@@ -1,0 +1,19 @@
+﻿<div ng-controller="EmployeeController as ctrl">
+    <h3> {{ctrl.Msg}}</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>City</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="emp in ctrl.employees">
+                <td>{{emp.Id}}</td>
+                <td>{{emp.Name}}</td>
+                <td>{{emp.City}}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

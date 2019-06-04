@@ -1,0 +1,36 @@
+﻿.header {
+    height: 50px;
+    width: auto;
+    background-color: #8b8b8b;
+    text-align: center;
+}
+
+.footer {
+    height: 50px;
+    width: auto;
+    background-color: #8b8b8b;
+    text-align: center;
+}
+
+.leftpanel {
+    height: 500px;
+    width: 25%;
+    background-color: #8b8b8b;
+    text-align: center;
+}
+
+.maincontent {   
+    width: 75%;
+    background-color: #8b8b8b;
+    padding-left: 10%;
+    
+}
+
+.layouttable {
+    width: 100%;
+}
+
+.layouttable td {
+    border-spacing: 10px;
+}
+

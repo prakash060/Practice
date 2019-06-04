@@ -1,0 +1,39 @@
+﻿<!DOCTYPE html>
+<html ng-app="app">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+
+    <link href="css/layout.css" rel="stylesheet" />
+    <script src="scripts/angular.js"></script>
+    <script src="scripts/angular-route.js"></script>
+    <script src="scripts/AppModule.js"></script>
+    <script src="scripts/RouteConfig.js"></script>
+    <script src="features/Home/HomeController.js"></script>
+    <script src="features/Education/CourseController.js"></script>
+    <script src="features/Employee/EmployeeController.js"></script>
+
+    <base href="/" />
+</head>
+<body>
+    <table class="layouttable">
+        <tr>
+            <td colspan="2" class="header"><h1>Header</h1></td>
+        </tr>
+        <tr>
+            <td class="leftpanel"> 
+                <h4>Quick links</h4>
+                <a href="#/home">Home</a><br />
+                <a href="#/courses">Courses</a><br />
+                <a href="#/employees">Employees</a><br />
+            </td>
+            <td class="maincontent">
+               <ng-view></ng-view>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" class="footer"> <b>Footer</b></td>
+        </tr>
+    </table>
+</body>
+</html>
