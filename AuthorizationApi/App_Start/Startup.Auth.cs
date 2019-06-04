@@ -19,8 +19,8 @@ namespace AuthorizationApi.App_Start
                 AccessTokenExpireTimeSpan = TimeSpan.FromMinutes(1),
                 Provider = new OAuthProvider()
             };
-            
-            app.UseOAuthBearerTokens(OAuthOptions)
+
+            app.UseOAuthBearerTokens(OAuthOptions);
             app.UseOAuthAuthorizationServer(OAuthOptions);
             app.UseOAuthBearerAuthentication(new OAuthBearerAuthenticationOptions());
         }
