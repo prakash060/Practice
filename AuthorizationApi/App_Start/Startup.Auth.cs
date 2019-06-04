@@ -20,7 +20,7 @@ namespace AuthorizationApi.App_Start
                 Provider = new OAuthProvider()
             };
             
-            app.UseOAuthBearerTokens(OAuthOptions);
+            app.UseOAuthBearerTokens(OAuthOptions)
             app.UseOAuthAuthorizationServer(OAuthOptions);
             app.UseOAuthBearerAuthentication(new OAuthBearerAuthenticationOptions());
         }
