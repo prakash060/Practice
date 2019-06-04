@@ -17,7 +17,7 @@ namespace AuthorizationApi.App_Start
                 AllowInsecureHttp = true,
                 TokenEndpointPath = new PathString("/Token"),
                 AccessTokenExpireTimeSpan = TimeSpan.FromMinutes(1),
-                Provider = new OAuthProvider();
+                Provider = new OAuthProvider()
             };
             
             app.UseOAuthBearerTokens(OAuthOptions);
