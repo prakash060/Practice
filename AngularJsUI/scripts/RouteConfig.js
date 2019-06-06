@@ -13,11 +13,11 @@ app.config(function ($routeProvider, $locationProvider) {
             templateUrl: "/features/Employee/Employee.html",
             controller: "EmployeeController"
         }).otherwise({
-            redirectTo:"/home"
+            redirectTo:"/"
         });
-    $locationProvider.html5Mode({
-        enabled: true,
-        requireBase: true,
-        rewriteLinks: true
-    });
+    //$locationProvider.html5Mode({
+    //    enabled: true
+    //    //requireBase: true,
+    //    //rewriteLinks: true
+    //});
 });
