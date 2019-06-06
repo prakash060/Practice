@@ -78,6 +78,7 @@
     <Content Include="scripts\angular-animate.js" />
     <Content Include="scripts\angular-route.js" />
     <None Include="scripts\angular.intellisense.js" />
+    <Content Include="scripts\angular-ui-router.min.js" />
     <Content Include="scripts\angular.js" />
     <Content Include="scripts\AppModule.js" />
     <Content Include="scripts\Main.js" />
