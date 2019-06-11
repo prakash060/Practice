@@ -3,6 +3,7 @@ using Microsoft.Owin;
 using Microsoft.Owin.Security.OAuth;
 using Owin;
 using System;
+using System.Web.Http;
 
 [assembly: OwinStartup(typeof(AuthorizationApi.App_Start.Startup))]
 
@@ -27,7 +28,10 @@ namespace AuthorizationApi.App_Start
 
         public void Configuration(IAppBuilder app)
         {
+
+            app.UseCors(Microsoft.Owin.Cors.CorsOptions.AllowAll);
             ConfigureAuth(app);
+
         }
     }
 }

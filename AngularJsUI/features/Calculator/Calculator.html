@@ -1,0 +1,19 @@
+﻿<div ng-controller="CalculatorController as ctrl">
+    <h3> {{ctrl.Msg}}</h3>
+    <table>
+        <tr>
+            <td>Num 1</td>
+            <td><input type="text" ng-model="ctrl.num1" /></td>
+        </tr>
+        <tr>
+            <td>Num 2</td>
+            <td><input type="text" ng-model="ctrl.num2" /></td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <button type="button" ng-click="ctrl.calculateSum()">Calculate</button>
+                Total : {{ctrl.total}}
+            </td>           
+        </tr>
+    </table>
+</div>

@@ -67,14 +67,22 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="commonjs\ConstantsProvider.js" />
     <Content Include="css\layout.css" />
+    <Content Include="customservices\factories\AuthenticationFactory.js" />
+    <Content Include="customservices\factories\CalcFactory.js" />
+    <Content Include="customservices\factories\EmployeeFactory.js" />
+    <Content Include="customservices\services\AuthenticationService.js" />
+    <Content Include="customservices\services\EmployeeService.js" />
+    <Content Include="features\Calculator\Calculator.html" />
+    <Content Include="features\Calculator\CalculatorController.js" />
     <Content Include="features\Education\Course.html" />
     <Content Include="features\Education\CourseController.js" />
     <Content Include="features\Employee\Employee.html" />
     <Content Include="features\Employee\EmployeeController.js" />
     <Content Include="features\Home\Home.html" />
     <Content Include="features\Home\HomeController.js" />
-    <Content Include="index.html" />
+    <Content Include="Index.html" />
     <Content Include="scripts\angular-animate.js" />
     <Content Include="scripts\angular-route.js" />
     <None Include="scripts\angular.intellisense.js" />
@@ -101,6 +109,9 @@
     <None Include="Web.Release.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="customservices\providers\" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

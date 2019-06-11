@@ -1,24 +1,19 @@
 ﻿using AuthorizationApi.Attributes;
+using System.Collections.Generic;
 using System.Web.Http;
+using System.Web.Http.Cors;
 
 namespace AuthorizationApi.Controllers
 {
     [RoutePrefix("api/authentication")]
     public class AuthenticationController : ApiController
     {
-        [Route("basic")]
         [BasicAuth]
-        [HttpGet]
-        public IHttpActionResult BasicAuthentication(string userName, string password)
+        [HttpPost]
+        [Route("BasicAuthentication")]        
+        public IHttpActionResult BasicAuthentication()
         {
             return Ok();
-        }
-        
-        [HttpGet]
-        [Authorize]
-        public IHttpActionResult GetEmployee()
-        {
-            return Ok("Hello P");
         }
 
         [Route("bearer/validatetoken")]
@@ -26,6 +21,6 @@ namespace AuthorizationApi.Controllers
         public IHttpActionResult OAuthValidateToken(string token)
         {
             return Ok();
-        }
+        }       
     }
 }

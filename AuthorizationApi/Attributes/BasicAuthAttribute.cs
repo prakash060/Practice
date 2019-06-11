@@ -34,7 +34,7 @@ namespace AuthorizationApi.Attributes
                 }
                 else
                 {
-                    actionContext.Response = actionContext.Request.CreateResponse(HttpStatusCode.Unauthorized);
+                    actionContext.Response = actionContext.Request.CreateResponse(HttpStatusCode.NoContent);
                 }
             }
         }
