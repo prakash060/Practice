@@ -33,7 +33,8 @@ app.service("authenticationService", ["$http", function ($http) {
     var basicAuth = function (userName, password) {
         var basic_auth_token = window.btoa(userName + ":" + password);
         return $http({
-            url: 'http://localhost:56842/api/authentication/BasicAuthentication',
+            //url: 'http://localhost:56842/api/authentication/BasicAuthentication',
+            url: 'http://192.168.0.102:8082/api/authentication/BasicAuthentication',
             method: 'POST',
             contentType: 'application/json',
             headers: { 'Authorization': 'Basic ' + basic_auth_token }
@@ -43,7 +44,8 @@ app.service("authenticationService", ["$http", function ($http) {
     var oAuthGetToken = function (userName, password) {
         var token = 'username = ' + userName + ' & password=' + password + '& grant_type=password';
         $http({
-            url: 'http://localhost:56842/Token',
+            //url: 'http://localhost:56842/Token',
+            url: 'http://192.168.0.102:8082/Token',
             method: 'POST',
             contentType: 'application/json',
             data: token
@@ -52,7 +54,8 @@ app.service("authenticationService", ["$http", function ($http) {
 
     var oAuthValidateToken = function (token) {
         $http({
-            url: 'http://localhost:56842/Token',
+            //url: 'http://localhost:56842/Token',
+            url: 'http://192.168.0.102:8082/Token',
             method: 'POST',
             contentType: 'application/json',
             data: token
