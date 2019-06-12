@@ -3,7 +3,7 @@
 app.service("employeeService", ["$http", function ($http) {
     var getEmployees = function () {
         return $http({
-            url: 'http://practice.pk/api/employee/GetEmployees',
+            url: 'http://practice.pk:8083/api/employee/GetEmployees',
             method: 'GET',
             contentType: 'application/json'
         });
