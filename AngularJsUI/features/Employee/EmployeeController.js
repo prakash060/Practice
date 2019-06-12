@@ -7,11 +7,6 @@ app.controller('EmployeeController', ['authenticationService', 'employeeService'
     self.basicAuth = false;
 
     self.employees = [];
-    self.employees = [
-        { 'Id': '1', 'Name': 'Default', 'City': 'Naganur' },
-        { 'Id': '2', 'Name': 'Default', 'City': 'Naganur' }
-    ];    
-
     
     self.getEmployees = function () {
         authenticateUser();        
