@@ -1,9 +1,9 @@
 ﻿/// <reference path="../../scripts/appmodule.js" />
 
-app.service("employeeService", ["$http", function ($http) {
+app.service("employeeService", ['$http', 'constants', function ($http, constants) {
     var getEmployees = function () {
         return $http({
-            url: 'http://practice.pk:8083/api/employee/GetEmployees',
+            url: constants.empServiceUrl + '/GetEmployees',
             method: 'GET',
             contentType: 'application/json'
         });
