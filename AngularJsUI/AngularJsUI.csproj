@@ -82,7 +82,7 @@
     <Content Include="features\Employee\EmployeeController.js" />
     <Content Include="features\Home\Home.html" />
     <Content Include="features\Home\HomeController.js" />
-    <Content Include="Index.html" />
+    <Content Include="index.html" />
     <Content Include="scripts\angular-animate.js" />
     <Content Include="scripts\angular-route.js" />
     <None Include="scripts\angular.intellisense.js" />
