@@ -17,11 +17,11 @@ namespace PracticeData.Controllers
         {
             var courses = new List<Course>
             {
-                new Course{CourseName = "C#"},
-                new Course{CourseName = "Angular"},
-                new Course{CourseName = "WebApi"},
-                new Course{CourseName = "NodeJS"},
-                new Course{CourseName = "Bootstrap"}
+                new Course{Id = 1, CourseName = "C#"},
+                new Course{Id = 1, CourseName = "Angular"},
+                new Course{Id = 1, CourseName = "WebApi"},
+                new Course{Id = 1, CourseName = "NodeJS"},
+                new Course{Id = 1, CourseName = "Bootstrap"}
             };
             return Ok(courses);
         }
