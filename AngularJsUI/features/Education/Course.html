@@ -1,8 +1,15 @@
 ﻿<div ng-controller="CourseController as ctrl">
-    <h3> {{ctrl.Msg}}</h3>
-    <ul>
-        <li ng-repeat="course in ctrl.courses">
-            {{course.CourseName}}
-        </li>
-    </ul>
+    <h3 class="padding-left-20px"> {{ctrl.Msg}}</h3>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-3">
+                <ul class="list-group ">
+                    <li class="list-group-item" ng-repeat="course in ctrl.courses">
+                        {{course.CourseName}}
+                    </li>
+                </ul>
+                <button class="btn btnCustomColor" ng-click="ctrl.getCourses()">Get Courses</button>
+            </div>
+        </div>
+    </div>   
 </div>

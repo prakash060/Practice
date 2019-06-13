@@ -3,8 +3,6 @@
 app.controller('EmployeeController', ['authenticationService', 'employeeService', function (authService, empService) {
     var self = this;
     self.Msg = "Employees : ";
-    self.oAuthToken = '';
-    self.basicAuth = false;
 
     self.employees = [];
     

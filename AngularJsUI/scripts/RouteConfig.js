@@ -17,7 +17,7 @@ app.config(function ($routeProvider, $locationProvider) {
             controller: "CalculatorController"
         })
         .otherwise({
-            redirectTo: "/"
+            redirectTo: "/home"
         });
     $locationProvider.html5Mode({
         enabled: true,

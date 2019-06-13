@@ -1,27 +1,36 @@
 ﻿<div ng-controller="EmployeeController as ctrl">
-    <h3> {{ctrl.Msg}}</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Id</th>
-                <th>Name</th>
-                <th>City</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr ng-show="ctrl.employees.length == 0"><td colspan="3"><b>No emloyees found..!</b></td></tr>
-            <tr ng-repeat="emp in ctrl.employees">
-                <td>{{emp.Id}}</td>
-                <td>{{emp.Name}}</td>
-                <td>{{emp.City}}</td>
-            </tr>
-        </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="3">                 
-                    <button ng-click="ctrl.getEmployees()">Get Employees</button>
-                </td>
-            </tr>
-        </tfoot>
-    </table>
+    <h3 class="padding-left-20px"> {{ctrl.Msg}}</h3>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-6">
+                <table class="table table-striped table-hover table-light col-lg-9">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Name</th>
+                            <th>City</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-show="ctrl.employees.length == 0"><td colspan="3"><b>No emloyees found..!</b></td></tr>
+                        <tr ng-repeat="emp in ctrl.employees">
+                            <td>{{emp.Id}}</td>
+                            <td>{{emp.Name}}</td>
+                            <td>{{emp.City}}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3">
+                                <button class="btn btnCustomColor" ng-click="ctrl.getEmployees()">Get Employees</button>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="col-lg-6">
+                
+            </div>
+        </div>
+    </div>
 </div>
