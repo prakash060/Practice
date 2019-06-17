@@ -1,4 +1,8 @@
-﻿.divLeftSideBar {
+﻿body {
+    background: url('../Images/BG1.jpeg');
+}
+
+.divLeftSideBar {
     border-radius: 3px;
     margin-top: 5px;
     margin-bottom: 5px;
@@ -18,7 +22,8 @@
 
 .divNavMenu {
     border-radius: 3px;
-    min-height:40px;
+    min-height:60px;
+    line-height:40px;
     margin-top: 5px;    
     background-color: #659dbd;
 }
@@ -38,6 +43,16 @@
 .navMenuItemColor{
     background-color:white;
     color:black;
+}
+
+/*margin*/
+.margin-left-5px{
+    margin-left:5px;
+}
+
+/*Border*/
+.border-left-2px {
+    border-left:2px solid black;
 }
 
 /*padding*/ 
