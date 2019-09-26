@@ -31,7 +31,7 @@ var ngRouteModule = angular.module('ngRoute', ['ng']).
  *
  * @description
  *
- * Used for configuring routes.
+ * Used for configuring routes. added comment
  *
  * ## Example
  * See {@link ngRoute.$route#example $route} for an example of configuring and using `ngRoute`.
