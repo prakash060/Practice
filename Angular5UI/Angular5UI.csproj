@@ -69,7 +69,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Angular8\.git\ms-persist.xml" />
     <Content Include="Angular8\hello-world\e2e\protractor.conf.js" />
     <Content Include="Angular8\hello-world\karma.conf.js" />
     <Content Include="Angular8\hello-world\src\app\app.component.html" />
@@ -89,35 +88,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="package-lock.json" />
-    <Content Include="Angular8\.git\COMMIT_EDITMSG" />
-    <Content Include="Angular8\.git\config" />
-    <Content Include="Angular8\.git\description" />
-    <Content Include="Angular8\.git\FETCH_HEAD" />
-    <Content Include="Angular8\.git\HEAD" />
-    <Content Include="Angular8\.git\hooks\applypatch-msg.sample" />
-    <Content Include="Angular8\.git\hooks\commit-msg.sample" />
-    <Content Include="Angular8\.git\hooks\fsmonitor-watchman.sample" />
-    <Content Include="Angular8\.git\hooks\post-update.sample" />
-    <Content Include="Angular8\.git\hooks\pre-applypatch.sample" />
-    <Content Include="Angular8\.git\hooks\pre-commit.sample" />
-    <Content Include="Angular8\.git\hooks\pre-push.sample" />
-    <Content Include="Angular8\.git\hooks\pre-rebase.sample" />
-    <Content Include="Angular8\.git\hooks\pre-receive.sample" />
-    <Content Include="Angular8\.git\hooks\prepare-commit-msg.sample" />
-    <Content Include="Angular8\.git\hooks\update.sample" />
-    <Content Include="Angular8\.git\index" />
-    <Content Include="Angular8\.git\info\exclude" />
-    <Content Include="Angular8\.git\logs\HEAD" />
-    <Content Include="Angular8\.git\logs\refs\heads\master" />
-    <Content Include="Angular8\.git\logs\refs\remotes\origin-base\master" />
-    <Content Include="Angular8\.git\objects\03\59b54157565a5817766a0486d510f33bc4945a" />
-    <Content Include="Angular8\.git\objects\03\8ae5398555049397b5323b76ee7b18d42098ce" />
-    <Content Include="Angular8\.git\objects\23\707541016116b848d89733aced1b3ce05a2531" />
-    <Content Include="Angular8\.git\objects\2d\d5d211d22ffc1ce4a060d2b67e9b25ae4c2df0" />
-    <Content Include="Angular8\.git\objects\b3\2ed23975b08fc257fe43198d781882a19ed108" />
-    <Content Include="Angular8\.git\objects\ed\df2f59b2a21aef21a8f1494285981b5d5291fa" />
-    <Content Include="Angular8\.git\refs\heads\master" />
-    <Content Include="Angular8\.git\refs\remotes\origin-base\master" />
     <Content Include="Angular8\.vs\Angular8\v15\.suo" />
     <Content Include="Angular8\.vs\slnx.sqlite" />
     <Content Include="Angular8\.vs\VSWorkspaceState.json" />
@@ -247,9 +217,6 @@
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Angular8\.git\objects\info\" />
-    <Folder Include="Angular8\.git\objects\pack\" />
-    <Folder Include="Angular8\.git\refs\tags\" />
     <Folder Include="Angular8\hello-world\.git\objects\info\" />
     <Folder Include="Angular8\hello-world\.git\objects\pack\" />
     <Folder Include="Angular8\hello-world\.git\refs\tags\" />
