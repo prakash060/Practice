@@ -69,73 +69,18 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Angular8\hello-world\e2e\protractor.conf.js" />
-    <Content Include="Angular8\hello-world\karma.conf.js" />
-    <Content Include="Angular8\hello-world\src\app\app.component.html" />
-    <Content Include="Angular8\hello-world\src\app\course\course-list.component.html" />
-    <Content Include="Angular8\hello-world\src\app\employee\employee-create.component.html" />
-    <Content Include="Angular8\hello-world\src\app\employee\employee-list.component.html" />
-    <Content Include="Angular8\hello-world\src\favicon.ico" />
-    <Content Include="Angular8\hello-world\src\index.html" />
-    <Content Include="Angular8\Setup.txt" />
-    <Content Include="Angular8\temp.txt" />
-    <Content Include="Setup.txt" />
-    <Content Include="temp.txt" />
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="package-lock.json" />
-    <Content Include="Angular8\.vs\Angular8\v15\.suo" />
-    <Content Include="Angular8\.vs\slnx.sqlite" />
-    <Content Include="Angular8\.vs\VSWorkspaceState.json" />
-    <Content Include="Angular8\hello-world\.editorconfig" />
-    <Content Include="Angular8\hello-world\angular.json" />
-    <Content Include="Angular8\hello-world\browserslist" />
-    <Content Include="Angular8\hello-world\e2e\tsconfig.json" />
-    <Content Include="Angular8\hello-world\package-lock.json" />
-    <Content Include="Angular8\hello-world\package.json" />
-    <Content Include="Angular8\hello-world\README.md" />
-    <Content Include="Angular8\hello-world\src\app\app.component.sass" />
-    <Content Include="Angular8\hello-world\src\app\course\course-list.component.sass" />
-    <Content Include="Angular8\hello-world\src\app\employee\employee-create.component.sass" />
-    <Content Include="Angular8\hello-world\src\app\employee\employee-list.component.sass" />
-    <Content Include="Angular8\hello-world\src\assets\.gitkeep" />
-    <Content Include="Angular8\hello-world\src\styles.sass" />
-    <Content Include="Angular8\hello-world\tsconfig.app.json" />
-    <Content Include="Angular8\hello-world\tsconfig.json" />
-    <Content Include="Angular8\hello-world\tsconfig.spec.json" />
-    <Content Include="Angular8\hello-world\tslint.json" />
-    <Content Include="Angular8\package-lock.json" />
-    <None Include="packages.config" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
     <None Include="Web.Release.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <TypeScriptCompile Include="Angular8\hello-world\e2e\src\app.e2e-spec.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\e2e\src\app.po.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\app\app-routing.module.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\app\app.component.spec.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\app\app.component.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\app\app.module.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\app\course\course-list.component.spec.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\app\course\course-list.component.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\app\course\course.module.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\app\employee\employee-create.component.spec.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\app\employee\employee-create.component.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\app\employee\employee-list.component.spec.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\app\employee\employee-list.component.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\environments\environment.prod.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\environments\environment.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\main.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\polyfills.ts" />
-    <TypeScriptCompile Include="Angular8\hello-world\src\test.ts" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
