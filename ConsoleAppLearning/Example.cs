@@ -31,7 +31,7 @@ namespace ConsoleAppLearning
 
     public abstract class Example2 : Example1
     {
-        public override void Method1();
+        //public override void Method1();
         public new void Method2()
         {
             int x = 10;
