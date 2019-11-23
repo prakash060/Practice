@@ -92,82 +92,6 @@
     <Content Include="Angular8\.vs\slnx.sqlite" />
     <Content Include="Angular8\.vs\VSWorkspaceState.json" />
     <Content Include="Angular8\hello-world\.editorconfig" />
-    <Content Include="Angular8\hello-world\.git\COMMIT_EDITMSG" />
-    <Content Include="Angular8\hello-world\.git\config" />
-    <Content Include="Angular8\hello-world\.git\description" />
-    <Content Include="Angular8\hello-world\.git\HEAD" />
-    <Content Include="Angular8\hello-world\.git\hooks\applypatch-msg.sample" />
-    <Content Include="Angular8\hello-world\.git\hooks\commit-msg.sample" />
-    <Content Include="Angular8\hello-world\.git\hooks\fsmonitor-watchman.sample" />
-    <Content Include="Angular8\hello-world\.git\hooks\post-update.sample" />
-    <Content Include="Angular8\hello-world\.git\hooks\pre-applypatch.sample" />
-    <Content Include="Angular8\hello-world\.git\hooks\pre-commit.sample" />
-    <Content Include="Angular8\hello-world\.git\hooks\pre-push.sample" />
-    <Content Include="Angular8\hello-world\.git\hooks\pre-rebase.sample" />
-    <Content Include="Angular8\hello-world\.git\hooks\pre-receive.sample" />
-    <Content Include="Angular8\hello-world\.git\hooks\prepare-commit-msg.sample" />
-    <Content Include="Angular8\hello-world\.git\hooks\update.sample" />
-    <Content Include="Angular8\hello-world\.git\index" />
-    <Content Include="Angular8\hello-world\.git\info\exclude" />
-    <Content Include="Angular8\hello-world\.git\logs\HEAD" />
-    <Content Include="Angular8\hello-world\.git\logs\refs\heads\master" />
-    <Content Include="Angular8\hello-world\.git\objects\00\110334f20bf8a4ec787b8708bbc3c59d80c9d9" />
-    <Content Include="Angular8\hello-world\.git\objects\06\c734263e1716e120bbb2771845eca1ae74c055" />
-    <Content Include="Angular8\hello-world\.git\objects\08\b0f06ef3391767dd9517947cad86dfc135b43c" />
-    <Content Include="Angular8\hello-world\.git\objects\16\317897b1c50a3a71bc775a8d6429f2b4c6cf98" />
-    <Content Include="Angular8\hello-world\.git\objects\25\e1e75d963952fa077c082ca578391280e795a5" />
-    <Content Include="Angular8\hello-world\.git\objects\26\26e8d24c921a88a676b139ea4b470fdfae7a0b" />
-    <Content Include="Angular8\hello-world\.git\objects\2c\3ba2995c8510c02ca812f90280146738f162cf" />
-    <Content Include="Angular8\hello-world\.git\objects\2f\2c5d6c16b4366fdd83090e73279d2f5f336710" />
-    <Content Include="Angular8\hello-world\.git\objects\30\956ae7ea265edf9bdc17001d75457e51ebe107" />
-    <Content Include="Angular8\hello-world\.git\objects\36\12073bc31cd4c1f5d6cbb00318521e9a61bd8a" />
-    <Content Include="Angular8\hello-world\.git\objects\39\b800f789619f0fb8063aba2e05bd5a57850e57" />
-    <Content Include="Angular8\hello-world\.git\objects\40\38b712682f806973c76f30c8a83ec689222538" />
-    <Content Include="Angular8\hello-world\.git\objects\41\cafeb8a9bf00db87a39e692b6a40b34e299a82" />
-    <Content Include="Angular8\hello-world\.git\objects\47\63eb415f6c7981f436705acd6bc0d61cba8dea" />
-    <Content Include="Angular8\hello-world\.git\objects\56\5a11a2156b8307120e25ba35a89bf17a094f26" />
-    <Content Include="Angular8\hello-world\.git\objects\60\d1318d9b6365f1d8b008370cd8461f1da64d0d" />
-    <Content Include="Angular8\hello-world\.git\objects\64\00fde7d544029c82e13d368a6b69d6664fe857" />
-    <Content Include="Angular8\hello-world\.git\objects\6a\bdf962a8ef5b0ada233dd99d0e8919f6e08fa9" />
-    <Content Include="Angular8\hello-world\.git\objects\6a\fb476e865cce8d2c9318dfb82215673bb66210" />
-    <Content Include="Angular8\hello-world\.git\objects\70\e76fd9bc0d28911c87ca205a511e9e1c2bf575" />
-    <Content Include="Angular8\hello-world\.git\objects\73\607f491ceb35d2ade4521582cb442d288e091b" />
-    <Content Include="Angular8\hello-world\.git\objects\7b\4f817adb754769ca126a939d48ac4b0850489d" />
-    <Content Include="Angular8\hello-world\.git\objects\7c\3f8b09fd6d0b220c3d9721756a0d5504ec6b01" />
-    <Content Include="Angular8\hello-world\.git\objects\7c\798cfff07e3edfa1532700adcf713ab17ff545" />
-    <Content Include="Angular8\hello-world\.git\objects\7f\eacadc636ddabaee087a1457fb3cbeb8222e55" />
-    <Content Include="Angular8\hello-world\.git\objects\80\111b8bfaa59f8f42194abda8f4aecdd1e6b9ae" />
-    <Content Include="Angular8\hello-world\.git\objects\80\848532e47d58cc7a4b618f600b438960f9f045" />
-    <Content Include="Angular8\hello-world\.git\objects\81\92d364b468281b6152cf7ab08f6f4beda014c4" />
-    <Content Include="Angular8\hello-world\.git\objects\81\ff31bab69492d7841f812e49e4c6bbab03166d" />
-    <Content Include="Angular8\hello-world\.git\objects\86\d943a9b2e8f3bb69fbe37fd8363962646b1d92" />
-    <Content Include="Angular8\hello-world\.git\objects\88\b57b150f7391a5c0ac5fe35f7ebc50533a3fda" />
-    <Content Include="Angular8\hello-world\.git\objects\90\d4ee0072ce3fc41812f8af910219f9eea3c3de" />
-    <Content Include="Angular8\hello-world\.git\objects\90\e4c2df10f2ce5f0c54009a3cc24f1e98d2e229" />
-    <Content Include="Angular8\hello-world\.git\objects\94\23029bc2888610b2b6c0a6c2c847a1b67c8f79" />
-    <Content Include="Angular8\hello-world\.git\objects\98\9011c2806776dde1d38dd51e4fcfdca49a1053" />
-    <Content Include="Angular8\hello-world\.git\objects\99\7406ad22c29aae95893fb3d666c30258a09537" />
-    <Content Include="Angular8\hello-world\.git\objects\a9\eaedc7492aa5ab5ed5a5825e1134bb797b8a00" />
-    <Content Include="Angular8\hello-world\.git\objects\aa\665d6b8740860e1d67de37a26ab362ef8ba974" />
-    <Content Include="Angular8\hello-world\.git\objects\aa\d23f68eaf9a2b2ed6accdc2117bfef2cfbdc2d" />
-    <Content Include="Angular8\hello-world\.git\objects\b4\87fbdfe6adc49b8fefe20f7940d87444542b8d" />
-    <Content Include="Angular8\hello-world\.git\objects\b8\498c26f24ea7661ad43fda1a000c7b2cef29e3" />
-    <Content Include="Angular8\hello-world\.git\objects\c7\b673cf44b388e9989fe908b78d7d73cd2e1409" />
-    <Content Include="Angular8\hello-world\.git\objects\c8\d70f15200546102f7f9f7192ec8290d9bb6d0a" />
-    <Content Include="Angular8\hello-world\.git\objects\c9\11d8c929b3ae791c7a40040ba2282631af8ffa" />
-    <Content Include="Angular8\hello-world\.git\objects\ca\f9806344405c6a00f7ba2b7be211a9200b5b09" />
-    <Content Include="Angular8\hello-world\.git\objects\cd\a9995311461693102a3a80fc34522a429dd0d8" />
-    <Content Include="Angular8\hello-world\.git\objects\cf\6c4055f48777ba5bf41e0c6877a555ca980e81" />
-    <Content Include="Angular8\hello-world\.git\objects\d4\6dad38fe54672f4e62fe36bbd6fdd0d668630a" />
-    <Content Include="Angular8\hello-world\.git\objects\d5\64d0bc3dd917926892c55e3706cc116d5b165e" />
-    <Content Include="Angular8\hello-world\.git\objects\d8\979389fc51122a58647dcf2c9e9f133c74ebcd" />
-    <Content Include="Angular8\hello-world\.git\objects\e6\9de29bb2d1d6434b8b29ae775ad8c2e48c5391" />
-    <Content Include="Angular8\hello-world\.git\objects\e8\9330a618c137cdaccde46f87923736cc04dfb4" />
-    <Content Include="Angular8\hello-world\.git\objects\ea\a74a0a8f54316fb36c0a8c93c7308942cf3ba8" />
-    <Content Include="Angular8\hello-world\.git\objects\eb\8bee360063e1b3b72cf2c79e8008899eb36a44" />
-    <Content Include="Angular8\hello-world\.git\objects\fe\67916196f9c5ee10e9c1d1669a85a1e23b4558" />
-    <Content Include="Angular8\hello-world\.git\refs\heads\master" />
-    <Content Include="Angular8\hello-world\.git\tgitchangelist" />
     <Content Include="Angular8\hello-world\angular.json" />
     <Content Include="Angular8\hello-world\browserslist" />
     <Content Include="Angular8\hello-world\e2e\tsconfig.json" />
@@ -216,11 +140,7 @@
   <ItemGroup>
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Angular8\hello-world\.git\objects\info\" />
-    <Folder Include="Angular8\hello-world\.git\objects\pack\" />
-    <Folder Include="Angular8\hello-world\.git\refs\tags\" />
-  </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
