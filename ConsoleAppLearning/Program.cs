@@ -10,23 +10,7 @@ namespace ConsoleAppLearning
     {
         static void Main(string[] args)
         {
-            Class1 obj = new Class2();
-        }
-    }
-
-    abstract class Class1
-    {
-        public Class1()
-        {
-
-        }
-    }
-
-    class Class2 : Class1
-    {
-        public Class2()
-        {
-
+            //Example1 obj = new Example1();
         }
     }
 }

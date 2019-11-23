@@ -1,0 +1,16 @@
+﻿
+@model IEnumerable<EF6Bl.Person>
+
+@{
+    ViewBag.Title = "GetPersonList";
+}
+
+<h2>All Details</h2>
+
+@foreach (var p in Model)
+{
+    <li>@Html.DisplayFor(modelItem => p.Id)</li>
+    <li>@Html.DisplayFor(modelItem => p.Name)</li>
+    <li>@Html.DisplayFor(modelItem => p.Address)</li>
+}
+

@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{1A7F4B39-4B48-43C8-B6EF-0BEAC71025A2}</ProjectGuid>
+    <ProjectGuid>{9A088FD5-9EB3-4CB9-A13A-59A1A41C85E0}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>ConsoleAppLearning</RootNamespace>
-    <AssemblyName>ConsoleAppLearning</AssemblyName>
+    <RootNamespace>FactoryFattern</RootNamespace>
+    <AssemblyName>FactoryFattern</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -43,9 +43,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Example.cs" />
+    <Compile Include="BmwCar.cs" />
+    <Compile Include="CarFactory.cs" />
+    <Compile Include="ICar.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TataCar.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
