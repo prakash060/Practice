@@ -72,10 +72,13 @@
     <Content Include="hello-world\e2e\protractor.conf.js" />
     <Content Include="hello-world\karma.conf.js" />
     <Content Include="hello-world\src\app\app.component.html" />
-    <Content Include="hello-world\src\app\course\course-list.component.html" />
     <Content Include="hello-world\src\app\employee\employee-create.component.html" />
     <Content Include="hello-world\src\app\employee\employee-list.component.html" />
     <Content Include="hello-world\src\favicon.ico" />
+    <Content Include="hello-world\src\img\bg-1.jpg" />
+    <Content Include="hello-world\src\img\logo-1.jpg" />
+    <Content Include="hello-world\src\img\logo-2.jpg" />
+    <Content Include="hello-world\src\img\logo-3.png" />
     <Content Include="hello-world\src\index.html" />
     <Content Include="Setup.txt" />
     <Content Include="temp.txt" />
@@ -96,7 +99,6 @@
     <Content Include="hello-world\package.json" />
     <Content Include="hello-world\README.md" />
     <Content Include="hello-world\src\app\app.component.sass" />
-    <Content Include="hello-world\src\app\course\course-list.component.sass" />
     <Content Include="hello-world\src\app\employee\employee-create.component.sass" />
     <Content Include="hello-world\src\app\employee\employee-list.component.sass" />
     <Content Include="hello-world\src\assets\.gitkeep" />
@@ -123,9 +125,6 @@
     <TypeScriptCompile Include="hello-world\src\app\app.component.spec.ts" />
     <TypeScriptCompile Include="hello-world\src\app\app.component.ts" />
     <TypeScriptCompile Include="hello-world\src\app\app.module.ts" />
-    <TypeScriptCompile Include="hello-world\src\app\course\course-list.component.spec.ts" />
-    <TypeScriptCompile Include="hello-world\src\app\course\course-list.component.ts" />
-    <TypeScriptCompile Include="hello-world\src\app\course\course.module.ts" />
     <TypeScriptCompile Include="hello-world\src\app\employee\employee-create.component.spec.ts" />
     <TypeScriptCompile Include="hello-world\src\app\employee\employee-create.component.ts" />
     <TypeScriptCompile Include="hello-world\src\app\employee\employee-list.component.spec.ts" />
