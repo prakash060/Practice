@@ -21,6 +21,7 @@
     "@angular/router": "~8.2.11",
     "@fortawesome/angular-fontawesome": "^0.5.0",
     "angular-font-awesome": "^3.1.2",
+    "angular-oauth2-oidc": "^8.0.4",
     "bootstrap": "^4.3.1",
     "font-awesome": "^4.7.0",
     "glyphicons": "^0.2.0",

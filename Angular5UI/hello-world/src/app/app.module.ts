@@ -1,6 +1,8 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
-import {ReactiveFormsModule} from '@angular/forms'
+import {ReactiveFormsModule} from '@angular/forms';
+import {HttpClientModule} from '@angular/common/http';
+import {OAuthModule} from 'angular-oauth2-oidc';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -9,6 +11,10 @@ import { AngularFontAwesomeModule } from 'angular-font-awesome';
 import { EmployeeListComponent } from './employee/employee-list.component';
 import { EmployeeCreateComponent } from './employee/employee-create.component';
 import { ImagegalleryComponent } from './imagegallery/imagegallery.component';
+import { HomeComponent } from './home/home.component';
+import { EmployeeService } from './services/employee.service';
+import { EmployeeDetailComponent } from './employee/employee-detail.component';
+import { QueueComponent } from './queue/queue/queue.component';
 
 @NgModule({
   declarations: [
@@ -16,14 +22,19 @@ import { ImagegalleryComponent } from './imagegallery/imagegallery.component';
     EmployeeListComponent,
     EmployeeCreateComponent,
     ImagegalleryComponent,
+    HomeComponent,
+    EmployeeDetailComponent,
+    QueueComponent,
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     ReactiveFormsModule,
-    AngularFontAwesomeModule
+    AngularFontAwesomeModule,
+    HttpClientModule,
+    OAuthModule.forRoot()
   ],
-  providers: [],
+  providers: [EmployeeService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

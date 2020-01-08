@@ -9,8 +9,12 @@
                         class="nav-link nav-items-color">List</a></li>
                 <li class="nav-item"><a routerLinkActive="active" routerLink="create"
                         class="nav-link nav-items-color">Create</a></li>
+                <li class="nav-item"><a routerLinkActive="active" routerLink="details"
+                        class="nav-link nav-items-color">Details</a></li>
                 <li class="nav-item"><a routerLinkActive="active" routerLink="img"
                         class="nav-link nav-items-color">Images</a></li>
+                <li class="nav-item"><a routerLinkActive="active" routerLink="queue"
+                        class="nav-link nav-items-color">List</a></li>
             </ul>
             <ul class="navbar nav">
                 <li class="navbar-item dropdown">
@@ -18,6 +22,8 @@
                         <span><i class="fa fa-user"></i></span>
                     </a>
                     <div class="dropdown-menu" area-labelledby="ddl_target">
+                        <!-- <a class="dropdown-item" (click) = "login()" *ngIf = "!token">Login</a>
+                        <a class="dropdown-item" (click) = "logout()" *ngIf = "token">Logout</a> -->
                         <a class="dropdown-item">Login</a>
                         <a class="dropdown-item">Logout</a>
                     </div>

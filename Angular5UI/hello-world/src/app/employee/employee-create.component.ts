@@ -70,7 +70,7 @@ export class EmployeeCreateComponent implements OnInit {
 
   ngOnInit() {
     this.employeeForm = this.fb.group({
-      fullName : ['',[Validators.required,Validators.minLength(2),Validators.maxLength(10)]],
+      fullName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(10)]],
       email : [''],
       skills: this.fb.group({
         skillName: [''],

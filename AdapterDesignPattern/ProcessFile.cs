@@ -46,7 +46,7 @@ namespace AdapterDesignPattern
             }
             catch (Exception ex)
             {
-                _logger.LogError("File not provcessed", ex);
+                _logger.LogError("File not processed", ex);
                 return false;
             }
         }

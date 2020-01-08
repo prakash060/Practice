@@ -11,6 +11,16 @@ Install node, angular cli, vs code
    ng serve
 7. Once compilation is successfull, go to browser and open http:localhost:4200
 
+================= Useful extensions ================================
+ext install tslint
+ext install autoimport
+ext install Angular2
+ext install angular2-snippets
+ext install vscode-angular2-files
+angular2-inline
+ext install angular2-switcher
+ext install ng-bootstrap-snippets
+
 ================= Install bootstrap for angular ================================
 npm install bootstrap@3 jquery --save
 
@@ -27,3 +37,9 @@ Configure below in angular.json
 
 ================= Creating components ================================
 ng g c employee
+
+================= Oauth2 with angular ================================
+npm install angular-oauth2-oidc --save
+
+max
+geheim
