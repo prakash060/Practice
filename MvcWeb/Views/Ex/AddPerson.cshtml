@@ -1,7 +1,21 @@
 ﻿
-@{
-    ViewBag.Title = "AddPerson";
-}
+@model EF6Bl.Person
 
-<h2>AddPerson</h2>
+@using (Ajax.BeginForm("AddPerson", "Ex", null))
+{
+<fieldset>
+    <legend>Add New Person</legend>
+    <div class="form-control">
+        @Html.LabelFor(x => x.Name)
+        @Html.EditorFor(x => x.Name)
+    </div>
+    <div class="form-control">
+        @Html.LabelFor(x => x.Address)
+        @Html.EditorFor(x => x.Address)
+    </div>
+    <p>
+        <input type="submit" value="Add" />
+    </p>
+</fieldset>
+}
 

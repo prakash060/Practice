@@ -32,18 +32,19 @@ namespace MvcWeb.Controllers
             return View(personList);
         }
 
-        public ActionResult AddPerson()
+        public ActionResult AddPerson(Person person)
         {
+            if(person == null) return View("AddPerson");
             _personRepository.Insert(new Person
             {
-                Name = "Praksh-inserted",
-                Address = "Address",
-                CreatedBy = "Praksh-inserted",
+                Name = person.Name,
+                Address =person.Address,
+                CreatedBy = "Praksh-Admin",
                 CreatedDate = DateTime.Now
             });
             _personRepository.Save();
             var personList = _personRepository.GetAll();
-            return View("GetPersonList", personList);
+            return View("AddPerson");
             //RedirectToAction("GetPersonList");
 
         }
