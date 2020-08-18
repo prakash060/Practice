@@ -1,0 +1,73 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <script src="Scripts/jquery-1.9.0.min.js"></script>
+    <script src="Scripts/jquery-1.9.0.intellisense.js"></script>
+    <script src="Scripts/bootstrap.min.js"></script>
+    <link href="Content/bootstrap.min.css" rel="stylesheet" />
+    <link href="Content/bootstrap-theme.min.css" rel="stylesheet" />
+    <style type="text/css">
+        html {
+            background-color: lightseagreen;
+        }
+
+        body {
+            position: absolute;
+            background-color: lightpink;
+            top: 20px;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+        }
+
+        header {
+            text-align: center;
+            font-weight: bold;
+            color: purple;
+        }
+
+        .red {
+            display: inline-block;
+            background-color: red;
+            height: 100px;
+            width: 100px;
+        }
+
+        .blue {
+            display: inline-block;
+            background-color: lightblue;
+            height: 150px;
+            width: 150px;
+        }
+
+        .yellow {
+            display: inline-block;
+            background-color: yellow;
+            height: 200px;
+            width: 200px;
+        }
+
+        .main {
+            position: absolute;
+            padding: 10px;
+            background-color: lightcoral;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div style="text-align:center"><header>This is body</header></div>
+    <div class="main">
+        <header>This is main content</header>
+        <div class="red">This is red</div>
+        <div class="yellow">This is yellow</div>
+        <div class="blue">
+            This is blue
+            <div style="background-color:black; display: inline-block;">Box1</div>
+            <div style="background-color:green;display: inline-block;">Box2</div>
+        </div>
+    </div>
+</body>
+</html>
