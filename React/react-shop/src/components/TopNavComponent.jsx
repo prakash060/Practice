@@ -9,7 +9,7 @@ class TopNavComponent extends PureComponent {
           <Navbar.Brand href="/">
             <img
               alt=""
-              src="../images/logo3"
+              src={require("../images/logo3.png")}
               width="30"
               height="30"
               className="d-inline-block align-top"
