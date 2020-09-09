@@ -1,14 +1,30 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
-import * as serviceWorker from './serviceWorker';
+import React from "react";
+import ReactDOM from "react-dom";
+import "./index.css";
+import App from "./App";
+import Left from "./components/LeftPaneComponent";
+import Top from "./components/TopNavComponent";
+import * as serviceWorker from "./serviceWorker";
+
+ReactDOM.render(
+  <React.StrictMode>
+    <Top />
+  </React.StrictMode>,
+  document.getElementById("top")
+);
+
+ReactDOM.render(
+  <React.StrictMode>
+    <Left />
+  </React.StrictMode>,
+  document.getElementById("left")
+);
 
 ReactDOM.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
-  document.getElementById('root')
+  document.getElementById("root")
 );
 
 // If you want your app to work offline and load faster, you can change

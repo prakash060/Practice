@@ -22,9 +22,9 @@ export default class HomeComponent extends Component {
 
   render() {
     return (
-      <div className="container h-100">
+      <div className="container">
         <div className="row h-100 justify-content-center align-items-center">
-          <div className="col-10 col-md-6 col-lg-4">
+          <div>
             <form onSubmit={this.handleSubmit}>
               <h1>Welcome Form !</h1>
               <div className="form-group">

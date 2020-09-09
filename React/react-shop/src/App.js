@@ -1,18 +1,16 @@
 import React from "react";
 import { BrowserRouter, Route, Switch } from "react-router-dom";
+import "react-bootstrap";
+import "./css/LeftSidePanel.css";
 import Home from "./components/HomeComponent";
 import About from "./components/AboutComponent";
 import Contact from "./components/ContactComponent";
-import TopNav from "./components/TopNavComponent";
 import Error from "./components/ErrorComponent";
-import LeftPane from "./components/LeftPaneComponent";
 
 function App() {
   return (
-    <div>
+    <div id="mainDiv">
       <BrowserRouter>
-        <TopNav />
-        <LeftPane />
         <Switch>
           <Route path="/" component={Home} exact />
           <Route path="/about" component={About} />
