@@ -1,0 +1,60 @@
+﻿html {
+
+}
+body {
+    background-color: aquamarine;   
+}
+
+.main {
+    position: absolute;
+    left: 3%;
+    right: 3%;
+    top: 3%;
+    min-height: 90%;
+    padding:10px;
+    background-color: #0e8238;   
+}
+
+.header {
+    background-color: #00334d;
+    border-top-right-radius: 10px;
+    border-top-left-radius: 10px;
+    height:50px;
+    align-content:center;
+}
+
+.subHeader {
+    background-color: #001a33;
+    height: 30px;
+    align-content: center;
+}
+
+.midSection {
+  background-color:bisque;
+  position:relative;
+  height:400px;
+  display:flex;
+  top:10px;  
+}
+
+.leftPane {
+    background-color: #00334d;
+    align-content: center;   
+    height:100%;
+    width:15%;   
+}
+
+.contentPane {
+    align-content: center;
+    background-color: white;    
+    height:100%;
+    width:100%;
+}
+
+.footer {
+    bottom: 0;
+    background-color: #00334d;
+    height: 50px;
+    text-align: center;
+    position: relative;
+}
