@@ -66,8 +66,9 @@
     <Compile Include="FileOperations.cs" />
     <Compile Include="HourGlassSum.cs" />
     <Compile Include="InheritanceSample.cs" />
+    <Compile Include="Models\Combination.cs" />
     <Compile Include="Models\Player.cs" />
-    <Compile Include="PermutationsAndCombinations.cs" />
+    <Compile Include="CreateDream11Teams.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StringOperations\StringOperation.cs" />

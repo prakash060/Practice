@@ -6,11 +6,9 @@ using System.Threading.Tasks;
 
 namespace ConsoleAppLearning.Models
 {
-    public class Player
+    public class Combination
     {
+        public Player[] Players { get; set; }
         public int Id { get; set; }
-        public string Name { get; set; }
-        public string Points { get; set; }
-        public string Type { get; set; }
     }
 }

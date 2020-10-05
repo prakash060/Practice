@@ -27,7 +27,7 @@ namespace ConsoleAppLearning
             var fileName = Path.GetFileName(path);
             if (File.Exists(path))
             {
-                File.Move(path, $@"C:\Users\User\Documents\OldTeams\{fileName}_{Guid.NewGuid()}");
+                File.Move(path, $@"D:\Teams\OldTeams\{fileName}_{Guid.NewGuid()}");
             }
 
             FileStream fileStream = File.Create(path);
