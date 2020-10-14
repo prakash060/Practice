@@ -61,9 +61,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AbstractClass.cs" />
-    <Compile Include="Example.cs" />
+    <Compile Include="Constants.cs" />
     <Compile Include="ExtentionMethods.cs" />
     <Compile Include="FileOperations.cs" />
+    <Compile Include="Filters.cs" />
     <Compile Include="HourGlassSum.cs" />
     <Compile Include="InheritanceSample.cs" />
     <Compile Include="Models\Combination.cs" />

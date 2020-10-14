@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ConsoleAppLearning.Models
 {
@@ -10,5 +7,6 @@ namespace ConsoleAppLearning.Models
     {
         public Player[] Players { get; set; }
         public int Id { get; set; }
+        public decimal TotalPoints { get; set; }
     }
 }

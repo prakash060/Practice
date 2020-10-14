@@ -24,10 +24,10 @@ namespace ConsoleAppLearning
 
         public static void WriteExcelFile(string path, ExcelPackage excel)
         {
-            var fileName = Path.GetFileName(path);
+            var fileName = Path.GetFileNameWithoutExtension(path);
             if (File.Exists(path))
             {
-                File.Move(path, $@"D:\Teams\OldTeams\{fileName}_{Guid.NewGuid()}");
+                File.Move(path, $@"D:\Teams\OldTeams\{fileName}_{Guid.NewGuid()}.xlsx");
             }
 
             FileStream fileStream = File.Create(path);
