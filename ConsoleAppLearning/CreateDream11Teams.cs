@@ -33,7 +33,7 @@ namespace ConsoleAppLearning
             allPlayers.AddRange(bowlers.ToList());
 
             var validCombinations = GetPlayerCombinations(allPlayers.ToArray(), _teamSize, filters);
-            WriteTeams(validCombinations);
+            WriteTeams(validCombinations, filters.ApplyFilters == 1);
         }
 
         private Filters ReadInputFilters(string message = null)
