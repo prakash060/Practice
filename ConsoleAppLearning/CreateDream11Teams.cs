@@ -19,8 +19,8 @@ namespace ConsoleAppLearning
 
         public void CreateTeams()
         {
-           
-             var filters = ReadInputFilters();
+
+            var filters = ReadInputFilters();
             _outputFilePath += Constants.TeamName + ".xlsx";
             _inputFilePath += Constants.TeamName + ".xlsx";
             var keepers = GetPlayers(_inputFilePath, "WK");
@@ -50,9 +50,9 @@ namespace ConsoleAppLearning
             Filters filters = null;
             if (applyFilter == 0)
                 return filters;
-            
+
             filters = new Filters();
-                                            
+
             Console.WriteLine("Do you want to apply players type filter ? Enter 0/1");
             filters.ApplyPlayersTypeCountFilter = Convert.ToInt32(Console.ReadLine());
             if (filters.ApplyPlayersTypeCountFilter == 1)
@@ -76,7 +76,7 @@ namespace ConsoleAppLearning
                 Console.WriteLine("Enter max points value");
                 filters.MaxPoints = Convert.ToInt32(Console.ReadLine());
             }
-            
+
             return filters;
         }
 
@@ -119,22 +119,31 @@ namespace ConsoleAppLearning
             var batCount = players.Where(q => q.Type == "BAT").Count();
             var bowlCount = players.Where(q => q.Type == "BOWL").Count();
             var totalPoints = players.Select(a => a.Points).Sum(b => Convert.ToDecimal(b));
-          
+
+            var eachTeamCount = players.GroupBy(x => x.Team)
+                     .Select(g => new { Team = g.Key, Count = g.Count() })
+                     .ToList();
+
+            if (eachTeamCount.Any(x => x.Count > 7)) return false;
+
             var isValidTotalCount = totalPoints <= 100 && wkCount >= 1 && wkCount <= 4 && arCount >= 1 && arCount <= 4 && batCount >= 3 && batCount <= 6 && bowlCount >= 3 && bowlCount <= 6;
             if (filters == null) return isValidTotalCount;
 
             if (isValidTotalCount)
             {
+                if (filters.ApplyPlayersTypeCountFilter == 0 && filters.ApplyPointsRangeFilter == 0)
+                    return true;
+
                 var isValidPointsRange = totalPoints >= filters.MinPoints && totalPoints <= filters.MaxPoints;
                 var isValidPlayerTypeCount = filters.WkCount == wkCount && filters.AllCount == arCount && filters.BatCount == batCount && filters.BowlCount == bowlCount;
 
                 if (filters.ApplyPlayersTypeCountFilter == 1 && filters.ApplyPointsRangeFilter == 1)
                     return isValidPlayerTypeCount && isValidPointsRange;
 
-                if (filters.ApplyPlayersTypeCountFilter == 1)
+                if (filters.ApplyPlayersTypeCountFilter == 1 && filters.ApplyPointsRangeFilter == 0)
                     return isValidPlayerTypeCount;
 
-                if (filters.ApplyPointsRangeFilter == 1)
+                if (filters.ApplyPlayersTypeCountFilter == 0 && filters.ApplyPointsRangeFilter == 1)
                     return isValidPointsRange;
             }
 
@@ -163,7 +172,8 @@ namespace ConsoleAppLearning
             {
                 var name = worksheet.Cells[i, 1].Value.ToString();
                 var points = worksheet.Cells[i, 2].Value.ToString();
-                playersInfo.Add(new Player { Name = name, Points = points });
+                var team = worksheet.Cells[i, 3].Value.ToString();
+                playersInfo.Add(new Player { Name = name, Points = points, Team = team });
             }
 
             return playersInfo;
@@ -190,7 +200,7 @@ namespace ConsoleAppLearning
                 if (teamNumber == 20000 || teamNumber % 20000 == 0)
                 {
                     rowIndex = 1;
-                    colIndex += 5;
+                    colIndex += 6;
                 }
 
                 CreateHeaderRow(workSheet, rowIndex, colIndex, teamNumber++);
@@ -200,6 +210,7 @@ namespace ConsoleAppLearning
                     workSheet.Cells[rowIndex, colIndex + 1].Value = player.Name;
                     workSheet.Cells[rowIndex, colIndex + 2].Value = player.Points;
                     workSheet.Cells[rowIndex, colIndex + 3].Value = player.Type;
+                    workSheet.Cells[rowIndex, colIndex + 4].Value = player.Team;
                     rowIndex++;
                 }
 
@@ -233,7 +244,7 @@ namespace ConsoleAppLearning
             workSheet.Column(col).Style.Fill.BackgroundColor.SetColor(Color.Azure);
         }
 
-        private static void CreateFooterRow(ExcelWorksheet workSheet, int row,int col, decimal totalPoints)
+        private static void CreateFooterRow(ExcelWorksheet workSheet, int row, int col, decimal totalPoints)
         {
             workSheet.TabColor = Color.Green;
             workSheet.DefaultRowHeight = 12;
@@ -242,8 +253,8 @@ namespace ConsoleAppLearning
             workSheet.Row(row).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             workSheet.Row(row).Style.Font.Bold = true;
 
-            workSheet.Cells[row, col+1].Value = "Total Points";
-            workSheet.Cells[row, col+2].Value = totalPoints;
+            workSheet.Cells[row, col + 1].Value = "Total Points";
+            workSheet.Cells[row, col + 2].Value = totalPoints;
         }
 
         private static void CreateHeaderRow(ExcelWorksheet workSheet, int row, int col, int number)
