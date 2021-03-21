@@ -1,18 +1,25 @@
 <template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
-  </div>
+<div>
+  <h1>{{homeTitle}}</h1>
+  <HomePage/> 
+</div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import HomePage from './components/home/HomePage.vue'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+   HomePage,
+  },
+
+  data() {
+    return {
+      homeTitle: "Sample User Form"
+    }
   }
+
 }
 </script>
 
