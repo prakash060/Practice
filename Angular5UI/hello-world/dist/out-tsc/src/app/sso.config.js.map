@@ -1,1 +1,0 @@
-{"version":3,"file":"sso.config.js","sourceRoot":"","sources":["../../../../src/app/sso.config.ts"],"names":[],"mappings":"AAEA,MAAM,CAAC,MAAM,UAAU,GAAe;IAEpC,+BAA+B;IAC/B,MAAM,EAAE,2DAA2D;IAEnE,qDAAqD;IACrD,WAAW,EAAE,MAAM,CAAC,QAAQ,CAAC,MAAM,GAAG,aAAa;IAEnD,qEAAqE;IACrE,QAAQ,EAAE,UAAU;IAEpB,8DAA8D;IAC9D,yEAAyE;IACzE,KAAK,EAAE,8BAA8B;CACtC,CAAA"}
