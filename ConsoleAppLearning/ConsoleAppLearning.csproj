@@ -65,6 +65,9 @@
   <ItemGroup>
     <Compile Include="AbstractClass.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="Data\Department.cs" />
+    <Compile Include="Data\Employee.cs" />
+    <Compile Include="Data\SampleData.cs" />
     <Compile Include="ExtentionMethods.cs" />
     <Compile Include="FileOperations.cs" />
     <Compile Include="Filters.cs" />

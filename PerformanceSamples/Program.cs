@@ -12,6 +12,8 @@ namespace PerformanceSamples
         {
             ForLoopVsForeach.ForLoopVsForeachPerformanceTest();
             Console.ReadLine();
+
         }
     }
+
 }
