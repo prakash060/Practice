@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LinqPractice.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,9 +15,11 @@ namespace LinqPractice
             Console.WriteLine("=====================================================");
             LinqBasics.DisplayAllEmplyees();
             Console.WriteLine("=====================================================");
-            LinqBasics.RightOuterJoinUsingExtensionMethod();
-            Console.WriteLine("=====================================================");
-            LinqBasics.RightOuterJoinUsingSqlLikeSyntax();
+            var emps = SampleData.GetEmployees().Distinct();
+            foreach (var e in emps)
+            {
+                Console.WriteLine($"{e.Id}\t{e.Name}\t{e.DepartmentId}");
+            }
 
             Console.ReadLine();
         }

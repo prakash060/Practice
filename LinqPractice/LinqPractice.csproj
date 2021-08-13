@@ -46,6 +46,7 @@
     <Compile Include="Data\Department.cs" />
     <Compile Include="Data\Employee.cs" />
     <Compile Include="Data\SampleData.cs" />
+    <Compile Include="EmployeeComparer.cs" />
     <Compile Include="LinqBasics.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
