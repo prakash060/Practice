@@ -27,6 +27,9 @@ export default class HomeComponent extends Component {
           <div>
             <form onSubmit={this.handleSubmit}>
               <h1>Welcome Form !</h1>
+              <script>
+                let clientKey1 = "This is my ckey 1";
+              </script>
               <div className="form-group">
                 <label htmlFor="userName">User Name:</label>
                 <input

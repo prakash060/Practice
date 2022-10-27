@@ -20,15 +20,54 @@ namespace MvcWeb.Controllers
             _personRepository = new Repository<Person>(new ExContext());
         }
 
+        public IEnumerable<Person> GetTempData()
+        {
+            var list = new List<Person>
+            {
+                new Person
+                {
+                     Address = "Address1",
+                     CreatedBy = "Admin",
+                     CreatedDate = DateTime.Now,
+                     Id = 1,
+                     Name = "Prakash1"
+
+                },
+
+                new Person
+                {
+                     Address = "Address2",
+                     CreatedBy = "Admin",
+                     CreatedDate = DateTime.Now,
+                     Id = 1,
+                     Name = "Prakash2"
+
+                },
+                new Person
+                {
+                     Address = "Address3",
+                     CreatedBy = "Admin",
+                     CreatedDate = DateTime.Now,
+                     Id = 1,
+                     Name = "Prakash3"
+
+                }
+            };
+
+            return list;
+        }
+
         public ActionResult ExView()
         {
-            var personList = _personRepository.GetAll();
+            //var personList = _personRepository.GetAll();
+            var personList = GetTempData();
             return View("GetPersonList", personList);
         }
 
         public ActionResult GetPersonList()
         {
-            var personList = _personRepository.GetAll();
+            //var personList = _personRepository.GetAll();
+            var personList = GetTempData();
             return View(personList);
         }
 
