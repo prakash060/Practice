@@ -11,6 +11,7 @@ namespace CommandPattern
         public ShoppingCartRepository()
         {
             _cart = new Dictionary<string, (Product product, int stock)>();
+
         }
 
         public void Add(Product product, int quantity)

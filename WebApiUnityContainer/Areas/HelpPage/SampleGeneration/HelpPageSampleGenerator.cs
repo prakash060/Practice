@@ -10,7 +10,6 @@ using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
 using System.Web.Http.Description;
-using System.Xml.Linq;
 using Newtonsoft.Json;
 
 namespace WebApiUnityContainer.Areas.HelpPage

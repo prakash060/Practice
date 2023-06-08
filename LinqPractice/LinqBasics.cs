@@ -194,6 +194,7 @@ namespace LinqPractice
             }
         }
 
+
         public static void RightOuterJoinUsingExtensionMethod()
         {
             var employees = SampleData.GetEmployees();
@@ -206,9 +207,12 @@ namespace LinqPractice
                                                  emp,
                                                  depts
                                              })
-                                             .SelectMany(z => z.emp.DefaultIfEmpty(), 
-                                             (a, b) => new { Department = a.depts ?? new Department { Name = "No Department"}, 
-                                                 Employee = b?? new Employee { Name = "No Employee"} });
+                                             .SelectMany(z => z.emp.DefaultIfEmpty(),
+                                             (a, b) => new
+                                             {
+                                                 Department = a.depts ?? new Department { Name = "No Department" },
+                                                 Employee = b ?? new Employee { Name = "No Employee" }
+                                             });
             foreach (var res in result)
             {
                 Console.WriteLine($"{res.Employee.Name}\t\t {res.Department.Name}");

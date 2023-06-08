@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30309.148
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33530.505
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AngularJsUI", "AngularJsUI\AngularJsUI.csproj", "{DAF976FF-72B4-46A4-9980-0ABB4CBC72CB}"
 EndProject
@@ -20,8 +20,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DesignPatterns", "DesignPatterns", "{21352E9C-4DC9-4AC3-82E5-1CEB313C1B72}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdapterDesignPattern", "AdapterDesignPattern\AdapterDesignPattern.csproj", "{977CEF6B-C5C5-43C9-8681-1EB18445799D}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiUnityContainer", "WebApiUnityContainer\WebApiUnityContainer.csproj", "{38D796FB-7755-466E-8E81-652633C03CBF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MvcWeb", "MvcWeb\MvcWeb.csproj", "{5FF45BED-BB13-44A3-98A6-16E8EE859208}"
 EndProject
@@ -46,6 +44,14 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Behavioral", "Behavioral", "{C5318B5B-9B61-407F-BD96-A32356BF7288}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandPattern", "CommandPattern\CommandPattern.csproj", "{B1120DE9-5C72-40B3-AFFB-E61B45F75C69}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Coding", "Coding", "{943EFCDB-3B99-4F1A-A0CF-20E82FBD3C69}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodingProblems", "CodingProblems\CodingProblems.csproj", "{77EA9694-4929-4562-AC4B-4AAD745C0F0B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolidPriciples", "SolidPriciples", "{1DBF2AE9-4D18-4A67-9696-A2D399624782}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolidPriciples", "SolidPriciples\SolidPriciples.csproj", "{EB1C3D11-9E13-46C4-8E84-8266D2916627}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -85,10 +91,6 @@ Global
 		{977CEF6B-C5C5-43C9-8681-1EB18445799D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{977CEF6B-C5C5-43C9-8681-1EB18445799D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{977CEF6B-C5C5-43C9-8681-1EB18445799D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{38D796FB-7755-466E-8E81-652633C03CBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{38D796FB-7755-466E-8E81-652633C03CBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{38D796FB-7755-466E-8E81-652633C03CBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{38D796FB-7755-466E-8E81-652633C03CBF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5FF45BED-BB13-44A3-98A6-16E8EE859208}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5FF45BED-BB13-44A3-98A6-16E8EE859208}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5FF45BED-BB13-44A3-98A6-16E8EE859208}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -125,6 +127,14 @@ Global
 		{B1120DE9-5C72-40B3-AFFB-E61B45F75C69}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B1120DE9-5C72-40B3-AFFB-E61B45F75C69}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B1120DE9-5C72-40B3-AFFB-E61B45F75C69}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77EA9694-4929-4562-AC4B-4AAD745C0F0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77EA9694-4929-4562-AC4B-4AAD745C0F0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77EA9694-4929-4562-AC4B-4AAD745C0F0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77EA9694-4929-4562-AC4B-4AAD745C0F0B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB1C3D11-9E13-46C4-8E84-8266D2916627}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB1C3D11-9E13-46C4-8E84-8266D2916627}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB1C3D11-9E13-46C4-8E84-8266D2916627}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB1C3D11-9E13-46C4-8E84-8266D2916627}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -138,6 +148,9 @@ Global
 		{F0719987-AD8D-4134-BF4D-C6F33E8F48B2} = {21352E9C-4DC9-4AC3-82E5-1CEB313C1B72}
 		{C5318B5B-9B61-407F-BD96-A32356BF7288} = {21352E9C-4DC9-4AC3-82E5-1CEB313C1B72}
 		{B1120DE9-5C72-40B3-AFFB-E61B45F75C69} = {C5318B5B-9B61-407F-BD96-A32356BF7288}
+		{77EA9694-4929-4562-AC4B-4AAD745C0F0B} = {943EFCDB-3B99-4F1A-A0CF-20E82FBD3C69}
+		{1DBF2AE9-4D18-4A67-9696-A2D399624782} = {21352E9C-4DC9-4AC3-82E5-1CEB313C1B72}
+		{EB1C3D11-9E13-46C4-8E84-8266D2916627} = {1DBF2AE9-4D18-4A67-9696-A2D399624782}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {287CD56B-02FB-4488-981B-E661CB9075EB}

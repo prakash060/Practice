@@ -13,14 +13,13 @@ namespace LinqPractice
         {
             
             Console.WriteLine("=====================================================");
-            LinqBasics.DisplayAllEmplyees();
+            LinqBasics.DisplayAllDepartments();
             Console.WriteLine("=====================================================");
-            var emps = SampleData.GetEmployees().Distinct();
-            foreach (var e in emps)
-            {
-                Console.WriteLine($"{e.Id}\t{e.Name}\t{e.DepartmentId}");
-            }
+            LinqBasics.DisplayAllEmplyees();
 
+
+            Console.WriteLine("=====================================================");
+            LinqBasics.RightOuterJoinUsingExtensionMethod();
             Console.ReadLine();
         }
     }
