@@ -1,0 +1,31 @@
+﻿@model ASPNetCore.ViewModels.HomeDetailsViewModel;
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = @Model.Title;
+}
+
+<h3>@Model.Title</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Department</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>@Model.Employee.Id</td>
+            <td>@Model.Employee.Name</td>
+            <td>@Model.Employee.Description</td>
+            <td>@Model.Employee.Department</td>
+        </tr>
+    </tbody>
+</table>
+
+@section Scripts{
+    <script src="~\js\customscript.js"></script>
+}

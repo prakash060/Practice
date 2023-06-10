@@ -88,11 +88,5 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\PracticeData\PracticeData.csproj">
-      <Project>{C758D539-EB0E-445C-9134-F67D2FA67443}</Project>
-      <Name>PracticeData</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
