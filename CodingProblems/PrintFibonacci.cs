@@ -21,7 +21,7 @@ namespace CodingProblems
         public void Fib1(int len)
         {
             int a = 0, b = 1, c;
-            Console.Write("{0} {1}", a, b);
+            Console.WriteLine("{0} {1}", a, b);
             for (int i = 2; i < len; i++)
             {
                 c = a + b;
@@ -34,7 +34,8 @@ namespace CodingProblems
 
         public void Execute()
         {
-            //int n = 100;
+            //Print series
+            //int n = 10;
             //for (int i = 0; i < n; i++)
             //{
             //    var res = Fib(i);
@@ -42,8 +43,12 @@ namespace CodingProblems
 
             //}
 
-            Fib1(100);
-            
+            //Fib1(10);
+
+            //Print nth number in series
+            var res = Fib(9);
+            Console.WriteLine(res);
+
             Console.WriteLine("Completed.!");
         }
     }

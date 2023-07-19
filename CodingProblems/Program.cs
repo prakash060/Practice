@@ -1,8 +1,8 @@
 ﻿using CodingProblems;
 
 #region PrintFibonacci
-//PrintFibonacci obj = new PrintFibonacci();
-//obj.Execute(); 
+PrintFibonacci obj = new PrintFibonacci();
+obj.Execute();
 #endregion
 
 #region AddBigInt
@@ -31,6 +31,12 @@
 
 //cache.PrintCache(); 
 
+#endregion
+
+#region FindKthSmallestElement
+int[] arr = new[] { 9, 10, 3, 4, 5, 6, 1, 2, 7, 8};
+
+Console.WriteLine(KthLargestElement.FindKthLargestElement(arr, 4)); 
 #endregion
 
 Console.WriteLine("");

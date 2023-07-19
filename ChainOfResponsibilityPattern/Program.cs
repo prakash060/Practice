@@ -14,20 +14,16 @@ namespace ChainOfResponsibilityPattern
             var user1 = new User { Id = -1, Name = "", PinCode = 1234 };
             var user2 = new User { Id = 10, Name = "Prakash", PinCode = 1234 };
 
-            Register(user2);
+            var valid = Validate(user1);
+
+            if (valid)
+                Console.WriteLine("Valid user.!");
+            else
+                Console.WriteLine("Invalid user.!");
 
             Console.ReadLine();
         }
 
-        private static void Register(User user)
-        {
-            var valid = Validate(user);
-
-            if(valid)
-                Console.WriteLine("Registered.!");
-            else
-                Console.WriteLine("Registraion failed.!");
-        }
 
         private static bool Validate(User user)
         {

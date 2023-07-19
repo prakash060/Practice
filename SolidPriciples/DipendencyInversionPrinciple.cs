@@ -42,7 +42,7 @@ namespace SolidPriciples
 
     //High level module
 
-    public class Reserch
+    public class Research
     {
         //public Reserch(RelationShips relationShips)
         //{
@@ -53,7 +53,7 @@ namespace SolidPriciples
         //    }
         //}
 
-        public Reserch(IRelationShipsBrowser browser)
+        public Research(IRelationShipsBrowser browser)
         {
             foreach (var item in browser.GetAllChildsByParentName("Prakash"))
             {
@@ -68,7 +68,7 @@ namespace SolidPriciples
             relationShips.AddParentChild(new Person { Name = "Prakash" }, new Person { Name = "Yashasvi" });
             relationShips.AddParentChild(new Person { Name = "Prakash" }, new Person { Name = "Shreyasvi" });
 
-            new Reserch(relationShips);
+            new Research(relationShips);
         }
     }
 
