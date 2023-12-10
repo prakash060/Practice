@@ -13,5 +13,10 @@ namespace ConsoleAppLearning
         //{
         //    return $"Name : {employee.Name}, Id : {employee.Id}, City : {employee.City}";
         //}
+
+        //public static string ToEmpString(this Employee employee)
+        //{
+        //    return $"Name : {employee.Name}, Id : {employee.Id}, City : {employee.City}";
+        //}
     }
 }
