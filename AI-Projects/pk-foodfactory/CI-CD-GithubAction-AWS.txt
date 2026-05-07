@@ -1,0 +1,248 @@
+Checking current build commands and repo settings so the deployment plan matches your apps exactly.
+
+Read [](file:///c%3A/Dont-Delete/Github-Prakash060/Practice/AI-Projects/pk-foodfactory-backend/package.json)
+
+Read [](file:///c%3A/Dont-Delete/Github-Prakash060/Practice/AI-Projects/pk-foodfactory/package.json)
+
+## AWS Hosting + GitHub Actions CI/CD Plan
+
+This plan covers both apps in your repo:
+
+- pk-foodfactory — frontend React app
+- pk-foodfactory-backend — backend Node/Express app
+
+---
+
+## 1. Choose AWS Architecture
+
+### Frontend
+Recommended:
+- AWS S3 for static hosting
+- AWS CloudFront for CDN
+- Route53 for DNS + custom domain
+
+Alternative:
+- AWS Amplify Hosting (simpler, but still usable with GitHub Actions)
+
+### Backend
+Recommended:
+- AWS Elastic Beanstalk for Node.js app deployment
+- Or AWS ECS/Fargate with ECR if you want container-based production deployment
+
+### Database
+Recommended:
+- MongoDB Atlas for simplicity
+- Or AWS DocumentDB if you want all-AWS deployment
+
+---
+
+## 2. AWS Account Preparation
+
+1. Create an AWS account if you don’t have one.
+2. Create an IAM user for CI/CD with:
+   - `AmazonS3FullAccess` (frontend deploy)
+   - `CloudFrontFullAccess` or at least invalidation rights
+   - `AWSElasticBeanstalkFullAccess` (if using EB)
+   - `AmazonEC2ContainerRegistryFullAccess` and `AmazonECS_FullAccess` (if using ECS)
+   - `SecretsManagerReadWrite` or `SSMParameterStoreFullAccess` if you want secret storage
+3. Store AWS credentials in GitHub Secrets:
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+   - `AWS_REGION`
+
+---
+
+## 3. Frontend Deployment Setup
+
+### Step 1: Create S3 bucket
+- Use a bucket name like `pk-foodfactory-frontend`
+- Enable static website hosting
+- Configure bucket policy for public read or CloudFront origin access
+
+### Step 2: Create CloudFront distribution
+- Origin = S3 bucket
+- Default root object = index.html
+- Add a behaviour for SPA routing (fallback to index.html)
+- Enable HTTPS using ACM certificate
+
+### Step 3: Configure DNS (optional)
+- Add Route53 record to point custom domain to CloudFront
+- Request ACM certificate in `us-east-1` for CloudFront
+
+### Step 4: Frontend build
+- Command: `npm run build`
+- Output folder: `dist`
+
+---
+
+## 4. Backend Deployment Setup
+
+### Option A: Elastic Beanstalk
+1. Create EB Application
+2. Create Node.js environment
+3. Set environment variables in EB:
+   - `MONGODB_URI`
+   - `RAZORPAY_KEY_ID`
+   - `RAZORPAY_KEY_SECRET`
+   - `RAZORPAY_WEBHOOK_SECRET`
+   - `PORT=5000`
+4. Deploy pk-foodfactory-backend source bundle
+
+### Option B: ECS/Fargate
+1. Create ECR repository
+2. Create ECS cluster + Fargate service
+3. Create Application Load Balancer
+4. Store env vars in task definition or AWS Secrets Manager
+5. Deploy Docker image from GitHub Actions
+
+### Backend health
+- Add a simple `/api/health` route (already exists in `server.js`)
+- Use this in CI/CD smoke tests
+
+---
+
+## 5. Database / Secrets Setup
+
+### Database
+- Create MongoDB Atlas cluster or AWS DocumentDB cluster
+- Whitelist app IPs or use VPC peering
+- Save connection string in backend environment
+
+### Secrets
+- Store Razorpay secrets in GitHub Secrets
+- For AWS deployment, optionally store them in:
+  - Elastic Beanstalk config
+  - ECS Task definition secrets
+  - AWS Secrets Manager or SSM Parameter Store
+
+Required secret names:
+- `MONGODB_URI`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `RAZORPAY_WEBHOOK_SECRET`
+- `REACT_APP_API_URL` (frontend)
+
+---
+
+## 6. GitHub Actions CI/CD Plan
+
+### Workflow 1: Frontend deploy
+File: `.github/workflows/frontend.yml`
+
+Steps:
+1. Trigger on `push` to `main` (or `release`)
+2. Checkout repo
+3. Setup Node
+4. `npm install`
+5. `npm run build`
+6. Deploy `dist/` to S3
+7. Invalidate CloudFront distribution
+
+Secrets needed:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `AWS_S3_BUCKET_FRONTEND`
+- `AWS_CLOUDFRONT_DISTRIBUTION_ID`
+
+### Workflow 2: Backend deploy
+File: `.github/workflows/backend.yml`
+
+#### If using Elastic Beanstalk
+Steps:
+1. Trigger on `push` to `main`
+2. Checkout repo
+3. Setup Node
+4. Install deps
+5. Run tests if any
+6. Zip backend folder
+7. Deploy to EB via AWS CLI or `einaregilsson/beanstalk-deploy`
+
+Secrets needed:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `EB_APPLICATION_NAME`
+- `EB_ENVIRONMENT_NAME`
+- `MONGODB_URI`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `RAZORPAY_WEBHOOK_SECRET`
+
+#### If using ECS/Fargate
+Steps:
+1. Checkout repo
+2. Setup Docker
+3. Build Docker image
+4. Log in to ECR
+5. Push image to ECR
+6. Update ECS task definition
+7. Deploy ECS service
+
+Secrets needed:
+- `AWS_ECR_REPOSITORY`
+- `AWS_ECS_CLUSTER`
+- `AWS_ECS_SERVICE`
+- plus the env vars above
+
+---
+
+## 7. Deployment Sequence
+
+### Initial setup
+1. Deploy backend first
+2. Confirm backend health at `/api/health`
+3. Update frontend `REACT_APP_API_URL` to backend endpoint
+4. Deploy frontend
+5. Test UI + checkout flow
+
+### CI/CD flow
+- Code push -> tests + build -> deploy backend
+- Code push -> build frontend -> deploy frontend
+- Optionally use branch rules to deploy `staging` separately
+
+---
+
+## 8. Post-Deployment Validation
+
+1. Confirm backend is reachable
+2. Confirm frontend loads from CloudFront
+3. Place a test order
+4. Confirm Razorpay payment flow works
+5. Verify order saved in MongoDB
+6. Confirm webhook updates payment status
+
+---
+
+## 9. Monitoring & Maintenance
+
+- Enable CloudWatch logs for backend
+- Enable S3/CloudFront access logs
+- Use AWS CloudWatch alarms for:
+  - backend error rate
+  - high latency
+  - deployment failures
+- Add GitHub Actions notifications via Slack or email
+
+---
+
+## 10. Optional Enhancements
+
+- Add a staging environment using separate AWS resources
+- Use Terraform/CDK for infrastructure-as-code
+- Use AWS Secrets Manager for Razorpay credentials
+- Add GitHub Actions approvals for `main` deployment
+
+---
+
+## Recommended Next Step
+
+1. Create AWS IAM user and GitHub secrets
+2. Provision frontend S3 + CloudFront
+3. Provision backend EB or ECS
+4. Create `frontend.yml` and `backend.yml` in `.github/workflows`
+5. Deploy and validate
+
+If you want, I can next generate the exact GitHub Actions workflow files for:
+- `frontend.yml`
+- `backend.yml`

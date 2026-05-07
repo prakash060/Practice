@@ -1,0 +1,49 @@
+Creating GitHub Actions workflows for frontend and backend with AWS deployment support.
+
+Created [](file:///c%3A/Dont-Delete/Github-Prakash060/Practice/AI-Projects/.github/workflows)
+
+Created [](file:///c%3A/Dont-Delete/Github-Prakash060/Practice/AI-Projects/.github/workflows/frontend.yml)
+
+Created [](file:///c%3A/Dont-Delete/Github-Prakash060/Practice/AI-Projects/.github/workflows/backend.yml)
+
+Done — the GitHub Actions workflows are now created.
+
+## Files added
+
+- frontend.yml
+- backend.yml
+
+## What they do
+
+### `frontend.yml`
+- Builds the frontend from pk-foodfactory
+- Deploys dist to S3
+- Invalidates CloudFront cache
+
+### `backend.yml`
+- Installs backend dependencies in pk-foodfactory-backend
+- Packages the backend source
+- Uploads the build bundle to S3
+- Creates an Elastic Beanstalk application version
+- Updates the Elastic Beanstalk environment
+
+## Required GitHub secrets
+
+### Frontend
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `AWS_S3_BUCKET_FRONTEND`
+- `AWS_CLOUDFRONT_DISTRIBUTION_ID`
+
+### Backend
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `AWS_EB_S3_BUCKET`
+- `AWS_EB_APPLICATION_NAME`
+- `AWS_EB_ENVIRONMENT_NAME`
+
+If you want, I can also add a third workflow for staging builds or a combined release workflow.
+
+Made changes.

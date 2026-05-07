@@ -1,0 +1,59 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - release
+  workflow_dispatch:
+
+jobs:
+  deploy-backend:
+    name: Build and deploy backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend dependencies
+        run: |
+          cd pk-foodfactory-backend
+          npm install
+
+      - name: Prepare deployment package
+        run: |
+          cd pk-foodfactory-backend
+          zip -r ../backend-deploy.zip . -x "node_modules/*" ".git/*" "**/.github/*"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload deployment package to S3
+        run: |
+          VERSION_LABEL=gh-${{ github.run_number }}-${{ github.sha }}
+          aws s3 cp backend-deploy.zip s3://${{ secrets.AWS_EB_S3_BUCKET }}/${VERSION_LABEL}.zip
+
+      - name: Create Elastic Beanstalk application version
+        run: |
+          VERSION_LABEL=gh-${{ github.run_number }}-${{ github.sha }}
+          aws elasticbeanstalk create-application-version \
+            --application-name ${{ secrets.AWS_EB_APPLICATION_NAME }} \
+            --version-label "$VERSION_LABEL" \
+            --source-bundle S3Bucket=${{ secrets.AWS_EB_S3_BUCKET }},S3Key="$VERSION_LABEL.zip"
+
+      - name: Update Elastic Beanstalk environment
+        run: |
+          VERSION_LABEL=gh-${{ github.run_number }}-${{ github.sha }}
+          aws elasticbeanstalk update-environment \
+            --environment-name ${{ secrets.AWS_EB_ENVIRONMENT_NAME }} \
+            --version-label "$VERSION_LABEL"
