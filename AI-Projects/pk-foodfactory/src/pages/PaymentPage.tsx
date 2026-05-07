@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFood } from '../hooks/useFood'
-import { UPIPayment } from '../components/PaymentMethods/UPIPayment'
-import { CardPayment } from '../components/PaymentMethods/CardPayment'
-import { NetBankingPayment } from '../components/PaymentMethods/NetBankingPayment'
-import { WalletPayment } from '../components/PaymentMethods/WalletPayment'
+import { paymentAPI } from '../services/api'
 
-type PaymentScreen = 'selection' | 'upi' | 'card' | 'netbanking' | 'wallet' | 'success'
+type PaymentScreen = 'selection' | 'success' | 'processing'
 
 export default function PaymentPage() {
   const navigate = useNavigate()
   const { cartItems, clearCart } = useFood()
   const [currentScreen, setCurrentScreen] = useState<PaymentScreen>('selection')
+  const [orderId, setOrderId] = useState<string>('')
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [error, setError] = useState<string>('')
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const finalAmount = total + 50 + Math.round(total * 0.05)
@@ -24,13 +24,89 @@ export default function PaymentPage() {
     }
   }
 
+  const initiatePayment = async () => {
+    try {
+      setIsProcessing(true)
+      setError('')
+
+      // Prepare order data
+      const orderData = {
+        amount: finalAmount,
+        currency: 'INR',
+        items: cartItems.map(item => ({
+          foodId: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        })),
+        customerDetails: {
+          // Add customer details here if available
+        }
+      }
+
+      // Create order on backend
+      const response = await paymentAPI.createOrder(orderData)
+      setOrderId(response.orderId)
+
+      // Initialize Razorpay
+      const options = {
+        key: response.key,
+        amount: response.amount,
+        currency: response.currency,
+        order_id: response.razorpayOrderId,
+        name: 'PK Food Factory',
+        description: 'Food Order Payment',
+        handler: async (response: any) => {
+          try {
+            // Verify payment on backend
+            await paymentAPI.verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+
+            handlePaymentSuccess()
+          } catch (error) {
+            console.error('Payment verification failed:', error)
+            setError('Payment verification failed. Please contact support.')
+            setCurrentScreen('selection')
+          }
+        },
+        prefill: {
+          name: '',
+          email: '',
+          contact: ''
+        },
+        theme: {
+          color: '#6b5ef7'
+        },
+        modal: {
+          ondismiss: () => {
+            setCurrentScreen('selection')
+            setIsProcessing(false)
+          }
+        }
+      }
+
+      const rzp = new (window as any).Razorpay(options)
+      rzp.open()
+
+    } catch (error) {
+      console.error('Payment initiation failed:', error)
+      setError('Failed to initiate payment. Please try again.')
+      setCurrentScreen('selection')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   const handlePaymentSuccess = () => {
     setCurrentScreen('success')
     clearCart()
-    // Redirect to home after 2 seconds
+    // Redirect to home after 3 seconds
     setTimeout(() => {
       navigate('/')
-    }, 2000)
+    }, 3000)
   }
 
   if (cartItems.length === 0 && currentScreen !== 'success') {
@@ -64,7 +140,7 @@ export default function PaymentPage() {
               <div className="success-icon">✓</div>
               <h2>Payment Successful!</h2>
               <p>Your order has been placed successfully.</p>
-              <p className="order-id">Order ID: #PK{Math.floor(Math.random() * 100000)}</p>
+              <p className="order-id">Order ID: #{orderId}</p>
               <p className="redirect-message">Redirecting to home...</p>
             </div>
           </div>
@@ -94,18 +170,21 @@ export default function PaymentPage() {
             <div className="payment-methods">
               <h2>Select Payment Method</h2>
 
+              {error && <p className="error-message">{error}</p>}
+
               <div className="method-option">
                 <button
                   type="button"
                   className="method-button"
-                  onClick={() => setCurrentScreen('upi')}
+                  onClick={initiatePayment}
+                  disabled={isProcessing}
                 >
                   <div className="method-icon">📱</div>
                   <div className="method-info">
                     <strong>UPI</strong>
                     <p>Google Pay, PhonePe, Paytm, etc.</p>
                   </div>
-                  <div className="method-arrow">→</div>
+                  <div className="method-arrow">{isProcessing ? '...' : '→'}</div>
                 </button>
               </div>
 
@@ -113,14 +192,15 @@ export default function PaymentPage() {
                 <button
                   type="button"
                   className="method-button"
-                  onClick={() => setCurrentScreen('card')}
+                  onClick={initiatePayment}
+                  disabled={isProcessing}
                 >
                   <div className="method-icon">💳</div>
                   <div className="method-info">
                     <strong>Credit / Debit Card</strong>
                     <p>Visa, MasterCard, RuPay</p>
                   </div>
-                  <div className="method-arrow">→</div>
+                  <div className="method-arrow">{isProcessing ? '...' : '→'}</div>
                 </button>
               </div>
 
@@ -128,14 +208,15 @@ export default function PaymentPage() {
                 <button
                   type="button"
                   className="method-button"
-                  onClick={() => setCurrentScreen('netbanking')}
+                  onClick={initiatePayment}
+                  disabled={isProcessing}
                 >
                   <div className="method-icon">🏦</div>
                   <div className="method-info">
                     <strong>Net Banking</strong>
                     <p>HDFC, ICICI, SBI, Axis, etc.</p>
                   </div>
-                  <div className="method-arrow">→</div>
+                  <div className="method-arrow">{isProcessing ? '...' : '→'}</div>
                 </button>
               </div>
 
@@ -143,14 +224,15 @@ export default function PaymentPage() {
                 <button
                   type="button"
                   className="method-button"
-                  onClick={() => setCurrentScreen('wallet')}
+                  onClick={initiatePayment}
+                  disabled={isProcessing}
                 >
                   <div className="method-icon">👛</div>
                   <div className="method-info">
                     <strong>Digital Wallet</strong>
                     <p>Paytm Wallet, Amazon Pay</p>
                   </div>
-                  <div className="method-arrow">→</div>
+                  <div className="method-arrow">{isProcessing ? '...' : '→'}</div>
                 </button>
               </div>
             </div>
@@ -163,14 +245,6 @@ export default function PaymentPage() {
               Cancel
             </button>
           </div>
-        ) : currentScreen === 'upi' ? (
-          <UPIPayment amount={finalAmount} onSuccess={handlePaymentSuccess} onBack={() => setCurrentScreen('selection')} />
-        ) : currentScreen === 'card' ? (
-          <CardPayment amount={finalAmount} onSuccess={handlePaymentSuccess} onBack={() => setCurrentScreen('selection')} />
-        ) : currentScreen === 'netbanking' ? (
-          <NetBankingPayment amount={finalAmount} onSuccess={handlePaymentSuccess} onBack={() => setCurrentScreen('selection')} />
-        ) : currentScreen === 'wallet' ? (
-          <WalletPayment amount={finalAmount} onSuccess={handlePaymentSuccess} onBack={() => setCurrentScreen('selection')} />
         ) : null}
       </section>
     </main>
