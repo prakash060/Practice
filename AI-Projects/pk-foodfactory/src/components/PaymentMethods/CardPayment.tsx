@@ -52,10 +52,15 @@ export function CardPayment({ amount, onSuccess, onBack }: CardPaymentProps) {
     setIsProcessing(true)
     setError('')
 
-    // Simulate card payment processing
+    // Simulate card payment processing with possible failure
     setTimeout(() => {
       setIsProcessing(false)
-      onSuccess()
+      const success = Math.random() > 0.2 // 80% success rate
+      if (success) {
+        onSuccess()
+      } else {
+        setError('Payment failed. Please check your card details or try again.')
+      }
     }, 2000)
   }
 

@@ -29,10 +29,15 @@ export function NetBankingPayment({ amount, onSuccess, onBack }: NetBankingPayme
     setIsProcessing(true)
     setError('')
 
-    // Simulate net banking payment processing
+    // Simulate net banking payment processing with possible failure
     setTimeout(() => {
       setIsProcessing(false)
-      onSuccess()
+      const success = Math.random() > 0.2 // 80% success rate
+      if (success) {
+        onSuccess()
+      } else {
+        setError('Payment failed. Please check your bank details or try again.')
+      }
     }, 2000)
   }
 

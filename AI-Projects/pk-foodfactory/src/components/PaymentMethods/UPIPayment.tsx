@@ -25,10 +25,15 @@ export function UPIPayment({ amount, onSuccess, onBack }: UPIPaymentProps) {
     setIsProcessing(true)
     setError('')
 
-    // Simulate UPI payment processing
+    // Simulate UPI payment processing with possible failure
     setTimeout(() => {
       setIsProcessing(false)
-      onSuccess()
+      const success = Math.random() > 0.2 // 80% success rate
+      if (success) {
+        onSuccess()
+      } else {
+        setError('Payment failed. Please check your UPI ID or try again.')
+      }
     }, 2000)
   }
 

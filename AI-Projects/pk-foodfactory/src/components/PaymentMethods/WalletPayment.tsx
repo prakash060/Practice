@@ -33,10 +33,15 @@ export function WalletPayment({ amount, onSuccess, onBack }: WalletPaymentProps)
     setIsProcessing(true)
     setError('')
 
-    // Simulate wallet payment processing
+    // Simulate wallet payment processing with possible failure
     setTimeout(() => {
       setIsProcessing(false)
-      onSuccess()
+      const success = Math.random() > 0.2 // 80% success rate
+      if (success) {
+        onSuccess()
+      } else {
+        setError('Payment failed. Please check your wallet or try again.')
+      }
     }, 2000)
   }
 
