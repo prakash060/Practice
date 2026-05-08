@@ -3,10 +3,9 @@ import { FoodCard } from '../FoodCard/FoodCard'
 
 interface FoodListProps {
   items: FoodItem[]
-  onAddToCart: (item: FoodItem) => void
 }
 
-export function FoodList({ items, onAddToCart }: FoodListProps) {
+export function FoodList({ items }: FoodListProps) {
   if (items.length === 0) {
     return <p className="empty-state">No dishes found for this category yet.</p>
   }
@@ -14,7 +13,7 @@ export function FoodList({ items, onAddToCart }: FoodListProps) {
   return (
     <div className="food-grid">
       {items.map((item) => (
-        <FoodCard key={item.id} item={item} onAddToCart={onAddToCart} />
+        <FoodCard key={item.id} item={item} />
       ))}
     </div>
   )

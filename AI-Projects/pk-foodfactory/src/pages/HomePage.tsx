@@ -7,7 +7,7 @@ import { useFood } from '../hooks/useFood'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { categories, selectedCategory, setSelectedCategory, menuItems, addToCart, cartItems, removeFromCart, clearCart } = useFood()
+  const { categories, selectedCategory, setSelectedCategory, menuItems, cartItems, removeFromCart, clearCart } = useFood()
 
   const selectedMeta = getCategoryMeta(selectedCategory)
 
@@ -59,7 +59,7 @@ export default function HomePage() {
       <section className="content-grid">
         <div className="content-grid__main">
           <h2>{selectedCategory} menu</h2>
-          <FoodList items={menuItems} onAddToCart={addToCart} />
+          <FoodList items={menuItems} />
         </div>
         <aside className="content-grid__side">
           <OrderSummary cartItems={cartItems} onRemoveItem={removeFromCart} onClearCart={clearCart} onCheckout={handleCheckout} />

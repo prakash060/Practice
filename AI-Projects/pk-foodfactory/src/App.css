@@ -311,6 +311,47 @@
   transform: translateY(-1px);
 }
 
+.food-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #e9e6f8;
+  border-radius: 14px;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(22, 18, 44, 0.08);
+}
+
+.qty-stepper__btn {
+  width: 44px;
+  height: 42px;
+  border: none;
+  background: transparent;
+  color: #2b2652;
+  font-size: 1.25rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease;
+}
+
+.qty-stepper__btn:hover {
+  background: #f7f4ff;
+}
+
+.qty-stepper__count {
+  min-width: 36px;
+  text-align: center;
+  font-weight: 900;
+  color: #6b5ef7;
+}
+
 .order-summary {
   background: #ffffff;
   border-radius: 24px;
