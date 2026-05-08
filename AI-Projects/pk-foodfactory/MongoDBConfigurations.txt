@@ -1,0 +1,152 @@
+Inspecting backend database setup and model details so the MongoDB plan matches the actual application schema.
+
+Read [](file:///c%3A/Dont-Delete/Github-Prakash060/Practice/AI-Projects/pk-foodfactory-backend/server.js)
+
+Read [](file:///c%3A/Dont-Delete/Github-Prakash060/Practice/AI-Projects/pk-foodfactory-backend/models/Order.js)
+
+Read [](file:///c%3A/Dont-Delete/Github-Prakash060/Practice/AI-Projects/pk-foodfactory-backend)
+
+Read [](file:///c%3A/Dont-Delete/Github-Prakash060/Practice/AI-Projects/pk-foodfactory-backend/.env)
+
+## MongoDB Configuration Plan
+
+### 1. Database name
+
+Use this exact database name:
+
+- `foodfactory`
+
+> This matches the current backend env config in .env.
+
+### 2. Connection string
+
+Set this exact environment variable for the backend:
+
+- `MONGODB_URI`
+
+Example values:
+
+- Local MongoDB:
+  ```text
+  MONGODB_URI=mongodb://localhost:27017/foodfactory
+  ```
+
+- MongoDB Atlas:
+  ```text
+  MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/foodfactory?retryWrites=true&w=majority
+  ```
+
+### 3. Backend app behavior
+
+The backend loads `MONGODB_URI` from env and connects with:
+
+- `mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pk-foodfactory')`
+
+So to avoid mismatch, always set `MONGODB_URI` in deployment and local .env to use `foodfactory`.
+
+### 4. Collection name
+
+The application uses this exact collection:
+
+- `orders`
+
+This is created automatically by Mongoose from the model name `Order`.
+
+### 5. Document shape
+
+Each saved order document should look like this:
+
+```json
+{
+  "_id": "ObjectId(...)",
+  "orderId": "PK1681234567890",
+  "items": [
+    {
+      "foodId": "biryani-01",
+      "name": "Chicken Biryani",
+      "price": 2,
+      "quantity": 1
+    }
+  ],
+  "subtotal": 2,
+  "deliveryFee": 50,
+  "tax": 0,
+  "totalAmount": 52,
+  "paymentId": "pay_ABCDE12345",             // Razorpay payment id
+  "paymentStatus": "pending|paid|failed|refunded",
+  "razorpayOrderId": "order_ABCDE12345",
+  "customerDetails": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "9999999999",
+    "address": "123 Main Street"
+  },
+  "createdAt": "2026-05-07T12:00:00.000Z",
+  "updatedAt": "2026-05-07T12:00:00.000Z",
+  "__v": 0
+}
+```
+
+### 6. Exact field names
+
+Use these exact field names in MongoDB documents:
+
+- `orderId`
+- `items`
+- `subtotal`
+- `deliveryFee`
+- `tax`
+- `totalAmount`
+- `paymentId`
+- `paymentStatus`
+- `razorpayOrderId`
+- `customerDetails`
+- `createdAt`
+- `updatedAt`
+
+### 7. Exact nested item fields
+
+Each `items` array entry must contain:
+
+- `foodId`
+- `name`
+- `price`
+- `quantity`
+
+### 8. Payment status values
+
+Allowed values:
+
+- `pending`
+- `paid`
+- `failed`
+- `refunded`
+
+### 9. Important note for this project
+
+At present, the frontend does not store food/menu items in MongoDB. Your current app only persists orders in MongoDB. So the only required collection is:
+
+- `orders`
+
+### 10. Recommended deployment config
+
+For AWS deployment, set backend environment variables exactly as:
+
+- `MONGODB_URI`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `RAZORPAY_WEBHOOK_SECRET`
+
+And ensure the backend environment uses `foodfactory` in the connection string.
+
+---
+
+## Quick validation checklist
+
+- [ ] DB name = `foodfactory`
+- [ ] Collection name = `orders`
+- [ ] Document uses `orderId` + `items` + `totalAmount` + `paymentStatus`
+- [ ] `MONGODB_URI` set in backend environment
+- [ ] No extra MongoDB collections are required by current app
+
+If you want, I can also give you the exact MongoDB Atlas connection string format ready for AWS Elastic Beanstalk or ECS.
