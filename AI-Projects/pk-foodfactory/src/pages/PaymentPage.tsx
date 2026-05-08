@@ -1,30 +1,91 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useFood } from '../hooks/useFood'
 import { paymentAPI } from '../services/api'
 
-type PaymentScreen = 'selection' | 'success' | 'processing'
+type PaymentScreen = 'checkout' | 'success'
+type PreferredMethod = 'upi' | 'card' | 'netbanking' | 'wallet' | 'all'
+type CustomerDetails = {
+  name?: string
+  email?: string
+  phone?: string
+}
 
 export default function PaymentPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { cartItems, clearCart } = useFood()
-  const [currentScreen, setCurrentScreen] = useState<PaymentScreen>('selection')
+  const [currentScreen, setCurrentScreen] = useState<PaymentScreen>('checkout')
   const [orderId, setOrderId] = useState<string>('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string>('')
+  const [customerName, setCustomerName] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
 
-  const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const finalAmount = total + 50 + Math.round(total * 0.05)
+  const total = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    [cartItems]
+  )
+  const finalAmount = useMemo(() => total + 50 + Math.round(total * 0.05), [total])
+
+  useEffect(() => {
+    if (cartItems.length === 0 && currentScreen !== 'success') {
+      const t = setTimeout(() => navigate('/'), 1200)
+      return () => clearTimeout(t)
+    }
+  }, [cartItems.length, currentScreen, navigate])
+
+  useEffect(() => {
+    const state = (location.state ?? {}) as { paidOrderId?: string }
+    if (state.paidOrderId) {
+      setOrderId(state.paidOrderId)
+      setCurrentScreen('success')
+      // clear state so refresh/back doesn't keep replaying success
+      navigate('/payment', { replace: true })
+    }
+  }, [location.state, navigate])
 
   const handleBackToCheckout = () => {
-    if (currentScreen !== 'selection') {
-      setCurrentScreen('selection')
-    } else {
-      navigate('/checkout')
+    navigate('/checkout')
+  }
+
+  const goToMethodPage = (method: Exclude<PreferredMethod, 'all'>) => {
+    const customer: CustomerDetails = {
+      name: customerName.trim() || undefined,
+      email: customerEmail.trim() || undefined,
+      phone: customerPhone.trim() || undefined,
+    }
+    navigate(`/payment/${method}`, { state: { customer } })
+  }
+
+  const getCheckoutConfig = (preferred: PreferredMethod) => {
+    if (preferred === 'all') return undefined
+
+    const titles: Record<Exclude<PreferredMethod, 'all'>, string> = {
+      upi: 'Pay via UPI',
+      card: 'Pay via Card',
+      netbanking: 'Pay via Netbanking',
+      wallet: 'Pay via Wallet',
+    }
+
+    return {
+      display: {
+        blocks: {
+          preferred: {
+            name: titles[preferred],
+            instruments: [{ method: preferred }],
+          },
+        },
+        sequence: ['block.preferred'],
+        preferences: {
+          show_default_blocks: false,
+        },
+      },
     }
   }
 
-  const initiatePayment = async () => {
+  const initiatePayment = async (preferred: PreferredMethod = 'all') => {
     try {
       setIsProcessing(true)
       setError('')
@@ -40,13 +101,19 @@ export default function PaymentPage() {
           quantity: item.quantity
         })),
         customerDetails: {
-          // Add customer details here if available
+          name: customerName.trim() || undefined,
+          email: customerEmail.trim() || undefined,
+          phone: customerPhone.trim() || undefined,
         }
       }
 
       // Create order on backend
       const response = await paymentAPI.createOrder(orderData)
       setOrderId(response.orderId)
+
+      if (!(window as any).Razorpay) {
+        throw new Error('Razorpay script not loaded')
+      }
 
       // Initialize Razorpay
       const options = {
@@ -56,6 +123,7 @@ export default function PaymentPage() {
         order_id: response.razorpayOrderId,
         name: 'PK Food Factory',
         description: 'Food Order Payment',
+        config: getCheckoutConfig(preferred),
         handler: async (response: any) => {
           try {
             // Verify payment on backend
@@ -69,20 +137,19 @@ export default function PaymentPage() {
           } catch (error) {
             console.error('Payment verification failed:', error)
             setError('Payment verification failed. Please contact support.')
-            setCurrentScreen('selection')
+            setCurrentScreen('checkout')
           }
         },
         prefill: {
-          name: '',
-          email: '',
-          contact: ''
+          name: customerName.trim(),
+          email: customerEmail.trim(),
+          contact: customerPhone.trim(),
         },
         theme: {
           color: '#6b5ef7'
         },
         modal: {
           ondismiss: () => {
-            setCurrentScreen('selection')
             setIsProcessing(false)
           }
         }
@@ -91,10 +158,11 @@ export default function PaymentPage() {
       const rzp = new (window as any).Razorpay(options)
       rzp.open()
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment initiation failed:', error)
-      setError('Failed to initiate payment. Please try again.')
-      setCurrentScreen('selection')
+      const backendMsg = error?.response?.data?.error
+      setError(backendMsg || 'Failed to start Razorpay Checkout. Please check backend credentials and try again.')
+      setCurrentScreen('checkout')
     } finally {
       setIsProcessing(false)
     }
@@ -144,10 +212,10 @@ export default function PaymentPage() {
               <p className="redirect-message">Redirecting to home...</p>
             </div>
           </div>
-        ) : currentScreen === 'selection' ? (
+        ) : currentScreen === 'checkout' ? (
           <div className="payment-container">
             <div className="payment-summary">
-              <h2>Order Summary</h2>
+              <h2>Checkout</h2>
               <div className="summary-item">
                 <span>Subtotal</span>
                 <span>₹{total}</span>
@@ -168,17 +236,53 @@ export default function PaymentPage() {
             </div>
 
             <div className="payment-methods">
-              <h2>Select Payment Method</h2>
+              <h2>Customer details (optional)</h2>
 
               {error && <p className="error-message">{error}</p>}
 
-              <div className="method-option">
-                <button
-                  type="button"
-                  className="method-button"
-                  onClick={initiatePayment}
+              <div className="form-group">
+                <label htmlFor="customerName">Name</label>
+                <input
+                  id="customerName"
+                  type="text"
+                  placeholder="Your name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
                   disabled={isProcessing}
-                >
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="customerEmail">Email</label>
+                <input
+                  id="customerEmail"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  disabled={isProcessing}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="customerPhone">Phone</label>
+                <input
+                  id="customerPhone"
+                  type="tel"
+                  placeholder="9999999999"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  disabled={isProcessing}
+                />
+              </div>
+
+              <h2 style={{ marginTop: 8 }}>Choose a payment option</h2>
+              <p className="payment-disclaimer" style={{ marginTop: 0 }}>
+                All options open the Razorpay Checkout gateway. This just takes you directly to the method you prefer.
+              </p>
+
+              <div className="method-option">
+                <button type="button" className="method-button" onClick={() => goToMethodPage('upi')} disabled={isProcessing}>
                   <div className="method-icon">📱</div>
                   <div className="method-info">
                     <strong>UPI</strong>
@@ -189,12 +293,7 @@ export default function PaymentPage() {
               </div>
 
               <div className="method-option">
-                <button
-                  type="button"
-                  className="method-button"
-                  onClick={initiatePayment}
-                  disabled={isProcessing}
-                >
+                <button type="button" className="method-button" onClick={() => goToMethodPage('card')} disabled={isProcessing}>
                   <div className="method-icon">💳</div>
                   <div className="method-info">
                     <strong>Credit / Debit Card</strong>
@@ -205,12 +304,7 @@ export default function PaymentPage() {
               </div>
 
               <div className="method-option">
-                <button
-                  type="button"
-                  className="method-button"
-                  onClick={initiatePayment}
-                  disabled={isProcessing}
-                >
+                <button type="button" className="method-button" onClick={() => goToMethodPage('netbanking')} disabled={isProcessing}>
                   <div className="method-icon">🏦</div>
                   <div className="method-info">
                     <strong>Net Banking</strong>
@@ -221,12 +315,7 @@ export default function PaymentPage() {
               </div>
 
               <div className="method-option">
-                <button
-                  type="button"
-                  className="method-button"
-                  onClick={initiatePayment}
-                  disabled={isProcessing}
-                >
+                <button type="button" className="method-button" onClick={() => goToMethodPage('wallet')} disabled={isProcessing}>
                   <div className="method-icon">👛</div>
                   <div className="method-info">
                     <strong>Digital Wallet</strong>
@@ -239,10 +328,11 @@ export default function PaymentPage() {
 
             <button
               type="button"
-              className="cancel-button"
-              onClick={handleBackToCheckout}
+              className="proceed-payment-button"
+              onClick={() => initiatePayment('all')}
+              disabled={isProcessing}
             >
-              Cancel
+              {isProcessing ? 'Opening Razorpay...' : 'Pay with Razorpay (all methods)'}
             </button>
           </div>
         ) : null}

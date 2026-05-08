@@ -1,4 +1,6 @@
 import type { FoodItem } from '../../types/food'
+import { useMemo, useState } from 'react'
+import { getCategoryMeta } from '../../constants/categories'
 
 interface FoodCardProps {
   item: FoodItem
@@ -6,10 +8,23 @@ interface FoodCardProps {
 }
 
 export function FoodCard({ item, onAddToCart }: FoodCardProps) {
+  const fallback = useMemo(() => getCategoryMeta(item.category).imageUrl, [item.category])
+  const initialSrc = item.imageUrl || fallback
+  const [imageSrc, setImageSrc] = useState(initialSrc)
   return (
     <article className="food-card">
       <div className="food-card__image">
-        <span>{item.category}</span>
+        <img
+          src={imageSrc}
+          alt={item.name}
+          loading="lazy"
+          onError={() => {
+            if (imageSrc !== fallback) setImageSrc(fallback)
+          }}
+        />
+        <div className="food-card__image-overlay">
+          <span className="food-card__badge">{item.category}</span>
+        </div>
       </div>
       <div className="food-card__content">
         <div className="food-card__header">
