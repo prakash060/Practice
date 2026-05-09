@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { AppHeaderApp } from '../components/AppHeader'
+import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useFood } from '../hooks/useFood'
 import { paymentAPI } from '../services/api'
 
@@ -27,7 +29,10 @@ export default function PaymentPage() {
     () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cartItems]
   )
-  const finalAmount = useMemo(() => total + 50 + Math.round(total * 0.05), [total])
+  const finalAmount = useMemo(
+    () => total + DELIVERY_FEE_INR + Math.round(total * 0.05),
+    [total]
+  )
 
   useEffect(() => {
     if (cartItems.length === 0 && currentScreen !== 'success') {
@@ -180,6 +185,7 @@ export default function PaymentPage() {
   if (cartItems.length === 0 && currentScreen !== 'success') {
     return (
       <main className="payment-page">
+        <AppHeaderApp />
         <div className="payment-container">
           <p className="empty-state">Your cart is empty. Redirecting to menu...</p>
         </div>
@@ -189,6 +195,7 @@ export default function PaymentPage() {
 
   return (
     <main className="payment-page">
+      <AppHeaderApp />
       <header className="payment-header">
         <button 
           type="button" 
@@ -222,7 +229,7 @@ export default function PaymentPage() {
               </div>
               <div className="summary-item">
                 <span>Delivery Fee</span>
-                <span>₹50</span>
+                <span>₹{DELIVERY_FEE_INR}</span>
               </div>
               <div className="summary-item">
                 <span>Tax (5%)</span>

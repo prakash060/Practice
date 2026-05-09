@@ -1,9 +1,13 @@
 import { useNavigate } from 'react-router-dom'
+import { AppHeaderApp } from '../components/AppHeader'
+import { DELIVERY_FEE_INR } from '../constants/pricing'
+import { useAuth } from '../state/AuthContext'
 import { useFood } from '../hooks/useFood'
 
 export default function CheckoutPage() {
   const navigate = useNavigate()
   const { cartItems } = useFood()
+  const { user } = useAuth()
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
@@ -19,6 +23,7 @@ export default function CheckoutPage() {
 
   return (
     <main className="checkout-page">
+      <AppHeaderApp />
       <header className="checkout-header">
         <button type="button" className="back-button" onClick={handleBackToMenu}>
           ← Back to Menu
@@ -54,7 +59,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="total-row">
                   <span>Delivery Fee</span>
-                  <span>₹50</span>
+                  <span>₹{DELIVERY_FEE_INR}</span>
                 </div>
                 <div className="total-row">
                   <span>Tax (5%)</span>
@@ -62,14 +67,14 @@ export default function CheckoutPage() {
                 </div>
                 <div className="total-row total-amount">
                   <span>Total Amount</span>
-                  <strong>₹{total + 50 + Math.round(total * 0.05)}</strong>
+                  <strong>₹{total + DELIVERY_FEE_INR + Math.round(total * 0.05)}</strong>
                 </div>
               </div>
 
               <div className="delivery-info">
                 <h3>Delivery Address</h3>
-                <p>123 Main Street, City, State - 123456</p>
-                <p className="note">Note: For this demo, address is predefined.</p>
+                <p>{user?.address ?? '—'}</p>
+                <p className="note">Update your address anytime from Profile.</p>
               </div>
 
               <button 

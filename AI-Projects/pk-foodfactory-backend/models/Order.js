@@ -11,7 +11,7 @@ const orderSchema = new mongoose.Schema({
   orderId: { type: String, unique: true, required: true },
   items: [orderItemSchema],
   subtotal: { type: Number, required: true },
-  deliveryFee: { type: Number, default: 50 },
+  deliveryFee: { type: Number, default: 0 },
   tax: { type: Number, required: true },
   totalAmount: { type: Number, required: true },
   paymentId: { type: String },

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { AppHeaderApp } from '../components/AppHeader'
+import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useFood } from '../hooks/useFood'
 import { paymentAPI } from '../services/api'
 
@@ -44,7 +46,10 @@ export default function PaymentMethodPage() {
     () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cartItems]
   )
-  const finalAmount = useMemo(() => total + 50 + Math.round(total * 0.05), [total])
+  const finalAmount = useMemo(
+    () => total + DELIVERY_FEE_INR + Math.round(total * 0.05),
+    [total]
+  )
 
   useEffect(() => {
     if (!method) {
@@ -161,6 +166,7 @@ export default function PaymentMethodPage() {
 
   return (
     <main className="payment-page">
+      <AppHeaderApp />
       <header className="payment-header">
         <button type="button" className="back-button" onClick={() => navigate('/payment')} disabled={isProcessing}>
           ← Back

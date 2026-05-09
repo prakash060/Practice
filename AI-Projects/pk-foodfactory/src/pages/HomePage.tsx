@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { AppHeaderApp } from '../components/AppHeader'
 import { CategoryTabs } from '../components/CategoryTabs/CategoryTabs'
 import { FoodList } from '../components/FoodList/FoodList'
 import { OrderSummary } from '../components/OrderSummary/OrderSummary'
@@ -19,23 +20,7 @@ export default function HomePage() {
 
   return (
     <main className="app-shell">
-      <header className="brand-header">
-        <div className="brand-header__left">
-          <div className="brand-mark" aria-hidden="true">
-            <span className="brand-mark__dot" />
-          </div>
-          <div>
-            <p className="eyebrow">PK Food Factory</p>
-            <h1 className="brand-title">PK Meals</h1>
-          </div>
-        </div>
-        <div className="brand-header__right">
-          <div className="brand-pill">
-            <span className="brand-pill__emoji">{selectedMeta.emoji}</span>
-            <span className="brand-pill__text">{selectedMeta.label}</span>
-          </div>
-        </div>
-      </header>
+      <AppHeaderApp />
 
       <section className="category-hero" style={{ ['--accent' as any]: selectedMeta.accent }}>
         <div className="category-hero__bg" style={{ backgroundImage: `url(${selectedMeta.imageUrl})` }} />

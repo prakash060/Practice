@@ -23,7 +23,7 @@ router.post('/create-order', async (req, res) => {
 
     // Calculate amounts
     const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const deliveryFee = 50;
+    const deliveryFee = 0;
     const tax = Math.round(subtotal * 0.05);
     const totalAmount = subtotal + deliveryFee + tax;
 

@@ -69,9 +69,9 @@ Each saved order document should look like this:
     }
   ],
   "subtotal": 2,
-  "deliveryFee": 50,
+  "deliveryFee": 0,
   "tax": 0,
-  "totalAmount": 52,
+  "totalAmount": 2,
   "paymentId": "pay_ABCDE12345",             // Razorpay payment id
   "paymentStatus": "pending|paid|failed|refunded",
   "razorpayOrderId": "order_ABCDE12345",

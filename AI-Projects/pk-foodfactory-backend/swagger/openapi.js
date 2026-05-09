@@ -13,11 +13,19 @@ const openapi = {
   servers: [{ url: '/', description: 'Current server' }],
   tags: [
     { name: 'Health', description: 'Service health' },
-    { name: 'Users', description: 'User registration' },
+    { name: 'Users', description: 'Registration, login, profile (JWT)' },
     { name: 'Payment', description: 'Razorpay payment flow' },
     { name: 'Orders', description: 'Orders CRUD' },
   ],
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Paste a token from POST /api/users/login or register response',
+      },
+    },
     schemas: {
       Error: {
         type: 'object',
@@ -55,6 +63,41 @@ const openapi = {
           updatedAt: { type: 'string', format: 'date-time' },
         },
       },
+      RegisterResponse: {
+        allOf: [
+          { $ref: '#/components/schemas/UserPublic' },
+          {
+            type: 'object',
+            required: ['token'],
+            properties: { token: { type: 'string' } },
+          },
+        ],
+      },
+      LoginRequest: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string', format: 'password' },
+        },
+      },
+      LoginResponse: {
+        type: 'object',
+        required: ['user', 'token'],
+        properties: {
+          user: { $ref: '#/components/schemas/UserPublic' },
+          token: { type: 'string' },
+        },
+      },
+      UpdateProfileRequest: {
+        type: 'object',
+        required: ['name', 'phone', 'address'],
+        properties: {
+          name: { type: 'string', minLength: 2, maxLength: 120 },
+          phone: { type: 'string' },
+          address: { type: 'string', minLength: 10, maxLength: 500 },
+        },
+      },
       OrderItem: {
         type: 'object',
         required: ['foodId', 'name', 'price', 'quantity'],
@@ -71,7 +114,7 @@ const openapi = {
         properties: {
           amount: {
             type: 'number',
-            description: 'Total in INR (must match subtotal + 50 delivery + 5% tax)',
+            description: 'Total in INR (must match subtotal + delivery fee (0) + 5% tax)',
             example: 152,
           },
           currency: { type: 'string', example: 'INR' },
@@ -138,11 +181,64 @@ const openapi = {
         },
         responses: {
           '201': {
-            description: 'Created',
-            content: { 'application/json': { schema: { $ref: '#/components/schemas/UserPublic' } } },
+            description: 'Created (includes JWT)',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/RegisterResponse' } } },
           },
           '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '409': { description: 'Email already registered', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '500': { description: 'Server error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/api/users/login': {
+      post: {
+        tags: ['Users'],
+        summary: 'Log in',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/LoginRequest' } } },
+        },
+        responses: {
+          '200': {
+            description: 'JWT + user',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/LoginResponse' } } },
+          },
+          '401': { description: 'Invalid credentials', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '500': { description: 'Server error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/api/users/me': {
+      get: {
+        tags: ['Users'],
+        summary: 'Current user profile',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Profile',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/UserPublic' } } },
+          },
+          '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '404': { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '500': { description: 'Server error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+      put: {
+        tags: ['Users'],
+        summary: 'Update profile (name, phone, address)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateProfileRequest' } } },
+        },
+        responses: {
+          '200': {
+            description: 'Updated profile',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/UserPublic' } } },
+          },
+          '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '404': { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '500': { description: 'Server error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
         },
       },
@@ -151,7 +247,8 @@ const openapi = {
       get: {
         tags: ['Users'],
         summary: 'List all registered users',
-        description: 'Passwords are never returned.',
+        description: 'Requires Bearer token. Passwords are never returned.',
+        security: [{ bearerAuth: [] }],
         responses: {
           '200': {
             description: 'List of users',
@@ -161,6 +258,7 @@ const openapi = {
               },
             },
           },
+          '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '500': { description: 'Server error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
         },
       },
