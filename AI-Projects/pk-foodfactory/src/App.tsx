@@ -1,7 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { FoodProvider } from './state/FoodContext'
 import { AuthProvider } from './state/AuthContext'
+import { ToastProvider } from './state/ToastContext'
 import { ProtectedRoute, GuestRoute, AuthCatchAll } from './components/ProtectedRoute'
+import { ToastHost } from './components/ToastHost'
 import HomePage from './pages/HomePage'
 import CheckoutPage from './pages/CheckoutPage'
 import PaymentPage from './pages/PaymentPage'
@@ -15,17 +17,19 @@ import './App.css'
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <FoodProvider>
-          <Routes>
-            <Route
-              path="/login"
-              element={
-                <GuestRoute>
-                  <LoginPage />
-                </GuestRoute>
-              }
-            />
+      <ToastProvider>
+        <AuthProvider>
+          <FoodProvider>
+            <ToastHost />
+            <Routes>
+              <Route
+                path="/login"
+                element={
+                  <GuestRoute>
+                    <LoginPage />
+                  </GuestRoute>
+                }
+              />
             <Route
               path="/signup"
               element={
@@ -82,10 +86,11 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="*" element={<AuthCatchAll />} />
-          </Routes>
-        </FoodProvider>
-      </AuthProvider>
+              <Route path="*" element={<AuthCatchAll />} />
+            </Routes>
+          </FoodProvider>
+        </AuthProvider>
+      </ToastProvider>
     </Router>
   )
 }

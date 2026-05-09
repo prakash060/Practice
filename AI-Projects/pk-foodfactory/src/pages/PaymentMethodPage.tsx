@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
 import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useFood } from '../hooks/useFood'
@@ -7,12 +7,6 @@ import { useAuth } from '../state/AuthContext'
 import { ordersAPI, paymentAPI } from '../services/api'
 
 type Method = 'upi' | 'card' | 'netbanking' | 'wallet'
-
-type CustomerDetails = {
-  name?: string
-  email?: string
-  phone?: string
-}
 
 const METHOD_UI: Record<Method, { title: string; icon: string; subtitle: string }> = {
   upi: { title: 'UPI', icon: '📱', subtitle: 'Google Pay, PhonePe, Paytm, etc.' },
@@ -28,7 +22,6 @@ function isMethod(value: string | undefined): value is Method {
 export default function PaymentMethodPage() {
   const navigate = useNavigate()
   const params = useParams()
-  const location = useLocation()
   const { cartItems, clearCart } = useFood()
   const { user } = useAuth()
 
@@ -38,11 +31,6 @@ export default function PaymentMethodPage() {
   const [orderId, setOrderId] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState('')
-
-  const state = (location.state ?? {}) as { customer?: CustomerDetails }
-  const [customerName, setCustomerName] = useState(state.customer?.name ?? '')
-  const [customerEmail, setCustomerEmail] = useState(state.customer?.email ?? '')
-  const [customerPhone, setCustomerPhone] = useState(state.customer?.phone ?? '')
 
   const total = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -104,9 +92,9 @@ export default function PaymentMethodPage() {
           quantity: item.quantity,
         })),
         customerDetails: {
-          name: customerName.trim() || undefined,
-          email: customerEmail.trim() || undefined,
-          phone: customerPhone.trim() || undefined,
+          name: user?.name,
+          email: user?.email,
+          phone: user?.phone,
           address: user?.address,
         },
       }
@@ -115,20 +103,28 @@ export default function PaymentMethodPage() {
       setOrderId(response.orderId)
 
       if (response.checkoutDummy) {
-        await paymentAPI.verifyPayment({
-          razorpay_order_id: response.razorpayOrderId,
-          razorpay_payment_id: 'dummy_payment_id',
-          razorpay_signature: 'dummy',
-        })
-        clearCart()
-        navigate('/', {
-          replace: true,
-          state: {
-            orderId: response.orderId,
-            status: 'Order placed successfully (dummy payment)',
-          },
-        })
-        return
+        try {
+          await paymentAPI.verifyPayment({
+            razorpay_order_id: response.razorpayOrderId,
+            razorpay_payment_id: 'dummy_payment_id',
+            razorpay_signature: 'dummy',
+          })
+
+          // Only after create + verify succeeds: clear cart and redirect home with status.
+          clearCart()
+          navigate('/', {
+            replace: true,
+            state: {
+              orderId: response.orderId,
+              status: 'Order placed successfully (dummy payment)',
+            },
+          })
+          return
+        } catch (e) {
+          console.error('Payment verification failed:', e)
+          setError('Payment verification failed. Please contact support.')
+          return
+        }
       }
 
       if (!(window as any).Razorpay) {
@@ -160,9 +156,9 @@ export default function PaymentMethodPage() {
           }
         },
         prefill: {
-          name: customerName.trim(),
-          email: customerEmail.trim(),
-          contact: customerPhone.trim(),
+          name: user?.name ?? '',
+          email: user?.email ?? '',
+          contact: user?.phone ?? '',
         },
         theme: { color: '#6b5ef7' },
         modal: {
@@ -209,44 +205,7 @@ export default function PaymentMethodPage() {
           </div>
 
           <div className="payment-methods">
-            <h2>Customer details (optional)</h2>
             {error && <p className="error-message">{error}</p>}
-
-            <div className="form-group">
-              <label htmlFor="customerName">Name</label>
-              <input
-                id="customerName"
-                type="text"
-                placeholder="Your name"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                disabled={isProcessing}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="customerEmail">Email</label>
-              <input
-                id="customerEmail"
-                type="email"
-                placeholder="you@example.com"
-                value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
-                disabled={isProcessing}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="customerPhone">Phone</label>
-              <input
-                id="customerPhone"
-                type="tel"
-                placeholder="9999999999"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                disabled={isProcessing}
-              />
-            </div>
           </div>
 
           <button type="button" className="proceed-payment-button" onClick={handlePay} disabled={isProcessing}>
