@@ -49,4 +49,4 @@ jobs:
 
       - name: Sync built site to S3
         run: |
-          aws s3 sync AI-Projects/pk-foodfactory/dist "s3://${{ secrets.AWS_S3_BUCKET_FRONTEND }}" --delete --acl public-read
+          aws s3 sync AI-Projects/pk-foodfactory/dist "s3://${{ secrets.AWS_S3_BUCKET_FRONTEND }}" --delete
