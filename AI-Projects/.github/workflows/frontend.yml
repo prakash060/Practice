@@ -3,7 +3,7 @@ name: Frontend CI/CD
 on:
   push:
     branches:
-      - main
+      - master
       - release
   workflow_dispatch:
 
@@ -19,7 +19,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ secrets.NODE_VERSION }}
 
       - name: Install dependencies
         run: |
@@ -42,6 +42,6 @@ jobs:
         run: |
           aws s3 sync pk-foodfactory/dist s3://${{ secrets.AWS_S3_BUCKET_FRONTEND }} --delete --acl public-read
 
-      - name: Invalidate CloudFront cache
-        run: |
-          aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+      #- name: Invalidate CloudFront cache
+      #  run: |
+       #   aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
