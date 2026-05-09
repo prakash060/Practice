@@ -21,9 +21,6 @@ Recommended:
 - AWS CloudFront for CDN
 - Route53 for DNS + custom domain
 
-Alternative:
-- AWS Amplify Hosting (simpler, but still usable with GitHub Actions)
-
 ### Backend
 Recommended:
 - AWS Elastic Beanstalk for Node.js app deployment
