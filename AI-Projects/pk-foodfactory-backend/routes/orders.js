@@ -46,6 +46,17 @@ router.post('/checkout', requireAuth, createCheckoutOrderForUser);
 // Back-compat: some clients may still POST /api/orders
 router.post('/', requireAuth, createCheckoutOrderForUser);
 
+// My orders (current user)
+router.get('/my', requireAuth, async (req, res) => {
+  try {
+    const orders = await Order.find({ userId: req.userId }).sort({ createdAt: -1 });
+    return res.json(orders);
+  } catch (error) {
+    console.error('Get my orders error:', error);
+    return res.status(500).json({ error: 'Failed to get orders' });
+  }
+});
+
 // Get all orders (admin endpoint)
 router.get('/', async (req, res) => {
   try {

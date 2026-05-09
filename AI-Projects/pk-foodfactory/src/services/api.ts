@@ -111,6 +111,22 @@ interface OrderStatusResponse {
   items: OrderItem[];
 }
 
+export type OrderDoc = {
+  orderId: string;
+  userId?: string | null;
+  items: OrderItem[];
+  subtotal: number;
+  deliveryFee: number;
+  tax: number;
+  totalAmount: number;
+  paymentId?: string;
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  razorpayOrderId?: string;
+  customerDetails?: CustomerDetails;
+  createdAt: string;
+  updatedAt: string;
+};
+
 // Payment API calls
 export const paymentAPI = {
   createOrder: async (orderData: CreateOrderRequest): Promise<CreateOrderResponse> => {
@@ -139,6 +155,11 @@ export const ordersAPI = {
 
   getAllOrders: async () => {
     const response = await api.get('/orders');
+    return response.data;
+  },
+
+  getMyOrders: async (): Promise<OrderDoc[]> => {
+    const response = await api.get<OrderDoc[]>('/orders/my');
     return response.data;
   },
 

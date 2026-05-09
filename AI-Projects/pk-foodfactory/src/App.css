@@ -372,6 +372,84 @@
   box-shadow: 0 20px 44px rgba(96, 82, 163, 0.08);
 }
 
+/* Orders list */
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.order-row {
+  padding: 16px;
+  border: 1px solid #eceaf8;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.order-row__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.order-row__right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.order-row__items {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.order-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f9f8fc;
+  border: 1px solid #eceaf8;
+  color: #3e3a4e;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.order-chip--muted {
+  color: #7d7a8d;
+}
+
+.order-status {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.order-status--paid {
+  background: #e8f8ef;
+  color: #1f6f3b;
+  border: 1px solid #b6e2c7;
+}
+
+.order-status--pending {
+  background: #fff7e6;
+  color: #7a5200;
+  border: 1px solid #ffe1a8;
+}
+
+.order-status--failed,
+.order-status--refunded {
+  background: #fff0f0;
+  color: #822;
+  border: 1px solid #f2b6b6;
+}
+
 .order-summary__header {
   display: flex;
   justify-content: space-between;

@@ -93,6 +93,14 @@ export function AppHeaderApp() {
           {open ? (
             <div id={menuId} className="header-user-dropdown" role="menu">
               <Link
+                to="/orders"
+                className="header-user-dropdown__item"
+                role="menuitem"
+                onClick={close}
+              >
+                My orders
+              </Link>
+              <Link
                 to="/profile"
                 className="header-user-dropdown__item"
                 role="menuitem"

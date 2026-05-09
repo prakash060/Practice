@@ -9,6 +9,7 @@ import PaymentMethodPage from './pages/PaymentMethodPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import ProfilePage from './pages/ProfilePage'
+import MyOrdersPage from './pages/MyOrdersPage'
 import './App.css'
 
 function App() {
@@ -70,6 +71,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <MyOrdersPage />
                 </ProtectedRoute>
               }
             />
