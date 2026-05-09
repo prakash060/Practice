@@ -1,10 +1,17 @@
+# Repository root: Practice/
+# Backend app: AI-Projects/pk-foodfactory-backend
+
 name: Backend CI/CD
 
 on:
   push:
     branches:
+      - main
       - master
       - release
+    paths:
+      - 'AI-Projects/pk-foodfactory-backend/**'
+      - '.github/workflows/backend.yml'
   workflow_dispatch:
 
 jobs:
@@ -20,16 +27,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
+          cache-dependency-path: AI-Projects/pk-foodfactory-backend/package-lock.json
 
       - name: Install backend dependencies
-        run: |
-          cd pk-foodfactory-backend
-          npm install
+        working-directory: AI-Projects/pk-foodfactory-backend
+        run: npm ci
 
       - name: Prepare deployment package
+        working-directory: AI-Projects/pk-foodfactory-backend
         run: |
-          cd pk-foodfactory-backend
-          zip -r ../backend-deploy.zip . -x "node_modules/*" ".git/*" "**/.github/*"
+          zip -r "${{ github.workspace }}/backend-deploy.zip" . -x "node_modules/*" ".git/*" "**/.github/*"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -41,7 +49,7 @@ jobs:
       - name: Upload deployment package to S3
         run: |
           VERSION_LABEL=gh-${{ github.run_number }}-${{ github.sha }}
-          aws s3 cp backend-deploy.zip s3://${{ secrets.AWS_EB_S3_BUCKET }}/${VERSION_LABEL}.zip
+          aws s3 cp "${{ github.workspace }}/backend-deploy.zip" "s3://${{ secrets.AWS_EB_S3_BUCKET }}/${VERSION_LABEL}.zip"
 
       - name: Create Elastic Beanstalk application version
         run: |
