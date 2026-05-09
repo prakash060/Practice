@@ -3,7 +3,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
 import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useFood } from '../hooks/useFood'
-import { paymentAPI } from '../services/api'
+import { useAuth } from '../state/AuthContext'
+import { ordersAPI, paymentAPI } from '../services/api'
 
 type Method = 'upi' | 'card' | 'netbanking' | 'wallet'
 
@@ -29,6 +30,7 @@ export default function PaymentMethodPage() {
   const params = useParams()
   const location = useLocation()
   const { cartItems, clearCart } = useFood()
+  const { user } = useAuth()
 
   const methodParam = params.method
   const method = isMethod(methodParam) ? methodParam : null
@@ -105,11 +107,29 @@ export default function PaymentMethodPage() {
           name: customerName.trim() || undefined,
           email: customerEmail.trim() || undefined,
           phone: customerPhone.trim() || undefined,
+          address: user?.address,
         },
       }
 
-      const response = await paymentAPI.createOrder(orderData)
+      const response = await ordersAPI.createCheckoutOrder(orderData)
       setOrderId(response.orderId)
+
+      if (response.checkoutDummy) {
+        await paymentAPI.verifyPayment({
+          razorpay_order_id: response.razorpayOrderId,
+          razorpay_payment_id: 'dummy_payment_id',
+          razorpay_signature: 'dummy',
+        })
+        clearCart()
+        navigate('/', {
+          replace: true,
+          state: {
+            orderId: response.orderId,
+            status: 'Order placed successfully (dummy payment)',
+          },
+        })
+        return
+      }
 
       if (!(window as any).Razorpay) {
         throw new Error('Razorpay script not loaded')

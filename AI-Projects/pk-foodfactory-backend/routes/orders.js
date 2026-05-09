@@ -1,7 +1,50 @@
 const express = require('express');
 const Order = require('../models/Order');
+const User = require('../models/User');
+const { requireAuth } = require('../middleware/auth');
+const { createCheckoutOrder } = require('../services/checkoutOrder');
 
 const router = express.Router();
+
+async function createCheckoutOrderForUser(req, res) {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { amount, currency, items, customerDetails: cd } = req.body;
+    const customerDetails = {
+      name: (cd && cd.name && String(cd.name).trim()) || user.name,
+      email: (cd && cd.email && String(cd.email).trim()) || user.email,
+      phone: (cd && cd.phone && String(cd.phone).trim()) || user.phone,
+      address: (cd && cd.address && String(cd.address).trim()) || user.address,
+    };
+
+    const result = await createCheckoutOrder({
+      amount,
+      currency,
+      items,
+      customerDetails,
+      userId: req.userId,
+    });
+
+    return res.json(result);
+  } catch (error) {
+    if (error.statusCode === 400) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Create order error:', error);
+    return res.status(500).json({ error: 'Failed to create order' });
+  }
+}
+
+// Explicit path avoids any hosting/proxy quirks with POST "/" on a sub-router.
+// Create checkout order (Razorpay + DB); requires login — links order to user
+router.post('/checkout', requireAuth, createCheckoutOrderForUser);
+
+// Back-compat: some clients may still POST /api/orders
+router.post('/', requireAuth, createCheckoutOrderForUser);
 
 // Get all orders (admin endpoint)
 router.get('/', async (req, res) => {

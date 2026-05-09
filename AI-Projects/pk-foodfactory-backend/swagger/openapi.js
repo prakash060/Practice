@@ -138,6 +138,10 @@ const openapi = {
           amount: { type: 'number', description: 'Amount in paise' },
           currency: { type: 'string' },
           key: { type: 'string', description: 'Razorpay key id' },
+          checkoutDummy: {
+            type: 'boolean',
+            description: 'True when DUMMY_PAYMENT_MODE is on (no live Razorpay order)',
+          },
         },
       },
       VerifyPaymentRequest: {
@@ -319,6 +323,28 @@ const openapi = {
         responses: {
           '200': { description: 'Order status' },
           '404': { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '500': { description: 'Server error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/api/orders/checkout': {
+      post: {
+        tags: ['Orders'],
+        summary: 'Create checkout order (Razorpay + DB)',
+        description:
+          'Requires Bearer token. Saves order linked to the current user; merges profile into customer details when form fields are empty. With DUMMY_PAYMENT_MODE, skips live Razorpay order creation.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateOrderRequest' } } },
+        },
+        responses: {
+          '200': {
+            description: 'Order created',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateOrderResponse' } } },
+          },
+          '400': { description: 'Bad request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '500': { description: 'Server error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
         },
       },

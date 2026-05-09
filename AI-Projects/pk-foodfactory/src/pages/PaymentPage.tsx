@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
 import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useFood } from '../hooks/useFood'
-import { paymentAPI } from '../services/api'
+import { useAuth } from '../state/AuthContext'
+import { ordersAPI, paymentAPI } from '../services/api'
 
 type PaymentScreen = 'checkout' | 'success'
 type PreferredMethod = 'upi' | 'card' | 'netbanking' | 'wallet' | 'all'
@@ -17,6 +18,7 @@ export default function PaymentPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { cartItems, clearCart } = useFood()
+  const { user } = useAuth()
   const [currentScreen, setCurrentScreen] = useState<PaymentScreen>('checkout')
   const [orderId, setOrderId] = useState<string>('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -109,12 +111,30 @@ export default function PaymentPage() {
           name: customerName.trim() || undefined,
           email: customerEmail.trim() || undefined,
           phone: customerPhone.trim() || undefined,
+          address: user?.address,
         }
       }
 
-      // Create order on backend
-      const response = await paymentAPI.createOrder(orderData)
+      const response = await ordersAPI.createCheckoutOrder(orderData)
       setOrderId(response.orderId)
+
+      // Backend DUMMY_PAYMENT_MODE: skip Razorpay widget; verify accepts placeholder payload.
+      if (response.checkoutDummy) {
+        await paymentAPI.verifyPayment({
+          razorpay_order_id: response.razorpayOrderId,
+          razorpay_payment_id: 'dummy_payment_id',
+          razorpay_signature: 'dummy',
+        })
+        // Dummy flow: redirect immediately with status (no waiting for widget).
+        navigate('/', {
+          replace: true,
+          state: {
+            orderId: response.orderId,
+            status: 'Order placed successfully (dummy payment)',
+          },
+        })
+        return
+      }
 
       if (!(window as any).Razorpay) {
         throw new Error('Razorpay script not loaded')
@@ -138,7 +158,7 @@ export default function PaymentPage() {
               razorpay_signature: response.razorpay_signature
             })
 
-            handlePaymentSuccess()
+            handlePaymentSuccess(response.orderId)
           } catch (error) {
             console.error('Payment verification failed:', error)
             setError('Payment verification failed. Please contact support.')
@@ -173,12 +193,18 @@ export default function PaymentPage() {
     }
   }
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = (paidOrderId?: string) => {
     setCurrentScreen('success')
     clearCart()
     // Redirect to home after 3 seconds
     setTimeout(() => {
-      navigate('/')
+      navigate('/', {
+        replace: true,
+        state: {
+          orderId: paidOrderId ?? orderId,
+          status: 'Order placed successfully',
+        },
+      })
     }, 3000)
   }
 

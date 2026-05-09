@@ -3,6 +3,32 @@ import { useMemo, useState } from 'react'
 import { getCategoryMeta } from '../../constants/categories'
 import { useFood } from '../../hooks/useFood'
 
+function IconMinus() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden fill="none">
+      <path
+        d="M5 12h14"
+        stroke="currentColor"
+        strokeWidth="2.25"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function IconPlus() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden fill="none">
+      <path
+        d="M12 5v14M5 12h14"
+        stroke="currentColor"
+        strokeWidth="2.25"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 interface FoodCardProps {
   item: FoodItem
 }
@@ -14,6 +40,7 @@ export function FoodCard({ item }: FoodCardProps) {
   const [imageSrc, setImageSrc] = useState(initialSrc)
 
   const quantity = cartItems.find((line) => line.id === item.id)?.quantity ?? 0
+
   return (
     <article className="food-card">
       <div className="food-card__image">
@@ -37,33 +64,32 @@ export function FoodCard({ item }: FoodCardProps) {
         <p>{item.description}</p>
       </div>
       <div className="food-card__actions">
-        {quantity === 0 ? (
-          <button type="button" className="food-card__button" onClick={() => addToCart(item)}>
-            Add
+        <div
+          className="qty-stepper"
+          role="group"
+          aria-label={`Quantity for ${item.name}`}
+        >
+          <button
+            type="button"
+            className="qty-stepper__btn qty-stepper__btn--minus"
+            onClick={() => removeFromCart(item.id)}
+            disabled={quantity === 0}
+            aria-label="Decrease quantity"
+          >
+            <IconMinus />
           </button>
-        ) : (
-          <div className="qty-stepper" role="group" aria-label={`Change quantity for ${item.name}`}>
-            <button
-              type="button"
-              className="qty-stepper__btn"
-              onClick={() => removeFromCart(item.id)}
-              aria-label="Remove one"
-            >
-              −
-            </button>
-            <span className="qty-stepper__count" aria-label={`Quantity ${quantity}`}>
-              {quantity}
-            </span>
-            <button
-              type="button"
-              className="qty-stepper__btn"
-              onClick={() => addToCart(item)}
-              aria-label="Add one"
-            >
-              +
-            </button>
-          </div>
-        )}
+          <span className="qty-stepper__count" aria-live="polite">
+            {quantity}
+          </span>
+          <button
+            type="button"
+            className="qty-stepper__btn qty-stepper__btn--plus"
+            onClick={() => addToCart(item)}
+            aria-label="Increase quantity"
+          >
+            <IconPlus />
+          </button>
+        </div>
       </div>
     </article>
   )

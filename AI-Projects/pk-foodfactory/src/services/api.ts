@@ -1,7 +1,16 @@
 import axios from 'axios';
 import { getStoredToken, triggerUnauthorized } from '../lib/authSession';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
+function resolveApiBaseUrl(): string {
+  const raw = import.meta.env.VITE_API_URL;
+  const trimmed = typeof raw === 'string' ? raw.trim() : '';
+  if (trimmed) {
+    return trimmed.replace(/\/$/, '');
+  }
+  return import.meta.env.DEV ? '/api' : 'http://localhost:5000/api';
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -72,12 +81,14 @@ interface CreateOrderRequest {
   customerDetails?: CustomerDetails;
 }
 
-interface CreateOrderResponse {
+export interface CreateOrderResponse {
   orderId: string;
   razorpayOrderId: string;
   amount: number;
   currency: string;
   key: string;
+  /** When true, backend skipped Razorpay; complete flow by calling verify with any placeholder ids. */
+  checkoutDummy?: boolean;
 }
 
 interface VerifyPaymentRequest {
@@ -120,6 +131,12 @@ export const paymentAPI = {
 
 // Orders API calls
 export const ordersAPI = {
+  /** Creates Razorpay order + DB row (requires auth; order linked to user). */
+  createCheckoutOrder: async (orderData: CreateOrderRequest): Promise<CreateOrderResponse> => {
+    const response = await api.post<CreateOrderResponse>('/orders/checkout', orderData);
+    return response.data;
+  },
+
   getAllOrders: async () => {
     const response = await api.get('/orders');
     return response.data;

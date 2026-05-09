@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
 import { CategoryTabs } from '../components/CategoryTabs/CategoryTabs'
 import { FoodList } from '../components/FoodList/FoodList'
@@ -8,9 +9,22 @@ import { useFood } from '../hooks/useFood'
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { categories, selectedCategory, setSelectedCategory, menuItems, cartItems, removeFromCart, clearCart } = useFood()
 
   const selectedMeta = getCategoryMeta(selectedCategory)
+  const [orderBanner, setOrderBanner] = useState<{ status: string; orderId?: string } | null>(null)
+
+  useEffect(() => {
+    const state = (location.state ?? {}) as { status?: string; orderId?: string }
+    if (state.status) {
+      setOrderBanner({ status: state.status, orderId: state.orderId })
+      // clear navigation state so refresh/back doesn't keep re-showing banner
+      navigate(location.pathname, { replace: true, state: null })
+      const t = setTimeout(() => setOrderBanner(null), 4500)
+      return () => clearTimeout(t)
+    }
+  }, [location.pathname, location.state, navigate])
 
   const handleCheckout = () => {
     if (cartItems.length > 0) {
@@ -21,6 +35,12 @@ export default function HomePage() {
   return (
     <main className="app-shell">
       <AppHeaderApp />
+      {orderBanner ? (
+        <p className="success-banner" style={{ margin: '0 0 14px' }}>
+          {orderBanner.status}
+          {orderBanner.orderId ? ` (Order #${orderBanner.orderId})` : ''}
+        </p>
+      ) : null}
 
       <section className="category-hero" style={{ ['--accent' as any]: selectedMeta.accent }}>
         <div className="category-hero__bg" style={{ backgroundImage: `url(${selectedMeta.imageUrl})` }} />

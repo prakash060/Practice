@@ -9,6 +9,7 @@ const orderItemSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   orderId: { type: String, unique: true, required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   items: [orderItemSchema],
   subtotal: { type: Number, required: true },
   deliveryFee: { type: Number, default: 0 },
