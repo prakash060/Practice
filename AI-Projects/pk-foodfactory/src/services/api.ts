@@ -7,7 +7,14 @@ function resolveApiBaseUrl(): string {
   if (trimmed) {
     return trimmed.replace(/\/$/, '');
   }
-  return import.meta.env.DEV ? '/api' : 'http://localhost:5000/api';
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+  // Production static hosting (e.g. S3): localhost would mean "this phone/tablet", not your server.
+  console.warn(
+    'VITE_API_URL was not set at build time. Set GitHub secret VITE_API_URL to your API base (e.g. http://your-env.elasticbeanstalk.com/api) and rebuild.'
+  );
+  return '';
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
