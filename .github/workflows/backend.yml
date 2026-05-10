@@ -90,6 +90,7 @@ jobs:
               VersionLabel: $VersionLabel,
               OptionSettings: (
                 [
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "NODE_ENV", Value: "production"},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "PORT", Value: $PORT},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "MONGODB_URI", Value: $MONGODB_URI},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "RAZORPAY_KEY_ID", Value: $RAZORPAY_KEY_ID},

@@ -6,10 +6,14 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const openapi = require('./swagger/openapi');
+const { getJwtSecret } = require('./middleware/auth');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const isProd = process.env.NODE_ENV === 'production';
+
+app.set('trust proxy', 1);
 
 // Swagger UI uses inline scripts/styles; relax CSP so the docs page works.
 // COOP is omitted: on HTTP (common on EB before HTTPS) browsers ignore it and log a console warning.
@@ -23,13 +27,8 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pk-foodfactory')
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.error('MongoDB connection error:', err));
-
 // Swagger UI (must use split mount: static assets + GET handler — see swagger-ui-express README)
-const swaggerOptions = { customSiteTitle: 'PK Food Factory API' };
+const swaggerOptions = { customSiteTitle: 'Food Factory API' };
 app.use('/api-docs', swaggerUi.serve);
 app.get('/api-docs', swaggerUi.setup(openapi, swaggerOptions));
 app.get('/api-docs/', (req, res) => res.redirect(301, '/api-docs'));
@@ -53,7 +52,12 @@ app.use('/api/users', require('./routes/users'));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  const dbOk = mongoose.connection.readyState === 1;
+  res.status(dbOk ? 200 : 503).json({
+    status: dbOk ? 'OK' : 'DEGRADED',
+    database: dbOk ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Error handling middleware
@@ -67,7 +71,44 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Swagger UI: http://localhost:${PORT}/api-docs`);
-});
+function resolveMongoUri() {
+  const uri = process.env.MONGODB_URI;
+  if (uri && uri.trim()) {
+    return uri.trim();
+  }
+  if (isProd) {
+    console.error(
+      'FATAL: MONGODB_URI is not set. Add it to Elastic Beanstalk environment properties and GitHub Actions secrets (see backend workflow).'
+    );
+    process.exit(1);
+  }
+  return 'mongodb://localhost:27017/foodfactory';
+}
+
+async function start() {
+  if (isProd && !getJwtSecret()) {
+    console.error(
+      'FATAL: JWT_SECRET is missing or invalid in production (min 16 characters, not a placeholder). Set it in EB / GitHub secrets.'
+    );
+    process.exit(1);
+  }
+
+  const mongoUri = resolveMongoUri();
+  try {
+    await mongoose.connect(mongoUri);
+    console.log('MongoDB connected');
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    console.error(
+      'If this is Atlas: Network Access must allow the EB instance (e.g. 0.0.0.0/0 for testing). Check MONGODB_URI and password URL-encoding.'
+    );
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Swagger UI: http://localhost:${PORT}/api-docs`);
+  });
+}
+
+start();
