@@ -37,7 +37,8 @@ jobs:
       - name: Prepare deployment package
         working-directory: AI-Projects/pk-foodfactory-backend
         run: |
-          zip -r "${{ github.workspace }}/backend-deploy.zip" . -x "node_modules/*" ".git/*" "**/.github/*"
+          zip -r "${{ github.workspace }}/backend-deploy.zip" . \
+            -x "node_modules/*" ".git/*" "**/.github/*" ".env" "**/.env"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -49,7 +50,7 @@ jobs:
       - name: Upload deployment package to S3
         run: |
           VERSION_LABEL=gh-${{ github.run_number }}-${{ github.sha }}
-          aws s3 cp "${{ github.workspace }}/backend-deploy.zip" "s3://${{ secrets.AWS_S3_BUCKET_BACKEND}}/${VERSION_LABEL}.zip"
+          aws s3 cp "${{ github.workspace }}/backend-deploy.zip" "s3://${{ secrets.AWS_S3_BUCKET_BACKEND }}/${VERSION_LABEL}.zip"
 
       - name: Create Elastic Beanstalk application version
         run: |
@@ -57,11 +58,50 @@ jobs:
           aws elasticbeanstalk create-application-version \
             --application-name ${{ secrets.AWS_EB_APPLICATION_NAME }} \
             --version-label "$VERSION_LABEL" \
-            --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET_BACKEND }},S3Key="$VERSION_LABEL.zip"
+            --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET_BACKEND }},S3Key="${VERSION_LABEL}.zip"
 
+      # Set these repository/environment secrets to match pk-foodfactory-backend/.env (no .env in the zip).
       - name: Update Elastic Beanstalk environment
+        env:
+          EB_ENV_NAME: ${{ secrets.AWS_EB_ENVIRONMENT_NAME }}
+          PORT: ${{ secrets.PORT }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+          DUMMY_PAYMENT_MODE: ${{ secrets.DUMMY_PAYMENT_MODE }}
+          RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
+          set -e
           VERSION_LABEL=gh-${{ github.run_number }}-${{ github.sha }}
-          aws elasticbeanstalk update-environment \
-            --environment-name ${{ secrets.AWS_EB_ENVIRONMENT_NAME }} \
-            --version-label "$VERSION_LABEL"
+          INPUT=$(jq -n \
+            --arg EnvironmentName "$EB_ENV_NAME" \
+            --arg VersionLabel "$VERSION_LABEL" \
+            --arg PORT "$PORT" \
+            --arg MONGODB_URI "$MONGODB_URI" \
+            --arg RAZORPAY_KEY_ID "$RAZORPAY_KEY_ID" \
+            --arg RAZORPAY_KEY_SECRET "$RAZORPAY_KEY_SECRET" \
+            --arg DUMMY_PAYMENT_MODE "$DUMMY_PAYMENT_MODE" \
+            --arg RAZORPAY_WEBHOOK_SECRET "$RAZORPAY_WEBHOOK_SECRET" \
+            --arg JWT_SECRET "$JWT_SECRET" \
+            --arg EMAIL_USER "$EMAIL_USER" \
+            --arg EMAIL_PASS "$EMAIL_PASS" \
+            '{
+              EnvironmentName: $EnvironmentName,
+              VersionLabel: $VersionLabel,
+              OptionSettings: (
+                [
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "PORT", Value: $PORT},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "MONGODB_URI", Value: $MONGODB_URI},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "RAZORPAY_KEY_ID", Value: $RAZORPAY_KEY_ID},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "RAZORPAY_KEY_SECRET", Value: $RAZORPAY_KEY_SECRET},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "DUMMY_PAYMENT_MODE", Value: $DUMMY_PAYMENT_MODE},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "RAZORPAY_WEBHOOK_SECRET", Value: $RAZORPAY_WEBHOOK_SECRET},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "JWT_SECRET", Value: $JWT_SECRET},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "EMAIL_USER", Value: $EMAIL_USER},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "EMAIL_PASS", Value: $EMAIL_PASS}
+                ]
+                | map(select(.Value != ""))
+              )
+            }')
+          aws elasticbeanstalk update-environment --cli-input-json "$INPUT"
