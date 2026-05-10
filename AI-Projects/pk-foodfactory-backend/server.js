@@ -28,7 +28,9 @@ app.use(express.urlencoded({ extended: true }));
 
 const MONGO_OPTIONS = {
   serverSelectionTimeoutMS: 20000,
-  socketTimeoutMS: 45000
+  socketTimeoutMS: 45000,
+  // Atlas SRV can resolve to IPv6; some AWS/EB networks only route IPv4. Prefer IPv4 to avoid false "whitelist" errors.
+  family: 4
 };
 
 function resolveMongoUri() {
