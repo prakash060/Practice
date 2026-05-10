@@ -51,6 +51,16 @@ if (mongoUri) {
     });
 }
 
+function requireMongo(req, res, next) {
+  if (mongoose.connection.readyState === 1) {
+    return next();
+  }
+  return res.status(503).json({
+    error:
+      'Database is not available. On AWS: set MONGODB_URI on Elastic Beanstalk; in MongoDB Atlas open Network Access (e.g. 0.0.0.0/0 for testing). Call GET /api/health to see database status.'
+  });
+}
+
 // Swagger UI (must use split mount: static assets + GET handler — see swagger-ui-express README)
 const swaggerOptions = { customSiteTitle: 'Food Factory API' };
 app.use('/api-docs', swaggerUi.serve);
@@ -62,19 +72,7 @@ app.get('/', (req, res) => {
   res.redirect('/api-docs');
 });
 
-// Rate limiting (only real API routes; avoids edge cases with /api-docs)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use('/api/', limiter);
-
-// Routes
-app.use('/api/payment', require('./routes/payment'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/users', require('./routes/users'));
-
-// Liveness: always 200 so Elastic Beanstalk / nginx health checks do not drain the pool
+// Liveness: register before /api rate limit so probes are never throttled; always 200 for ELB
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -82,6 +80,21 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Rate limiting (only real API routes; avoids edge cases with /api-docs)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS'
+});
+app.use('/api/', limiter);
+
+// Routes (DB-backed: fail fast with 503 + clear message instead of opaque 500)
+app.use('/api/payment', requireMongo, require('./routes/payment'));
+app.use('/api/orders', requireMongo, require('./routes/orders'));
+app.use('/api/users', requireMongo, require('./routes/users'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

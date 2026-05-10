@@ -1,6 +1,6 @@
 /**
  * OpenAPI 3.0 spec for PK Food Factory API (Swagger UI).
- * Server URL '/' makes "Try it out" use the same host/port as the docs page.
+ * Server URL '/' resolves to the site origin (Swagger UI: new URL('/', location.href)).
  */
 const openapi = {
   openapi: '3.0.3',

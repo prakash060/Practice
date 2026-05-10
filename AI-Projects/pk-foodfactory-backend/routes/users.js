@@ -64,6 +64,22 @@ router.post('/register', async (req, res) => {
     if (err.code === 11000) {
       return res.status(409).json({ error: 'An account with this email already exists' });
     }
+    if (err.name === 'ValidationError') {
+      const first = Object.values(err.errors || {})[0];
+      return res.status(400).json({ error: first?.message || 'Validation failed' });
+    }
+    const msg = err.message || '';
+    if (
+      msg.includes('not connected') ||
+      msg.includes('Client must be connected') ||
+      err.name === 'MongoServerSelectionError' ||
+      err.name === 'MongoNotConnectedError'
+    ) {
+      return res.status(503).json({
+        error:
+          'Database is not reachable. Check MONGODB_URI and MongoDB Atlas network access from your host (e.g. Elastic Beanstalk).'
+      });
+    }
     console.error('Register error:', err);
     return res.status(500).json({ error: 'Failed to register user' });
   }
