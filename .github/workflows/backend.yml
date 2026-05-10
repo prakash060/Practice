@@ -49,7 +49,7 @@ jobs:
       - name: Upload deployment package to S3
         run: |
           VERSION_LABEL=gh-${{ github.run_number }}-${{ github.sha }}
-          aws s3 cp "${{ github.workspace }}/backend-deploy.zip" "s3://${{ secrets.AWS_EB_S3_BUCKET }}/${VERSION_LABEL}.zip"
+          aws s3 cp "${{ github.workspace }}/backend-deploy.zip" "s3://${{ secrets.AWS_S3_BUCKET_BACKEND}}/${VERSION_LABEL}.zip"
 
       - name: Create Elastic Beanstalk application version
         run: |
@@ -57,7 +57,7 @@ jobs:
           aws elasticbeanstalk create-application-version \
             --application-name ${{ secrets.AWS_EB_APPLICATION_NAME }} \
             --version-label "$VERSION_LABEL" \
-            --source-bundle S3Bucket=${{ secrets.AWS_EB_S3_BUCKET }},S3Key="$VERSION_LABEL.zip"
+            --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET_BACKEND }},S3Key="$VERSION_LABEL.zip"
 
       - name: Update Elastic Beanstalk environment
         run: |
