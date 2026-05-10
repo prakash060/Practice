@@ -53,12 +53,10 @@ jobs:
           aws s3 cp "${{ github.workspace }}/backend-deploy.zip" "s3://${{ secrets.AWS_S3_BUCKET_BACKEND }}/${VERSION_LABEL}.zip"
 
       - name: Create Elastic Beanstalk application version
-        env:
-          APP_NAME: ${{ secrets.AWS_EB_APPLICATION_NAME }}
         run: |
           VERSION_LABEL=gh-${{ github.run_number }}-${{ github.sha }}
           aws elasticbeanstalk create-application-version \
-            --application-name "$APP_NAME" \
+            --application-name ${{ secrets.AWS_EB_APPLICATION_NAME }} \
             --version-label "$VERSION_LABEL" \
             --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET_BACKEND }},S3Key="${VERSION_LABEL}.zip"
       # Set these repository/environment secrets to match pk-foodfactory-backend/.env (no .env in the zip).
