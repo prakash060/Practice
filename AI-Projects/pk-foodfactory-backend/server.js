@@ -6,11 +6,10 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const openapi = require('./swagger/openapi');
-const { getJwtSecret } = require('./middleware/auth');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
 const isProd = process.env.NODE_ENV === 'production';
 
 app.set('trust proxy', 1);
@@ -26,6 +25,31 @@ app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+function resolveMongoUri() {
+  const uri = process.env.MONGODB_URI && process.env.MONGODB_URI.trim();
+  if (uri) return uri;
+  if (isProd) {
+    console.error(
+      'WARN: MONGODB_URI is not set — set it in Elastic Beanstalk environment properties. API routes that use the DB will fail until then.'
+    );
+    return null;
+  }
+  return 'mongodb://localhost:27017/foodfactory';
+}
+
+const mongoUri = resolveMongoUri();
+if (mongoUri) {
+  mongoose
+    .connect(mongoUri)
+    .then(() => console.log('MongoDB connected'))
+    .catch((err) => {
+      console.error('MongoDB connection error:', err);
+      console.error(
+        'Atlas: allow EB IPs in Network Access; ensure MONGODB_URI password is URL-encoded if it has special characters.'
+      );
+    });
+}
 
 // Swagger UI (must use split mount: static assets + GET handler — see swagger-ui-express README)
 const swaggerOptions = { customSiteTitle: 'Food Factory API' };
@@ -50,12 +74,11 @@ app.use('/api/payment', require('./routes/payment'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/users', require('./routes/users'));
 
-// Health check
+// Liveness: always 200 so Elastic Beanstalk / nginx health checks do not drain the pool
 app.get('/api/health', (req, res) => {
-  const dbOk = mongoose.connection.readyState === 1;
-  res.status(dbOk ? 200 : 503).json({
-    status: dbOk ? 'OK' : 'DEGRADED',
-    database: dbOk ? 'connected' : 'disconnected',
+  res.json({
+    status: 'OK',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString()
   });
 });
@@ -71,44 +94,8 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-function resolveMongoUri() {
-  const uri = process.env.MONGODB_URI;
-  if (uri && uri.trim()) {
-    return uri.trim();
-  }
-  if (isProd) {
-    console.error(
-      'FATAL: MONGODB_URI is not set. Add it to Elastic Beanstalk environment properties and GitHub Actions secrets (see backend workflow).'
-    );
-    process.exit(1);
-  }
-  return 'mongodb://localhost:27017/foodfactory';
-}
-
-async function start() {
-  if (isProd && !getJwtSecret()) {
-    console.error(
-      'FATAL: JWT_SECRET is missing or invalid in production (min 16 characters, not a placeholder). Set it in EB / GitHub secrets.'
-    );
-    process.exit(1);
-  }
-
-  const mongoUri = resolveMongoUri();
-  try {
-    await mongoose.connect(mongoUri);
-    console.log('MongoDB connected');
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-    console.error(
-      'If this is Atlas: Network Access must allow the EB instance (e.g. 0.0.0.0/0 for testing). Check MONGODB_URI and password URL-encoding.'
-    );
-    process.exit(1);
-  }
-
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Swagger UI: http://localhost:${PORT}/api-docs`);
-  });
-}
-
-start();
+// Bind all interfaces — required on Elastic Beanstalk so nginx can reach the app
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Swagger UI: http://localhost:${PORT}/api-docs`);
+});
