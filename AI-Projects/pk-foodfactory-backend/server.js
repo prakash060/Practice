@@ -26,12 +26,22 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+const MONGO_OPTIONS = {
+  serverSelectionTimeoutMS: 20000,
+  socketTimeoutMS: 45000
+};
+
 function resolveMongoUri() {
-  const uri = process.env.MONGODB_URI && process.env.MONGODB_URI.trim();
+  const raw =
+    process.env.MONGODB_URI ||
+    process.env.DATABASE_URL ||
+    process.env.MONGO_URL ||
+    '';
+  const uri = typeof raw === 'string' ? raw.trim() : '';
   if (uri) return uri;
   if (isProd) {
     console.error(
-      'WARN: MONGODB_URI is not set — set it in Elastic Beanstalk environment properties. API routes that use the DB will fail until then.'
+      'WARN: No MongoDB URI (set MONGODB_URI, DATABASE_URL, or MONGO_URL in Elastic Beanstalk environment properties).'
     );
     return null;
   }
@@ -41,24 +51,37 @@ function resolveMongoUri() {
 const mongoUri = resolveMongoUri();
 if (mongoUri) {
   mongoose
-    .connect(mongoUri)
+    .connect(mongoUri, MONGO_OPTIONS)
     .then(() => console.log('MongoDB connected'))
     .catch((err) => {
       console.error('MongoDB connection error:', err);
       console.error(
-        'Atlas: allow EB IPs in Network Access; ensure MONGODB_URI password is URL-encoded if it has special characters.'
+        'Atlas: Network Access must allow this host; URI password with special chars must be URL-encoded.'
       );
     });
 }
 
-function requireMongo(req, res, next) {
-  if (mongoose.connection.readyState === 1) {
+/** Wait for the driver (or surface connection errors) instead of failing while still connecting. */
+async function requireMongo(req, res, next) {
+  try {
+    if (!mongoUri) {
+      return res.status(503).json({
+        error:
+          'Database URL is missing. In Elastic Beanstalk: Configuration → Software → Environment properties — add MONGODB_URI (or DATABASE_URL) with your Atlas connection string. If you deploy via GitHub Actions, also set the MONGODB_URI repository secret so updates apply it.'
+      });
+    }
+    if (mongoose.connection.readyState === 1) {
+      return next();
+    }
+    await mongoose.connection.asPromise();
     return next();
+  } catch (err) {
+    console.error('requireMongo:', err);
+    const hint = err.message ? ` (${err.message})` : '';
+    return res.status(503).json({
+      error: `Cannot connect to MongoDB${hint}. Check Atlas Network Access (0.0.0.0/0 for testing), MONGODB_URI in EB, and URL-encode special characters in the password.`
+    });
   }
-  return res.status(503).json({
-    error:
-      'Database is not available. On AWS: set MONGODB_URI on Elastic Beanstalk; in MongoDB Atlas open Network Access (e.g. 0.0.0.0/0 for testing). Call GET /api/health to see database status.'
-  });
 }
 
 // Swagger UI (must use split mount: static assets + GET handler — see swagger-ui-express README)

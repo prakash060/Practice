@@ -72,6 +72,9 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           set -e
+          if [ -z "${MONGODB_URI:-}" ]; then
+            echo "::warning::GitHub secret MONGODB_URI is empty — the workflow will not set it on Elastic Beanstalk. Add the secret (same value as local .env) or set MONGODB_URI / DATABASE_URL in the EB console."
+          fi
           VERSION_LABEL=gh-${{ github.run_number }}-${{ github.sha }}
           INPUT=$(jq -n \
             --arg EnvironmentName "$EB_ENV_NAME" \
