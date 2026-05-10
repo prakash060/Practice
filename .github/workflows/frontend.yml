@@ -56,3 +56,14 @@ jobs:
       - name: Sync built site to S3
         run: |
           aws s3 sync AI-Projects/pk-foodfactory/dist "s3://${{ secrets.AWS_S3_BUCKET_FRONTEND }}" --delete
+
+      # SPA: direct visits to /login, /checkout, etc. must return index.html so React Router runs.
+      # Without this, S3 returns 404 XML for paths that are not real objects.
+      - name: Configure S3 static website (SPA error document)
+        run: |
+          aws s3api put-bucket-website \
+            --bucket "${{ secrets.AWS_S3_BUCKET_FRONTEND }}" \
+            --website-configuration '{
+              "IndexDocument": {"Suffix": "index.html"},
+              "ErrorDocument": {"Key": "index.html"}
+            }'
