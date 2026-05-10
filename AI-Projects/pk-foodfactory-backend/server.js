@@ -11,8 +11,12 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Swagger UI uses inline scripts/styles; relax CSP so the docs page works
-app.use(helmet({ contentSecurityPolicy: false }));
+// Swagger UI uses inline scripts/styles; relax CSP so the docs page works.
+// COOP is omitted: on HTTP (common on EB before HTTPS) browsers ignore it and log a console warning.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginOpenerPolicy: false
+}));
 
 app.use(cors());
 app.use(morgan('combined'));
