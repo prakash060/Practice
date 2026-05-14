@@ -23,19 +23,24 @@ function axiosErrorMessage(err: unknown, fallback: string): string {
   return fallback
 }
 
-// ---------- Category form ----------
+// ====================================================================
+// Category form (create + edit)
+// ====================================================================
 interface CategoryFormProps {
-  onCreated: (cat: CategoryDoc) => void
+  editing?: CategoryDoc | null
+  onSaved: (cat: CategoryDoc, mode: 'create' | 'update') => void
+  onCancelEdit?: () => void
 }
 
-function CategoryForm({ onCreated }: CategoryFormProps) {
-  const { showToast } = useToast()
-  const [name, setName] = useState('')
-  const [label, setLabel] = useState('')
-  const [emoji, setEmoji] = useState('')
-  const [accent, setAccent] = useState('#6b5ef7')
+function CategoryForm({ editing, onSaved, onCancelEdit }: CategoryFormProps) {
+  const isEdit = Boolean(editing)
+  const [name, setName] = useState(editing?.name ?? '')
+  const [label, setLabel] = useState(editing?.label ?? '')
+  const [emoji, setEmoji] = useState(editing?.emoji ?? '')
+  const [accent, setAccent] = useState(editing?.accent ?? '#6b5ef7')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [removeImage, setRemoveImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -45,35 +50,35 @@ function CategoryForm({ onCreated }: CategoryFormProps) {
     }
   }, [imagePreview])
 
-  const reset = () => {
+  const clearLocalImage = () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview)
+    setImageFile(null)
+    setImagePreview(null)
+  }
+
+  const resetCreate = () => {
     setName('')
     setLabel('')
     setEmoji('')
     setAccent('#6b5ef7')
-    if (imagePreview) URL.revokeObjectURL(imagePreview)
-    setImageFile(null)
-    setImagePreview(null)
+    clearLocalImage()
+    setRemoveImage(false)
     setError(null)
   }
 
   const onImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null
     setError(null)
-    if (imagePreview) URL.revokeObjectURL(imagePreview)
-    if (!file) {
-      setImageFile(null)
-      setImagePreview(null)
-      return
-    }
+    clearLocalImage()
+    if (!file) return
     if (file.size > MAX_IMAGE_BYTES) {
       setError('Image must be 2MB or smaller')
-      setImageFile(null)
-      setImagePreview(null)
       e.target.value = ''
       return
     }
     setImageFile(file)
     setImagePreview(URL.createObjectURL(file))
+    setRemoveImage(false)
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -86,23 +91,39 @@ function CategoryForm({ onCreated }: CategoryFormProps) {
     }
     setIsSubmitting(true)
     try {
-      const created = await categoriesAPI.create({
+      // Image rules:
+      //  - new file → upload it
+      //  - remove image checked → clear (imageUrl = null)
+      //  - otherwise → don't touch (undefined)
+      const imagePayload = imageFile
+        ? { image: imageFile }
+        : removeImage
+          ? { imageUrl: null }
+          : isEdit
+            ? {}
+            : { imageUrl: null }
+      const payload = {
         name: trimmedName,
         label: label.trim() || trimmedName,
         emoji: emoji.trim() || '🍽️',
         accent: accent.trim() || '#6b5ef7',
-        image: imageFile,
-        imageUrl: imageFile ? undefined : null,
-      })
-      showToast(`Category "${created.name}" added`, 'success')
-      onCreated(created)
-      reset()
+        ...imagePayload,
+      }
+      const saved = isEdit
+        ? await categoriesAPI.update(editing!.id, payload)
+        : await categoriesAPI.create(payload)
+      onSaved(saved, isEdit ? 'update' : 'create')
+      if (!isEdit) resetCreate()
     } catch (err) {
-      setError(axiosErrorMessage(err, 'Could not create category'))
+      setError(axiosErrorMessage(err, isEdit ? 'Could not update category' : 'Could not create category'))
     } finally {
       setIsSubmitting(false)
     }
   }
+
+  const currentImageSrc =
+    imagePreview ||
+    (removeImage ? GENERIC_FOOD_IMAGE : editing?.imageUrl || GENERIC_FOOD_IMAGE)
 
   return (
     <form className="auth-form" onSubmit={handleSubmit} noValidate>
@@ -169,53 +190,100 @@ function CategoryForm({ onCreated }: CategoryFormProps) {
           onChange={onImageChange}
           disabled={isSubmitting}
         />
+        {isEdit && editing?.imageUrl ? (
+          <label className="checkbox-inline">
+            <input
+              type="checkbox"
+              checked={removeImage}
+              onChange={(ev) => {
+                setRemoveImage(ev.target.checked)
+                if (ev.target.checked) clearLocalImage()
+              }}
+              disabled={isSubmitting}
+            />
+            Remove current image (use default)
+          </label>
+        ) : null}
         <div className="admin-preview">
           <img
-            src={imagePreview || GENERIC_FOOD_IMAGE}
-            alt={imagePreview ? 'Category image preview' : 'Default placeholder'}
+            src={currentImageSrc}
+            alt={imagePreview ? 'New image preview' : 'Current image'}
           />
           <p className="form-hint">
             {imagePreview
-              ? 'Preview of your selected image.'
-              : 'No image selected — a generic placeholder will be used.'}
+              ? 'New image — saving will replace the current one.'
+              : isEdit
+                ? removeImage
+                  ? 'Image will be cleared on save.'
+                  : editing?.imageUrl
+                    ? 'Current image. Pick a file to replace, or check the box above to clear it.'
+                    : 'No image set. Pick a file to add one.'
+                : 'No image selected — a generic placeholder will be used.'}
           </p>
         </div>
       </div>
 
       <div className="profile-actions">
-        <button
-          type="button"
-          className="back-button"
-          onClick={reset}
-          disabled={isSubmitting}
-        >
-          Reset
-        </button>
+        {isEdit ? (
+          <button
+            type="button"
+            className="back-button"
+            onClick={() => onCancelEdit?.()}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="back-button"
+            onClick={resetCreate}
+            disabled={isSubmitting}
+          >
+            Reset
+          </button>
+        )}
         <button
           type="submit"
           className="proceed-payment-button auth-submit profile-save"
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Saving…' : 'Save category'}
+          {isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save category'}
         </button>
       </div>
     </form>
   )
 }
 
-// ---------- Item form ----------
+// ====================================================================
+// Item form (create + edit, with category move on edit)
+// ====================================================================
 interface ItemFormProps {
+  /** Pre-selected category for new items, used as fallback display image. */
   category: CategoryDoc
-  onCreated: (item: FoodItemDoc) => void
+  /** Existing item being edited (null = create mode). */
+  editing?: FoodItemDoc | null
+  /** All categories — exposed as a select when editing so admin can move an item. */
+  allCategories: CategoryDoc[]
+  onSaved: (item: FoodItemDoc, mode: 'create' | 'update') => void
+  onCancelEdit?: () => void
 }
 
-function ItemForm({ category, onCreated }: ItemFormProps) {
-  const { showToast } = useToast()
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [price, setPrice] = useState('2')
+function ItemForm({
+  category,
+  editing,
+  allCategories,
+  onSaved,
+  onCancelEdit,
+}: ItemFormProps) {
+  const isEdit = Boolean(editing)
+  const [categoryName, setCategoryName] = useState(editing?.category ?? category.name)
+  const [name, setName] = useState(editing?.name ?? '')
+  const [description, setDescription] = useState(editing?.description ?? '')
+  const [price, setPrice] = useState(editing ? String(editing.price) : '2')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [removeImage, setRemoveImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -225,34 +293,35 @@ function ItemForm({ category, onCreated }: ItemFormProps) {
     }
   }, [imagePreview])
 
-  const reset = () => {
-    setName('')
-    setDescription('')
-    setPrice('2')
+  const clearLocalImage = () => {
     if (imagePreview) URL.revokeObjectURL(imagePreview)
     setImageFile(null)
     setImagePreview(null)
+  }
+
+  const resetCreate = () => {
+    setCategoryName(category.name)
+    setName('')
+    setDescription('')
+    setPrice('2')
+    clearLocalImage()
+    setRemoveImage(false)
     setError(null)
   }
 
   const onImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null
     setError(null)
-    if (imagePreview) URL.revokeObjectURL(imagePreview)
-    if (!file) {
-      setImageFile(null)
-      setImagePreview(null)
-      return
-    }
+    clearLocalImage()
+    if (!file) return
     if (file.size > MAX_IMAGE_BYTES) {
       setError('Image must be 2MB or smaller')
-      setImageFile(null)
-      setImagePreview(null)
       e.target.value = ''
       return
     }
     setImageFile(file)
     setImagePreview(URL.createObjectURL(file))
+    setRemoveImage(false)
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -270,29 +339,63 @@ function ItemForm({ category, onCreated }: ItemFormProps) {
     }
     setIsSubmitting(true)
     try {
-      const created = await foodItemsAPI.create({
-        category: category.name,
+      const imagePayload = imageFile
+        ? { image: imageFile }
+        : removeImage
+          ? { imageUrl: null }
+          : isEdit
+            ? {}
+            : { imageUrl: null }
+      const payload = {
+        category: categoryName,
         name: trimmedName,
         description: description.trim(),
         price: priceNum,
-        image: imageFile,
-        imageUrl: imageFile ? undefined : null,
-      })
-      showToast(`Added "${created.name}"`, 'success')
-      onCreated(created)
-      reset()
+        ...imagePayload,
+      }
+      const saved = isEdit
+        ? await foodItemsAPI.update(editing!.id, payload)
+        : await foodItemsAPI.create(payload)
+      onSaved(saved, isEdit ? 'update' : 'create')
+      if (!isEdit) resetCreate()
     } catch (err) {
-      setError(axiosErrorMessage(err, 'Could not save the item'))
+      setError(axiosErrorMessage(err, isEdit ? 'Could not update item' : 'Could not save the item'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const fallbackImage = category.imageUrl || GENERIC_FOOD_IMAGE
+  // For the preview, prefer the new file, then editing.imageUrl (unless removed),
+  // then the *target* category's image (so moving updates the preview), then generic.
+  const targetCategoryImage =
+    allCategories.find((c) => c.name === categoryName)?.imageUrl || null
+  const currentImageSrc =
+    imagePreview ||
+    (removeImage
+      ? targetCategoryImage || GENERIC_FOOD_IMAGE
+      : editing?.imageUrl || targetCategoryImage || GENERIC_FOOD_IMAGE)
 
   return (
     <form className="auth-form" onSubmit={handleSubmit} noValidate>
       {error ? <p className="error-message">{error}</p> : null}
+
+      {isEdit ? (
+        <div className="form-group">
+          <label htmlFor="item-category">Category</label>
+          <select
+            id="item-category"
+            value={categoryName}
+            onChange={(ev) => setCategoryName(ev.target.value)}
+            disabled={isSubmitting}
+          >
+            {allCategories.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.emoji} {c.label || c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
       <div className="form-group">
         <label htmlFor="item-name">Title</label>
@@ -341,41 +444,74 @@ function ItemForm({ category, onCreated }: ItemFormProps) {
           onChange={onImageChange}
           disabled={isSubmitting}
         />
+        {isEdit && editing?.imageUrl ? (
+          <label className="checkbox-inline">
+            <input
+              type="checkbox"
+              checked={removeImage}
+              onChange={(ev) => {
+                setRemoveImage(ev.target.checked)
+                if (ev.target.checked) clearLocalImage()
+              }}
+              disabled={isSubmitting}
+            />
+            Remove current image (use category default)
+          </label>
+        ) : null}
         <div className="admin-preview">
           <img
-            src={imagePreview || fallbackImage}
-            alt={imagePreview ? 'Selected image preview' : 'Category default image'}
+            src={currentImageSrc}
+            alt={imagePreview ? 'New image preview' : 'Current image'}
           />
           <p className="form-hint">
             {imagePreview
-              ? 'Preview of your selected image.'
-              : 'No image selected — the category image (or default) will be used.'}
+              ? 'New image — saving will replace the current one.'
+              : isEdit
+                ? removeImage
+                  ? 'Image will be cleared on save.'
+                  : editing?.imageUrl
+                    ? 'Current image. Pick a file to replace, or check the box above to clear it.'
+                    : 'No image set. Pick a file to add one.'
+                : 'No image selected — the category image (or default) will be used.'}
           </p>
         </div>
       </div>
 
       <div className="profile-actions">
-        <button
-          type="button"
-          className="back-button"
-          onClick={reset}
-          disabled={isSubmitting}
-        >
-          Reset
-        </button>
+        {isEdit ? (
+          <button
+            type="button"
+            className="back-button"
+            onClick={() => onCancelEdit?.()}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="back-button"
+            onClick={resetCreate}
+            disabled={isSubmitting}
+          >
+            Reset
+          </button>
+        )}
         <button
           type="submit"
           className="proceed-payment-button auth-submit profile-save"
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Saving…' : 'Save item'}
+          {isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save item'}
         </button>
       </div>
     </form>
   )
 }
 
-// ---------- Main page ----------
+// ====================================================================
+// Admin page
+// ====================================================================
 export default function AdminPage() {
   const navigate = useNavigate()
   const { reloadMenu } = useFood()
@@ -384,6 +520,8 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<CategoryDoc[]>([])
   const [items, setItems] = useState<FoodItemDoc[]>([])
   const [selectedCategoryName, setSelectedCategoryName] = useState<string | null>(null)
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [isLoadingCats, setIsLoadingCats] = useState(true)
   const [isLoadingItems, setIsLoadingItems] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -391,6 +529,14 @@ export default function AdminPage() {
   const selectedCategory = useMemo(
     () => categories.find((c) => c.name === selectedCategoryName) ?? null,
     [categories, selectedCategoryName]
+  )
+  const editingCategory = useMemo(
+    () => categories.find((c) => c.id === editingCategoryId) ?? null,
+    [categories, editingCategoryId]
+  )
+  const editingItem = useMemo(
+    () => items.find((it) => it.id === editingItemId) ?? null,
+    [items, editingItemId]
   )
 
   const loadCategories = async () => {
@@ -432,15 +578,32 @@ export default function AdminPage() {
   useEffect(() => {
     if (!selectedCategoryName) {
       setItems([])
+      setEditingItemId(null)
       return
     }
     void loadItems(selectedCategoryName)
+    setEditingItemId(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategoryName])
 
-  const handleCategoryCreated = (created: CategoryDoc) => {
-    setCategories((cur) => [...cur, created].sort((a, b) => a.name.localeCompare(b.name)))
-    setSelectedCategoryName(created.name)
+  // -------- Category callbacks --------
+  const handleCategorySaved = (saved: CategoryDoc, mode: 'create' | 'update') => {
+    setCategories((cur) => {
+      const next = mode === 'create' ? [...cur, saved] : cur.map((c) => (c.id === saved.id ? saved : c))
+      return next.sort((a, b) => a.name.localeCompare(b.name))
+    })
+    if (mode === 'create') {
+      setSelectedCategoryName(saved.name)
+      showToast(`Category "${saved.name}" added`, 'success')
+    } else {
+      // If we renamed, update the selection so the tab stays on this category.
+      setSelectedCategoryName((prev) =>
+        prev === editingCategory?.name ? saved.name : prev
+      )
+      setEditingCategoryId(null)
+      showToast(`Category "${saved.name}" updated`, 'success')
+      if (selectedCategoryName) void loadItems(selectedCategoryName)
+    }
     void reloadMenu()
   }
 
@@ -457,6 +620,7 @@ export default function AdminPage() {
       setSelectedCategoryName((prev) =>
         prev === cat.name ? categories.find((c) => c.id !== cat.id)?.name ?? null : prev
       )
+      if (editingCategoryId === cat.id) setEditingCategoryId(null)
       showToast(
         `Deleted "${cat.name}"${res.itemsDeleted ? ` and ${res.itemsDeleted} item(s)` : ''}`,
         'success'
@@ -467,8 +631,25 @@ export default function AdminPage() {
     }
   }
 
-  const handleItemCreated = (created: FoodItemDoc) => {
-    setItems((cur) => [...cur, created].sort((a, b) => a.name.localeCompare(b.name)))
+  // -------- Item callbacks --------
+  const handleItemSaved = (saved: FoodItemDoc, mode: 'create' | 'update') => {
+    setItems((cur) => {
+      if (mode === 'create') {
+        return [...cur, saved].sort((a, b) => a.name.localeCompare(b.name))
+      }
+      // On update, an item may have been moved to a different category. If so,
+      // drop it from the current list; otherwise replace in-place.
+      if (selectedCategoryName && saved.category !== selectedCategoryName) {
+        return cur.filter((it) => it.id !== saved.id)
+      }
+      return cur.map((it) => (it.id === saved.id ? saved : it))
+    })
+    if (mode === 'update') {
+      setEditingItemId(null)
+      showToast(`Updated "${saved.name}"`, 'success')
+    } else {
+      showToast(`Added "${saved.name}"`, 'success')
+    }
     void reloadMenu()
   }
 
@@ -477,6 +658,7 @@ export default function AdminPage() {
     try {
       await foodItemsAPI.remove(item.id)
       setItems((cur) => cur.filter((it) => it.id !== item.id))
+      if (editingItemId === item.id) setEditingItemId(null)
       showToast(`Deleted "${item.name}"`, 'success')
       void reloadMenu()
     } catch (err) {
@@ -503,7 +685,7 @@ export default function AdminPage() {
           <p className="category-hero__kicker">Administration</p>
           <h2 className="category-hero__title">Manage categories &amp; items</h2>
           <p className="category-hero__subtitle">
-            Start by creating a category, then add items under it. Images are optional.
+            Create or edit categories, then add and edit items in each one. Images are optional.
           </p>
         </div>
       </section>
@@ -514,12 +696,19 @@ export default function AdminPage() {
         </section>
       ) : null}
 
-      {/* Step 1 — categories */}
+      {/* ---- Step 1: Categories ---- */}
       <section className="admin-grid">
         <div className="admin-grid__form">
           <div className="auth-card admin-card">
-            <h2 className="profile-heading">Add a category</h2>
-            <CategoryForm onCreated={handleCategoryCreated} />
+            <h2 className="profile-heading">
+              {editingCategory ? `Edit category: ${editingCategory.name}` : 'Add a category'}
+            </h2>
+            <CategoryForm
+              key={editingCategory?.id ?? 'new-category'}
+              editing={editingCategory}
+              onSaved={handleCategorySaved}
+              onCancelEdit={() => setEditingCategoryId(null)}
+            />
           </div>
         </div>
 
@@ -543,7 +732,7 @@ export default function AdminPage() {
                     key={cat.id}
                     className={`admin-item ${
                       cat.name === selectedCategoryName ? 'admin-item--active' : ''
-                    }`}
+                    } ${cat.id === editingCategoryId ? 'admin-item--editing' : ''}`}
                   >
                     <button
                       type="button"
@@ -567,7 +756,14 @@ export default function AdminPage() {
                         </p>
                       </span>
                     </button>
-                    <div className="admin-item__actions">
+                    <div className="admin-item__actions admin-item__actions--stack">
+                      <button
+                        type="button"
+                        className="back-button admin-item__edit"
+                        onClick={() => setEditingCategoryId(cat.id)}
+                      >
+                        Edit
+                      </button>
                       <button
                         type="button"
                         className="back-button admin-item__delete"
@@ -584,25 +780,23 @@ export default function AdminPage() {
         </div>
       </section>
 
-      {/* Step 2 — items in selected category */}
+      {/* ---- Step 2: Items ---- */}
       <section className="panel">
         <h2 className="admin-section-title">Items</h2>
         {categories.length === 0 ? (
           <p className="empty-state">Create a category first to add items.</p>
         ) : (
-          <>
-            <CategoryTabs
-              categories={categoryNames}
-              selectedCategory={selectedCategoryName ?? categoryNames[0]}
-              onSelectCategory={(c) => setSelectedCategoryName(c)}
-              getCategoryImageUrl={(c) =>
-                categories.find((cat) => cat.name === c)?.imageUrl ?? undefined
-              }
-              getCategoryEmoji={(c) =>
-                categories.find((cat) => cat.name === c)?.emoji ?? '🍽️'
-              }
-            />
-          </>
+          <CategoryTabs
+            categories={categoryNames}
+            selectedCategory={selectedCategoryName ?? categoryNames[0]}
+            onSelectCategory={(c) => setSelectedCategoryName(c)}
+            getCategoryImageUrl={(c) =>
+              categories.find((cat) => cat.name === c)?.imageUrl ?? undefined
+            }
+            getCategoryEmoji={(c) =>
+              categories.find((cat) => cat.name === c)?.emoji ?? '🍽️'
+            }
+          />
         )}
       </section>
 
@@ -611,12 +805,17 @@ export default function AdminPage() {
           <div className="admin-grid__form">
             <div className="auth-card admin-card">
               <h2 className="profile-heading">
-                Add an item to {selectedCategory.label || selectedCategory.name}
+                {editingItem
+                  ? `Edit item: ${editingItem.name}`
+                  : `Add an item to ${selectedCategory.label || selectedCategory.name}`}
               </h2>
               <ItemForm
-                key={selectedCategory.id}
+                key={editingItem?.id ?? `new-item-${selectedCategory.id}`}
                 category={selectedCategory}
-                onCreated={handleItemCreated}
+                editing={editingItem}
+                allCategories={categories}
+                onSaved={handleItemSaved}
+                onCancelEdit={() => setEditingItemId(null)}
               />
             </div>
           </div>
@@ -637,7 +836,12 @@ export default function AdminPage() {
               ) : (
                 <ul className="admin-item-list">
                   {sortedItems.map((item) => (
-                    <li key={item.id} className="admin-item">
+                    <li
+                      key={item.id}
+                      className={`admin-item ${
+                        item.id === editingItemId ? 'admin-item--editing' : ''
+                      }`}
+                    >
                       <div
                         className="admin-item__thumb"
                         style={{
@@ -657,7 +861,14 @@ export default function AdminPage() {
                           <p className="admin-item__desc">{item.description}</p>
                         ) : null}
                       </div>
-                      <div className="admin-item__actions">
+                      <div className="admin-item__actions admin-item__actions--stack">
+                        <button
+                          type="button"
+                          className="back-button admin-item__edit"
+                          onClick={() => setEditingItemId(item.id)}
+                        >
+                          Edit
+                        </button>
                         <button
                           type="button"
                           className="back-button admin-item__delete"

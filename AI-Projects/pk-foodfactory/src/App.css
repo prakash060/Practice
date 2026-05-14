@@ -1573,6 +1573,66 @@
   box-shadow: 0 0 0 3px rgba(107, 94, 247, 0.12);
 }
 
+.admin-item--editing {
+  border-color: #f6b73c;
+  box-shadow: 0 0 0 3px rgba(246, 183, 60, 0.18);
+}
+
+.admin-item__actions--stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-item__edit {
+  color: #5a4dd6;
+  border-color: #d4cef5;
+}
+
+.admin-item__edit:hover {
+  background: #f1eefb;
+}
+
+.checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: #4a4858;
+  cursor: pointer;
+}
+
+.checkbox-inline input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.form-group select {
+  padding: 12px 14px;
+  border: 1px solid #eceaf8;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: #6b5ef7;
+  box-shadow: 0 0 0 3px rgba(107, 94, 247, 0.1);
+}
+
+.form-group input[type="color"] {
+  height: 44px;
+  width: 100%;
+  padding: 4px;
+  border: 1px solid #eceaf8;
+  border-radius: 10px;
+  background: #fff;
+}
+
 .admin-section-title {
   margin: 8px 0 12px;
 }

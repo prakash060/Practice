@@ -243,10 +243,10 @@ export interface FoodItemInput {
   imageUrl?: string | null;
 }
 
-function buildFoodItemForm(body: FoodItemInput): FormData {
+function buildFoodItemForm(body: Partial<FoodItemInput>): FormData {
   const fd = new FormData();
-  fd.append('category', body.category);
-  fd.append('name', body.name);
+  if (body.category !== undefined) fd.append('category', body.category);
+  if (body.name !== undefined) fd.append('name', body.name);
   if (body.description !== undefined) fd.append('description', body.description);
   if (body.price !== undefined) fd.append('price', String(body.price));
   if (body.image) {
@@ -283,7 +283,7 @@ export const foodItemsAPI = {
   update: async (id: string, body: Partial<FoodItemInput>): Promise<FoodItemDoc> => {
     const response = await api.put<FoodItemDoc>(
       `/food-items/${id}`,
-      buildFoodItemForm(body as FoodItemInput),
+      buildFoodItemForm(body),
       multipartConfig
     );
     return response.data;
@@ -304,9 +304,9 @@ export interface CategoryInput {
   imageUrl?: string | null;
 }
 
-function buildCategoryForm(body: CategoryInput): FormData {
+function buildCategoryForm(body: Partial<CategoryInput>): FormData {
   const fd = new FormData();
-  fd.append('name', body.name);
+  if (body.name !== undefined) fd.append('name', body.name);
   if (body.label !== undefined) fd.append('label', body.label);
   if (body.emoji !== undefined) fd.append('emoji', body.emoji);
   if (body.accent !== undefined) fd.append('accent', body.accent);
@@ -336,7 +336,7 @@ export const categoriesAPI = {
   update: async (id: string, body: Partial<CategoryInput>): Promise<CategoryDoc> => {
     const response = await api.put<CategoryDoc>(
       `/categories/${id}`,
-      buildCategoryForm(body as CategoryInput),
+      buildCategoryForm(body),
       multipartConfig
     );
     return response.data;
