@@ -6,7 +6,6 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const openapi = require('./swagger/openapi');
-const { seedFoodItemsIfEmpty } = require('./utils/seedFoodItems');
 require('dotenv').config();
 
 const app = express();
@@ -57,8 +56,6 @@ if (mongoUri) {
     .connect(mongoUri, MONGO_OPTIONS)
     .then(() => {
       console.log('MongoDB connected');
-      // First-run seed of menu items so the UI has something to show until the admin edits it.
-      seedFoodItemsIfEmpty();
     })
     .catch((err) => {
       console.error('MongoDB connection error:', err);
@@ -125,6 +122,7 @@ app.use('/api/', limiter);
 app.use('/api/payment', requireMongo, require('./routes/payment'));
 app.use('/api/orders', requireMongo, require('./routes/orders'));
 app.use('/api/users', requireMongo, require('./routes/users'));
+app.use('/api/categories', requireMongo, require('./routes/categories'));
 app.use('/api/food-items', requireMongo, require('./routes/foodItems'));
 
 // Error handling middleware

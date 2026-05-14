@@ -1,6 +1,6 @@
 import type { FoodItem } from '../../types/food'
 import { useMemo, useState } from 'react'
-import { getCategoryMeta } from '../../constants/categories'
+import { GENERIC_FOOD_IMAGE } from '../../constants/categories'
 import { useFood } from '../../hooks/useFood'
 
 function IconMinus() {
@@ -34,8 +34,11 @@ interface FoodCardProps {
 }
 
 export function FoodCard({ item }: FoodCardProps) {
-  const { cartItems, addToCart, removeFromCart } = useFood()
-  const fallback = useMemo(() => getCategoryMeta(item.category).imageUrl, [item.category])
+  const { cartItems, addToCart, removeFromCart, getCategoryMeta } = useFood()
+  const fallback = useMemo(
+    () => getCategoryMeta(item.category).imageUrl || GENERIC_FOOD_IMAGE,
+    [getCategoryMeta, item.category]
+  )
   const initialSrc = item.imageUrl || fallback
   const [imageSrc, setImageSrc] = useState(initialSrc)
 

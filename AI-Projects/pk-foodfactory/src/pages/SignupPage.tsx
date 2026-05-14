@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
-import { useAuth } from '../state/AuthContext'
+import { defaultLandingPath, useAuth } from '../state/AuthContext'
 import { validateSignupForm } from '../utils/userValidators'
 
 export default function SignupPage() {
@@ -39,14 +39,14 @@ export default function SignupPage() {
 
     setIsSubmitting(true)
     try {
-      await register({
+      const user = await register({
         name: name.trim(),
         email: email.trim(),
         password,
         phone: phone.trim(),
         address: address.trim(),
       })
-      navigate('/', { replace: true })
+      navigate(defaultLandingPath(user), { replace: true })
     } catch (err) {
       if (isAxiosError(err)) {
         const msg = (err.response?.data as { error?: string })?.error

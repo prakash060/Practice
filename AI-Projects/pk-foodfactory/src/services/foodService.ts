@@ -1,22 +1,26 @@
-import type { FoodItem } from '../types/food'
-import { foodItemsAPI } from './api'
-import { categories, type FoodCategory } from '../constants/categories'
+import type { Category, FoodItem } from '../types/food'
+import { foodItemsAPI, categoriesAPI } from './api'
 
-function isKnownCategory(value: string): value is FoodCategory {
-  return (categories as readonly string[]).includes(value)
+export async function fetchFoodItems(category?: string): Promise<FoodItem[]> {
+  const docs = await foodItemsAPI.list(category)
+  return docs.map((d) => ({
+    id: d.id,
+    category: d.category,
+    name: d.name,
+    description: d.description || '',
+    price: d.price,
+    imageUrl: d.imageUrl || null,
+  }))
 }
 
-/** Fetch the menu from the backend. Filters client-side guard: drop any unknown categories. */
-export async function fetchFoodItems(category?: FoodCategory): Promise<FoodItem[]> {
-  const docs = await foodItemsAPI.list(category)
-  return docs
-    .filter((d) => isKnownCategory(d.category))
-    .map((d) => ({
-      id: d.id,
-      category: d.category as FoodCategory,
-      name: d.name,
-      description: d.description || '',
-      price: d.price,
-      imageUrl: d.imageUrl || undefined,
-    }))
+export async function fetchCategories(): Promise<Category[]> {
+  const docs = await categoriesAPI.list()
+  return docs.map((d) => ({
+    id: d.id,
+    name: d.name,
+    label: d.label || d.name,
+    emoji: d.emoji || '🍽️',
+    accent: d.accent || '#6b5ef7',
+    imageUrl: d.imageUrl || null,
+  }))
 }

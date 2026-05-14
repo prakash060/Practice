@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const FoodItem = require('../models/FoodItem');
-const { ALLOWED_CATEGORIES } = require('../models/FoodItem');
+const Category = require('../models/Category');
 const { requireAuth } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin');
 
@@ -48,8 +48,6 @@ function parseItemBody(body, file, { partial = false } = {}) {
     const category = typeof body.category === 'string' ? body.category.trim() : '';
     if (!category) {
       errors.push('Category is required');
-    } else if (!ALLOWED_CATEGORIES.includes(category)) {
-      errors.push(`Category must be one of: ${ALLOWED_CATEGORIES.join(', ')}`);
     } else {
       out.category = category;
     }
@@ -84,10 +82,6 @@ function parseItemBody(body, file, { partial = false } = {}) {
     }
   }
 
-  // Image rules:
-  //  - if a file is uploaded → encode as data URL
-  //  - else if body.imageUrl is a non-empty string → use as-is
-  //  - else if client sends imageUrl: null/'' → clear
   if (file) {
     out.imageUrl = bufferToDataUrl(file);
   } else if (body.imageUrl !== undefined) {
@@ -107,11 +101,7 @@ router.get('/', async (req, res) => {
   try {
     const filter = {};
     if (req.query.category) {
-      const cat = String(req.query.category).trim();
-      if (!ALLOWED_CATEGORIES.includes(cat)) {
-        return res.status(400).json({ error: `Unknown category: ${cat}` });
-      }
-      filter.category = cat;
+      filter.category = String(req.query.category).trim();
     }
     const docs = await FoodItem.find(filter).sort({ category: 1, name: 1 }).lean();
     return res.json(docs.map((d) => ({
@@ -130,11 +120,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Public: list of supported categories
-router.get('/categories', (req, res) => {
-  res.json({ categories: ALLOWED_CATEGORIES });
-});
-
 // Admin: create
 router.post(
   '/',
@@ -146,6 +131,12 @@ router.post(
       const { values, errors } = parseItemBody(req.body || {}, req.file, { partial: false });
       if (errors.length) {
         return res.status(400).json({ error: errors[0] });
+      }
+      const knownCategory = await Category.findOne({ name: values.category });
+      if (!knownCategory) {
+        return res.status(400).json({
+          error: `Unknown category "${values.category}". Create the category first.`,
+        });
       }
       const created = await FoodItem.create({
         ...values,
@@ -173,6 +164,14 @@ router.put(
       const { values, errors } = parseItemBody(req.body || {}, req.file, { partial: true });
       if (errors.length) {
         return res.status(400).json({ error: errors[0] });
+      }
+      if (values.category) {
+        const knownCategory = await Category.findOne({ name: values.category });
+        if (!knownCategory) {
+          return res.status(400).json({
+            error: `Unknown category "${values.category}". Create the category first.`,
+          });
+        }
       }
       const updated = await FoodItem.findByIdAndUpdate(req.params.id, values, {
         new: true,

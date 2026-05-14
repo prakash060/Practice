@@ -16,6 +16,7 @@ const openapi = {
     { name: 'Users', description: 'Registration, login, profile (JWT)' },
     { name: 'Payment', description: 'Razorpay payment flow' },
     { name: 'Orders', description: 'Orders CRUD' },
+    { name: 'Categories', description: 'Food categories (public list; admin-only writes)' },
     { name: 'FoodItems', description: 'Menu items (public list; admin-only writes)' },
   ],
   components: {
@@ -68,11 +69,27 @@ const openapi = {
           updatedAt: { type: 'string', format: 'date-time' },
         },
       },
+      Category: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string', description: 'Unique slug used by FoodItem.category' },
+          label: { type: 'string' },
+          emoji: { type: 'string' },
+          accent: { type: 'string', description: 'Hex color, e.g. #6b5ef7' },
+          imageUrl: { type: 'string', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
       FoodItem: {
         type: 'object',
         properties: {
           id: { type: 'string' },
-          category: { type: 'string', enum: ['Biryani', 'Icecream', 'Chats', 'Pizza', 'Sweets'] },
+          category: {
+            type: 'string',
+            description: 'Must match an existing Category.name',
+          },
           name: { type: 'string' },
           description: { type: 'string' },
           price: { type: 'number' },
@@ -395,6 +412,107 @@ const openapi = {
         },
       },
     },
+    '/api/categories': {
+      get: {
+        tags: ['Categories'],
+        summary: 'List food categories',
+        responses: {
+          '200': {
+            description: 'List of categories',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/Category' } },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ['Categories'],
+        summary: 'Create a category (admin only)',
+        description:
+          'Multipart form. Provide `image` file (optional) OR `imageUrl` string. Requires Bearer token whose email matches ADMIN_EMAIL.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: {
+                  name: { type: 'string' },
+                  label: { type: 'string' },
+                  emoji: { type: 'string' },
+                  accent: { type: 'string' },
+                  imageUrl: { type: 'string', nullable: true },
+                  image: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Created',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Category' } } },
+          },
+          '400': { description: 'Validation error' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+          '409': { description: 'Duplicate name' },
+        },
+      },
+    },
+    '/api/categories/{id}': {
+      put: {
+        tags: ['Categories'],
+        summary: 'Update a category (admin only)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  label: { type: 'string' },
+                  emoji: { type: 'string' },
+                  accent: { type: 'string' },
+                  imageUrl: { type: 'string', nullable: true },
+                  image: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Updated',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Category' } } },
+          },
+          '400': { description: 'Validation error' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+          '404': { description: 'Not found' },
+          '409': { description: 'Duplicate name' },
+        },
+      },
+      delete: {
+        tags: ['Categories'],
+        summary: 'Delete a category and all its items (admin only)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Deleted (response includes itemsDeleted count)' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+          '404': { description: 'Not found' },
+        },
+      },
+    },
     '/api/food-items': {
       get: {
         tags: ['FoodItems'],
@@ -404,7 +522,7 @@ const openapi = {
             name: 'category',
             in: 'query',
             required: false,
-            schema: { type: 'string', enum: ['Biryani', 'Icecream', 'Chats', 'Pizza', 'Sweets'] },
+            schema: { type: 'string' },
           },
         ],
         responses: {

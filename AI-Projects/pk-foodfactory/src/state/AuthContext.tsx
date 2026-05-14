@@ -23,11 +23,17 @@ type AuthContextValue = {
   user: UserPublic | null
   token: string | null
   isReady: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (body: RegisterBody) => Promise<void>
+  /** Resolves with the freshly-logged-in user so callers can decide where to route (admin → /admin). */
+  login: (email: string, password: string) => Promise<UserPublic>
+  register: (body: RegisterBody) => Promise<UserPublic>
   logout: () => void
   refreshUser: () => Promise<void>
   updateProfile: (body: { name: string; phone: string; address: string }) => Promise<void>
+}
+
+/** Where to send a user after auth when no specific deep-link is requested. */
+export function defaultLandingPath(user: { isAdmin?: boolean } | null): string {
+  return user?.isAdmin ? '/admin' : '/'
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -84,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStoredToken(res.token)
     setToken(res.token)
     setUser(res.user)
+    return res.user
   }, [])
 
   const register = useCallback(async (body: RegisterBody) => {
@@ -92,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStoredToken(newToken)
     setToken(newToken)
     setUser(userPublic)
+    return userPublic
   }, [])
 
   const logout = useCallback(() => {

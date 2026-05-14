@@ -1,16 +1,20 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { categories } from '../constants/categories'
-import { fetchFoodItems } from '../services/foodService'
-import type { FoodItem } from '../types/food'
+import { fetchCategories, fetchFoodItems } from '../services/foodService'
+import {
+  DEFAULT_CATEGORY_ACCENT,
+  DEFAULT_CATEGORY_EMOJI,
+  GENERIC_FOOD_IMAGE,
+} from '../constants/categories'
+import type { Category, FoodItem } from '../types/food'
 
 export interface CartItem extends FoodItem {
   quantity: number
 }
 
 interface FoodContextValue {
-  categories: typeof categories
-  selectedCategory: (typeof categories)[number]
-  setSelectedCategory: (category: (typeof categories)[number]) => void
+  categories: Category[]
+  selectedCategory: string | null
+  setSelectedCategory: (categoryName: string) => void
   menuItems: FoodItem[]
   allItems: FoodItem[]
   cartItems: CartItem[]
@@ -20,14 +24,28 @@ interface FoodContextValue {
   isLoadingMenu: boolean
   menuError: string | null
   reloadMenu: () => Promise<void>
+  /** Looks up category by name. Returns a default-filled object when missing. */
+  getCategoryMeta: (categoryName: string) => Category
 }
 
 const FoodContext = createContext<FoodContextValue | undefined>(undefined)
 
+function defaultCategoryMeta(name: string): Category {
+  return {
+    id: '',
+    name,
+    label: name || 'Uncategorized',
+    emoji: DEFAULT_CATEGORY_EMOJI,
+    accent: DEFAULT_CATEGORY_ACCENT,
+    imageUrl: null,
+  }
+}
+
 export function FoodProvider({ children }: { children: React.ReactNode }) {
-  const [selectedCategory, setSelectedCategory] = useState<(typeof categories)[number]>(categories[0])
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedCategory, setSelectedCategoryState] = useState<string | null>(null)
   const [allItems, setAllItems] = useState<FoodItem[]>([])
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [isLoadingMenu, setIsLoadingMenu] = useState(true)
   const [menuError, setMenuError] = useState<string | null>(null)
 
@@ -35,8 +53,14 @@ export function FoodProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingMenu(true)
     setMenuError(null)
     try {
-      const items = await fetchFoodItems()
+      const [cats, items] = await Promise.all([fetchCategories(), fetchFoodItems()])
+      setCategories(cats)
       setAllItems(items)
+      // Keep selection when still present; otherwise pick first available.
+      setSelectedCategoryState((prev) => {
+        if (prev && cats.some((c) => c.name === prev)) return prev
+        return cats[0]?.name ?? null
+      })
     } catch (err) {
       console.error('Failed to load menu:', err)
       setMenuError('Could not load the menu. Please try again later.')
@@ -49,8 +73,24 @@ export function FoodProvider({ children }: { children: React.ReactNode }) {
     void reloadMenu()
   }, [reloadMenu])
 
+  const setSelectedCategory = useCallback((name: string) => {
+    setSelectedCategoryState(name)
+  }, [])
+
+  const categoryByName = useMemo(() => {
+    const map = new Map<string, Category>()
+    for (const c of categories) map.set(c.name, c)
+    return map
+  }, [categories])
+
+  const getCategoryMeta = useCallback(
+    (name: string): Category => categoryByName.get(name) ?? defaultCategoryMeta(name),
+    [categoryByName]
+  )
+
   const menuItems = useMemo(
-    () => allItems.filter((item) => item.category === selectedCategory),
+    () =>
+      selectedCategory ? allItems.filter((item) => item.category === selectedCategory) : [],
     [allItems, selectedCategory]
   )
 
@@ -93,6 +133,7 @@ export function FoodProvider({ children }: { children: React.ReactNode }) {
         isLoadingMenu,
         menuError,
         reloadMenu,
+        getCategoryMeta,
       }}
     >
       {children}
@@ -105,6 +146,7 @@ export function useFoodContext() {
   if (!context) {
     throw new Error('useFoodContext must be used within FoodProvider')
   }
-
   return context
 }
+
+export { GENERIC_FOOD_IMAGE }

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
-import { useAuth } from '../state/AuthContext'
+import { defaultLandingPath, useAuth } from '../state/AuthContext'
 import { validateEmail } from '../utils/userValidators'
 
 export default function LoginPage() {
@@ -15,8 +15,8 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const from =
-    (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/'
+  const requestedFrom =
+    (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? null
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -30,8 +30,11 @@ export default function LoginPage() {
 
     setIsSubmitting(true)
     try {
-      await login(email.trim(), password)
-      navigate(from, { replace: true })
+      const user = await login(email.trim(), password)
+      // Honor the deep-link the user was originally trying to reach; otherwise
+      // send admins to the admin console and everyone else to the home page.
+      const target = requestedFrom && requestedFrom !== '/' ? requestedFrom : defaultLandingPath(user)
+      navigate(target, { replace: true })
     } catch (err) {
       if (isAxiosError(err)) {
         const msg = (err.response?.data as { error?: string })?.error

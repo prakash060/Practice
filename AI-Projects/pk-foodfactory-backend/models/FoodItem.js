@@ -1,14 +1,15 @@
 const mongoose = require('mongoose');
 
-const ALLOWED_CATEGORIES = ['Biryani', 'Icecream', 'Chats', 'Pizza', 'Sweets'];
-
 const foodItemSchema = new mongoose.Schema(
   {
+    // Free string that must match an existing Category.name. The route layer
+    // enforces that — the schema purposefully has no enum so admins can add
+    // and remove categories at runtime without code/schema changes.
     category: {
       type: String,
       required: true,
-      enum: ALLOWED_CATEGORIES,
       trim: true,
+      maxlength: 60,
     },
     name: {
       type: String,
@@ -27,8 +28,8 @@ const foodItemSchema = new mongoose.Schema(
       default: 2,
       min: 0,
     },
-    // Stored as either an HTTPS URL, a data:image/... base64 URL, or null when
-    // no image is configured (the UI then falls back to the category's default).
+    // HTTPS URL, data:image/...;base64,... URL, or null (UI falls back to the
+    // category default, then to a generic placeholder).
     imageUrl: {
       type: String,
       default: null,
@@ -41,4 +42,3 @@ const foodItemSchema = new mongoose.Schema(
 foodItemSchema.index({ category: 1, name: 1 });
 
 module.exports = mongoose.model('FoodItem', foodItemSchema);
-module.exports.ALLOWED_CATEGORIES = ALLOWED_CATEGORIES;

@@ -1557,6 +1557,31 @@
   background: #fdecea;
 }
 
+.admin-item__select {
+  display: contents;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.admin-item--active {
+  border-color: #6b5ef7;
+  box-shadow: 0 0 0 3px rgba(107, 94, 247, 0.12);
+}
+
+.admin-section-title {
+  margin: 8px 0 12px;
+}
+
+.admin-footer-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
 @media (max-width: 980px) {
   .content-grid {
     grid-template-columns: 1fr;

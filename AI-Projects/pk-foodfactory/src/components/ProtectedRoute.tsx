@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../state/AuthContext'
+import { defaultLandingPath, useAuth } from '../state/AuthContext'
 import type { ReactNode } from 'react'
 
 function AuthLoading() {
@@ -23,7 +23,7 @@ export function GuestRoute({ children }: { children: ReactNode }) {
   const { user, isReady } = useAuth()
 
   if (!isReady) return <AuthLoading />
-  if (user) return <Navigate to="/" replace />
+  if (user) return <Navigate to={defaultLandingPath(user)} replace />
   return <>{children}</>
 }
 
@@ -31,7 +31,7 @@ export function AuthCatchAll() {
   const { user, isReady } = useAuth()
 
   if (!isReady) return <AuthLoading />
-  if (user) return <Navigate to="/" replace />
+  if (user) return <Navigate to={defaultLandingPath(user)} replace />
   return <Navigate to="/login" replace />
 }
 

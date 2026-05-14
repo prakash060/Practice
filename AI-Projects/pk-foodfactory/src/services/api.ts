@@ -69,6 +69,17 @@ export interface FoodItemDoc {
   updatedAt?: string;
 }
 
+export interface CategoryDoc {
+  id: string;
+  name: string;
+  label: string;
+  emoji: string;
+  accent: string;
+  imageUrl: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface RegisterResponse extends UserPublic {
   token: string;
 }
@@ -280,6 +291,61 @@ export const foodItemsAPI = {
 
   remove: async (id: string): Promise<{ success: boolean; id: string }> => {
     const response = await api.delete<{ success: boolean; id: string }>(`/food-items/${id}`);
+    return response.data;
+  },
+};
+
+export interface CategoryInput {
+  name: string;
+  label?: string;
+  emoji?: string;
+  accent?: string;
+  image?: File | null;
+  imageUrl?: string | null;
+}
+
+function buildCategoryForm(body: CategoryInput): FormData {
+  const fd = new FormData();
+  fd.append('name', body.name);
+  if (body.label !== undefined) fd.append('label', body.label);
+  if (body.emoji !== undefined) fd.append('emoji', body.emoji);
+  if (body.accent !== undefined) fd.append('accent', body.accent);
+  if (body.image) {
+    fd.append('image', body.image);
+  } else if (body.imageUrl !== undefined) {
+    fd.append('imageUrl', body.imageUrl === null ? '' : body.imageUrl);
+  }
+  return fd;
+}
+
+export const categoriesAPI = {
+  list: async (): Promise<CategoryDoc[]> => {
+    const response = await api.get<CategoryDoc[]>('/categories');
+    return response.data;
+  },
+
+  create: async (body: CategoryInput): Promise<CategoryDoc> => {
+    const response = await api.post<CategoryDoc>(
+      '/categories',
+      buildCategoryForm(body),
+      multipartConfig
+    );
+    return response.data;
+  },
+
+  update: async (id: string, body: Partial<CategoryInput>): Promise<CategoryDoc> => {
+    const response = await api.put<CategoryDoc>(
+      `/categories/${id}`,
+      buildCategoryForm(body as CategoryInput),
+      multipartConfig
+    );
+    return response.data;
+  },
+
+  remove: async (id: string): Promise<{ success: boolean; id: string; itemsDeleted: number }> => {
+    const response = await api.delete<{ success: boolean; id: string; itemsDeleted: number }>(
+      `/categories/${id}`
+    );
     return response.data;
   },
 };
