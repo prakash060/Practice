@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getStoredToken, triggerUnauthorized } from '../lib/authSession';
+import { getStoredAgentToken, triggerAgentUnauthorized } from '../lib/agentSession';
 
 function resolveApiBaseUrl(): string {
   const raw = import.meta.env.VITE_API_URL;
@@ -95,9 +96,27 @@ export interface DeliveryAgentDoc {
   photoUrl: string | null;
   status: DeliveryAgentStatus;
   notes: string;
+  /** True when an admin has set a login passcode for this agent (admin views only). */
+  hasPasscode?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface DeliveryAgentPublic {
+  id: string;
+  name: string;
+  phone: string;
+  photoUrl: string | null;
+  vehicleType: DeliveryVehicleType;
+  vehicleNumber: string;
+}
+
+export type DeliveryStatus =
+  | 'unassigned'
+  | 'assigned'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'not_delivered';
 
 export interface RegisterResponse extends UserPublic {
   token: string;
@@ -172,6 +191,11 @@ export type OrderDoc = {
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   razorpayOrderId?: string;
   customerDetails?: CustomerDetails;
+  deliveryAgentId?: string | null;
+  deliveryAgent?: DeliveryAgentPublic | null;
+  deliveryStatus?: DeliveryStatus;
+  deliveryNotes?: string;
+  deliveryStatusUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -379,6 +403,8 @@ export interface DeliveryAgentInput {
   address?: string;
   notes?: string;
   status?: DeliveryAgentStatus;
+  /** 4–8 digit login PIN. Pass '' (empty string) to clear an existing passcode. */
+  passcode?: string;
   photo?: File | null;
   photoUrl?: string | null;
 }
@@ -394,6 +420,7 @@ function buildDeliveryAgentForm(body: Partial<DeliveryAgentInput>): FormData {
   if (body.address !== undefined) fd.append('address', body.address);
   if (body.notes !== undefined) fd.append('notes', body.notes);
   if (body.status !== undefined) fd.append('status', body.status);
+  if (body.passcode !== undefined) fd.append('passcode', body.passcode);
   if (body.photo) {
     fd.append('photo', body.photo);
   } else if (body.photoUrl !== undefined) {
@@ -435,6 +462,133 @@ export const deliveryAgentsAPI = {
 
   remove: async (id: string): Promise<{ success: boolean; id: string }> => {
     const response = await api.delete<{ success: boolean; id: string }>(`/delivery-agents/${id}`);
+    return response.data;
+  },
+};
+
+// =============================================================
+// Admin reset (destructive bulk-clear, admin only)
+// =============================================================
+
+export interface ResetSummary {
+  categories: number;
+  foodItems: number;
+  orders: number;
+  deliveryAgents: number;
+  /** Count of deletable user accounts (excludes signed-in admin + ADMIN_EMAIL). */
+  users: number;
+}
+
+export interface ResetResponse {
+  success: boolean;
+  scope: 'delivery-agents' | 'categories' | 'food-items' | 'orders' | 'users' | 'all';
+  categories?: number;
+  foodItems?: number;
+  orders?: number;
+  deliveryAgents?: number;
+  users?: number;
+}
+
+export const adminResetAPI = {
+  summary: async (): Promise<ResetSummary> => {
+    const response = await api.get<ResetSummary>('/admin/reset/summary');
+    return response.data;
+  },
+
+  deliveryAgents: async (): Promise<ResetResponse> => {
+    const response = await api.post<ResetResponse>('/admin/reset/delivery-agents');
+    return response.data;
+  },
+
+  categories: async (): Promise<ResetResponse> => {
+    const response = await api.post<ResetResponse>('/admin/reset/categories');
+    return response.data;
+  },
+
+  foodItems: async (): Promise<ResetResponse> => {
+    const response = await api.post<ResetResponse>('/admin/reset/food-items');
+    return response.data;
+  },
+
+  orders: async (): Promise<ResetResponse> => {
+    const response = await api.post<ResetResponse>('/admin/reset/orders');
+    return response.data;
+  },
+
+  users: async (): Promise<ResetResponse> => {
+    const response = await api.post<ResetResponse>('/admin/reset/users');
+    return response.data;
+  },
+
+  all: async (confirm: string): Promise<ResetResponse> => {
+    const response = await api.post<ResetResponse>('/admin/reset/all', { confirm });
+    return response.data;
+  },
+};
+
+// =============================================================
+// Delivery agent self-service (separate token, separate axios client)
+// =============================================================
+
+const agentApi = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+agentApi.interceptors.request.use((config) => {
+  const token = getStoredAgentToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+agentApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const url = String(error.config?.url ?? '');
+    const isAuthRoute = url.includes('/delivery-agents/auth/login');
+    if (status === 401 && !isAuthRoute) {
+      triggerAgentUnauthorized();
+    }
+    return Promise.reject(error);
+  }
+);
+
+export interface AgentLoginResponse {
+  token: string;
+  agent: DeliveryAgentDoc;
+}
+
+export const agentAuthAPI = {
+  login: async (body: { phone: string; passcode: string }): Promise<AgentLoginResponse> => {
+    const response = await agentApi.post<AgentLoginResponse>('/delivery-agents/auth/login', body);
+    return response.data;
+  },
+
+  me: async (): Promise<DeliveryAgentDoc> => {
+    const response = await agentApi.get<DeliveryAgentDoc>('/delivery-agents/me');
+    return response.data;
+  },
+};
+
+export const agentOrdersAPI = {
+  list: async (): Promise<OrderDoc[]> => {
+    const response = await agentApi.get<OrderDoc[]>('/delivery-agents/me/orders');
+    return response.data;
+  },
+
+  updateStatus: async (
+    orderId: string,
+    body: { status: DeliveryStatus; notes?: string }
+  ): Promise<{
+    orderId: string;
+    deliveryStatus: DeliveryStatus;
+    deliveryNotes: string;
+    deliveryStatusUpdatedAt: string;
+  }> => {
+    const response = await agentApi.post(`/delivery-agents/me/orders/${orderId}/status`, body);
     return response.data;
   },
 };

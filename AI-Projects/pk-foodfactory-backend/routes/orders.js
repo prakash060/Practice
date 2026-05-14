@@ -6,6 +6,31 @@ const { createCheckoutOrder } = require('../services/checkoutOrder');
 
 const router = express.Router();
 
+const AGENT_PUBLIC_FIELDS = 'name phone photoUrl vehicleType vehicleNumber';
+
+function shapeOrder(doc) {
+  if (!doc) return doc;
+  const obj = typeof doc.toObject === 'function' ? doc.toObject() : doc;
+  const agent = obj.deliveryAgentId;
+  if (agent && typeof agent === 'object' && agent._id) {
+    obj.deliveryAgent = {
+      id: agent._id.toString(),
+      name: agent.name,
+      phone: agent.phone,
+      photoUrl: agent.photoUrl || null,
+      vehicleType: agent.vehicleType || 'Bike',
+      vehicleNumber: agent.vehicleNumber || '',
+    };
+    obj.deliveryAgentId = agent._id.toString();
+  } else if (agent) {
+    obj.deliveryAgentId = String(agent);
+    obj.deliveryAgent = null;
+  } else {
+    obj.deliveryAgent = null;
+  }
+  return obj;
+}
+
 async function createCheckoutOrderForUser(req, res) {
   try {
     const user = await User.findById(req.userId);
@@ -49,8 +74,10 @@ router.post('/', requireAuth, createCheckoutOrderForUser);
 // My orders (current user)
 router.get('/my', requireAuth, async (req, res) => {
   try {
-    const orders = await Order.find({ userId: req.userId }).sort({ createdAt: -1 });
-    return res.json(orders);
+    const orders = await Order.find({ userId: req.userId })
+      .sort({ createdAt: -1 })
+      .populate({ path: 'deliveryAgentId', select: AGENT_PUBLIC_FIELDS });
+    return res.json(orders.map(shapeOrder));
   } catch (error) {
     console.error('Get my orders error:', error);
     return res.status(500).json({ error: 'Failed to get orders' });
@@ -60,8 +87,10 @@ router.get('/my', requireAuth, async (req, res) => {
 // Get all orders (admin endpoint)
 router.get('/', async (req, res) => {
   try {
-    const orders = await Order.find().sort({ createdAt: -1 });
-    res.json(orders);
+    const orders = await Order.find()
+      .sort({ createdAt: -1 })
+      .populate({ path: 'deliveryAgentId', select: AGENT_PUBLIC_FIELDS });
+    res.json(orders.map(shapeOrder));
   } catch (error) {
     console.error('Get orders error:', error);
     res.status(500).json({ error: 'Failed to get orders' });
@@ -71,13 +100,14 @@ router.get('/', async (req, res) => {
 // Get order by ID
 router.get('/:orderId', async (req, res) => {
   try {
-    const order = await Order.findOne({ orderId: req.params.orderId });
+    const order = await Order.findOne({ orderId: req.params.orderId })
+      .populate({ path: 'deliveryAgentId', select: AGENT_PUBLIC_FIELDS });
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    res.json(order);
+    res.json(shapeOrder(order));
   } catch (error) {
     console.error('Get order error:', error);
     res.status(500).json({ error: 'Failed to get order' });

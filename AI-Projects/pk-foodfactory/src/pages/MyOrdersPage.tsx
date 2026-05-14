@@ -1,12 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
-import { ordersAPI, type OrderDoc } from '../services/api'
+import { ordersAPI, type DeliveryStatus, type OrderDoc } from '../services/api'
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
   return d.toLocaleString()
+}
+
+function deliveryLabel(s?: DeliveryStatus): string {
+  switch (s) {
+    case 'assigned':
+      return 'Rider assigned'
+    case 'out_for_delivery':
+      return 'Out for delivery'
+    case 'delivered':
+      return 'Delivered'
+    case 'not_delivered':
+      return 'Not delivered'
+    case 'unassigned':
+    default:
+      return 'Waiting for rider'
+  }
 }
 
 export default function MyOrdersPage() {
@@ -60,28 +76,68 @@ export default function MyOrdersPage() {
 
           {!isLoading && !error && hasOrders ? (
             <div className="orders-list">
-              {orders.map((o) => (
-                <article key={o.orderId} className="order-row">
-                  <div className="order-row__top">
-                    <div>
-                      <strong>Order #{o.orderId}</strong>
-                      <p className="item-description">{formatDate(o.createdAt)}</p>
+              {orders.map((o) => {
+                const dStatus = o.deliveryStatus ?? 'unassigned'
+                return (
+                  <article key={o.orderId} className="order-row">
+                    <div className="order-row__top">
+                      <div>
+                        <strong>Order #{o.orderId}</strong>
+                        <p className="item-description">{formatDate(o.createdAt)}</p>
+                      </div>
+                      <div className="order-row__right">
+                        <span className={`order-status order-status--${o.paymentStatus}`}>
+                          {o.paymentStatus}
+                        </span>
+                        <span className={`status-pill status-pill--${dStatus}`}>
+                          {deliveryLabel(dStatus)}
+                        </span>
+                        <span className="item-total">₹{o.totalAmount}</span>
+                      </div>
                     </div>
-                    <div className="order-row__right">
-                      <span className={`order-status order-status--${o.paymentStatus}`}>{o.paymentStatus}</span>
-                      <span className="item-total">₹{o.totalAmount}</span>
+                    <div className="order-row__items">
+                      {o.items.slice(0, 3).map((it) => (
+                        <span key={`${o.orderId}-${it.foodId}`} className="order-chip">
+                          {it.name} × {it.quantity}
+                        </span>
+                      ))}
+                      {o.items.length > 3 ? (
+                        <span className="order-chip order-chip--muted">
+                          +{o.items.length - 3} more
+                        </span>
+                      ) : null}
                     </div>
-                  </div>
-                  <div className="order-row__items">
-                    {o.items.slice(0, 3).map((it) => (
-                      <span key={`${o.orderId}-${it.foodId}`} className="order-chip">
-                        {it.name} × {it.quantity}
-                      </span>
-                    ))}
-                    {o.items.length > 3 ? <span className="order-chip order-chip--muted">+{o.items.length - 3} more</span> : null}
-                  </div>
-                </article>
-              ))}
+                    {o.deliveryAgent ? (
+                      <div className="order-row__delivery">
+                        <div
+                          className="order-row__delivery-photo"
+                          style={{
+                            backgroundImage: o.deliveryAgent.photoUrl
+                              ? `url(${o.deliveryAgent.photoUrl})`
+                              : undefined,
+                          }}
+                          aria-hidden="true"
+                        />
+                        <div>
+                          <p className="item-description">
+                            <strong>{o.deliveryAgent.name}</strong>
+                            {o.deliveryAgent.phone ? ` • ${o.deliveryAgent.phone}` : ''}
+                          </p>
+                          <p className="item-description">
+                            {o.deliveryAgent.vehicleType}
+                            {o.deliveryAgent.vehicleNumber
+                              ? ` • ${o.deliveryAgent.vehicleNumber}`
+                              : ''}
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+                    {o.deliveryNotes ? (
+                      <p className="item-description">Rider note: {o.deliveryNotes}</p>
+                    ) : null}
+                  </article>
+                )
+              })}
             </div>
           ) : null}
         </div>

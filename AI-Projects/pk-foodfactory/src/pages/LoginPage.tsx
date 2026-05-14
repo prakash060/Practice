@@ -98,6 +98,9 @@ export default function LoginPage() {
         <p className="auth-footer">
           No account? <Link to="/signup">Create one</Link>
         </p>
+        <p className="auth-footer auth-footer--muted">
+          Delivery rider? <Link to="/delivery/login">Rider sign in</Link>
+        </p>
       </div>
     </main>
   )

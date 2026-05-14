@@ -19,6 +19,7 @@ const openapi = {
     { name: 'Categories', description: 'Food categories (public list; admin-only writes)' },
     { name: 'FoodItems', description: 'Menu items (public list; admin-only writes)' },
     { name: 'DeliveryAgents', description: 'Onboarded delivery riders (admin only)' },
+    { name: 'AdminReset', description: 'Destructive bulk-clear operations (admin only)' },
   ],
   components: {
     securitySchemes: {
@@ -97,8 +98,43 @@ const openapi = {
           photoUrl: { type: 'string', nullable: true },
           status: { type: 'string', enum: ['active', 'inactive'] },
           notes: { type: 'string' },
+          hasPasscode: { type: 'boolean', description: 'True when the agent has a login passcode set' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      DeliveryAgentPublic: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          phone: { type: 'string' },
+          photoUrl: { type: 'string', nullable: true },
+          vehicleType: { type: 'string' },
+          vehicleNumber: { type: 'string' },
+        },
+      },
+      AgentLoginRequest: {
+        type: 'object',
+        required: ['phone', 'passcode'],
+        properties: {
+          phone: { type: 'string', example: '9876543210' },
+          passcode: { type: 'string', example: '1234' },
+        },
+      },
+      AgentLoginResponse: {
+        type: 'object',
+        properties: {
+          token: { type: 'string' },
+          agent: { $ref: '#/components/schemas/DeliveryAgent' },
+        },
+      },
+      AgentStatusUpdateRequest: {
+        type: 'object',
+        required: ['status'],
+        properties: {
+          status: { type: 'string', enum: ['out_for_delivery', 'delivered', 'not_delivered'] },
+          notes: { type: 'string', maxLength: 500 },
         },
       },
       FoodItem: {
@@ -682,6 +718,11 @@ const openapi = {
                   address: { type: 'string' },
                   notes: { type: 'string' },
                   status: { type: 'string', enum: ['active', 'inactive'] },
+                  passcode: {
+                    type: 'string',
+                    description: '4–8 digit login PIN. Empty/null clears the existing passcode.',
+                    example: '1234',
+                  },
                   photoUrl: { type: 'string', nullable: true },
                   photo: { type: 'string', format: 'binary' },
                 },
@@ -698,6 +739,71 @@ const openapi = {
           '401': { description: 'Unauthorized' },
           '403': { description: 'Admin access required' },
           '409': { description: 'Duplicate phone number' },
+        },
+      },
+    },
+    '/api/delivery-agents/auth/login': {
+      post: {
+        tags: ['DeliveryAgents'],
+        summary: 'Delivery agent login (phone + passcode)',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/AgentLoginRequest' } } },
+        },
+        responses: {
+          '200': {
+            description: 'JWT + agent profile',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/AgentLoginResponse' } } },
+          },
+          '400': { description: 'Bad request' },
+          '401': { description: 'Invalid phone or passcode' },
+          '403': { description: 'Inactive agent' },
+        },
+      },
+    },
+    '/api/delivery-agents/me': {
+      get: {
+        tags: ['DeliveryAgents'],
+        summary: 'Signed-in delivery agent profile',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Agent profile',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/DeliveryAgent' } } },
+          },
+          '401': { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/api/delivery-agents/me/orders': {
+      get: {
+        tags: ['DeliveryAgents'],
+        summary: 'Orders assigned to the signed-in agent',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Array of orders' },
+          '401': { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/api/delivery-agents/me/orders/{orderId}/status': {
+      post: {
+        tags: ['DeliveryAgents'],
+        summary: 'Update delivery status (agent only)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'orderId', in: 'path', required: true, schema: { type: 'string' }, example: 'PK1234567890' },
+        ],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/AgentStatusUpdateRequest' } } },
+        },
+        responses: {
+          '200': { description: 'Updated' },
+          '400': { description: 'Invalid status' },
+          '401': { description: 'Unauthorized' },
+          '404': { description: 'Order not found or not assigned' },
+          '409': { description: 'Order already finalised' },
         },
       },
     },
@@ -738,6 +844,10 @@ const openapi = {
                   address: { type: 'string' },
                   notes: { type: 'string' },
                   status: { type: 'string', enum: ['active', 'inactive'] },
+                  passcode: {
+                    type: 'string',
+                    description: '4–8 digit login PIN. Empty/null clears the existing passcode.',
+                  },
                   photoUrl: { type: 'string', nullable: true },
                   photo: { type: 'string', format: 'binary' },
                 },
@@ -767,6 +877,106 @@ const openapi = {
           '401': { description: 'Unauthorized' },
           '403': { description: 'Admin access required' },
           '404': { description: 'Not found' },
+        },
+      },
+    },
+    '/api/admin/reset/summary': {
+      get: {
+        tags: ['AdminReset'],
+        summary: 'Counts per collection (admin only)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Counts' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+        },
+      },
+    },
+    '/api/admin/reset/delivery-agents': {
+      post: {
+        tags: ['AdminReset'],
+        summary: 'Delete all delivery agents (admin only)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Deleted count' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+        },
+      },
+    },
+    '/api/admin/reset/categories': {
+      post: {
+        tags: ['AdminReset'],
+        summary: 'Delete all categories AND food items (admin only)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Deleted counts' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+        },
+      },
+    },
+    '/api/admin/reset/food-items': {
+      post: {
+        tags: ['AdminReset'],
+        summary: 'Delete all food items (admin only)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Deleted count' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+        },
+      },
+    },
+    '/api/admin/reset/orders': {
+      post: {
+        tags: ['AdminReset'],
+        summary: 'Delete all orders (admin only)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Deleted count' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+        },
+      },
+    },
+    '/api/admin/reset/users': {
+      post: {
+        tags: ['AdminReset'],
+        summary: 'Delete every user except the admin (admin only)',
+        description:
+          'Preserves the currently signed-in admin and the account configured as ADMIN_EMAIL so the admin can not lock themselves out.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Deleted count' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+        },
+      },
+    },
+    '/api/admin/reset/all': {
+      post: {
+        tags: ['AdminReset'],
+        summary: 'Delete delivery agents, categories, food items AND orders (admin only)',
+        description: 'Requires { "confirm": "RESET" } in the request body.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['confirm'],
+                properties: { confirm: { type: 'string', example: 'RESET' } },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Deleted counts' },
+          '400': { description: 'Confirmation missing' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
         },
       },
     },

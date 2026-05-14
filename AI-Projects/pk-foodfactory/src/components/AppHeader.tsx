@@ -127,6 +127,14 @@ export function AppHeaderApp() {
                   >
                     Delivery onboarding
                   </Link>
+                  <Link
+                    to="/admin/reset"
+                    className="header-user-dropdown__item header-user-dropdown__item--danger"
+                    role="menuitem"
+                    onClick={close}
+                  >
+                    Reset data
+                  </Link>
                 </>
               ) : null}
               <button

@@ -7,6 +7,8 @@ const orderItemSchema = new mongoose.Schema({
   quantity: { type: Number, required: true }
 });
 
+const DELIVERY_STATUSES = ['unassigned', 'assigned', 'out_for_delivery', 'delivered', 'not_delivered'];
+
 const orderSchema = new mongoose.Schema({
   orderId: { type: String, unique: true, required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
@@ -28,6 +30,21 @@ const orderSchema = new mongoose.Schema({
     phone: String,
     address: String
   },
+  // ---- Delivery fields ----
+  deliveryAgentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'DeliveryAgent',
+    default: null,
+    index: true,
+  },
+  deliveryStatus: {
+    type: String,
+    enum: DELIVERY_STATUSES,
+    default: 'unassigned',
+    index: true,
+  },
+  deliveryNotes: { type: String, default: '', trim: true, maxlength: 500 },
+  deliveryStatusUpdatedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -39,3 +56,4 @@ orderSchema.pre('save', function(next) {
 });
 
 module.exports = mongoose.model('Order', orderSchema);
+module.exports.DELIVERY_STATUSES = DELIVERY_STATUSES;

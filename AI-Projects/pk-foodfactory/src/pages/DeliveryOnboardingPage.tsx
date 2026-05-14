@@ -58,6 +58,8 @@ function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
   const [address, setAddress] = useState(editing?.address ?? '')
   const [notes, setNotes] = useState(editing?.notes ?? '')
   const [status, setStatus] = useState<DeliveryAgentStatus>(editing?.status ?? 'active')
+  const [passcode, setPasscode] = useState('')
+  const [clearPasscode, setClearPasscode] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [removePhoto, setRemovePhoto] = useState(false)
@@ -86,6 +88,8 @@ function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
     setAddress('')
     setNotes('')
     setStatus('active')
+    setPasscode('')
+    setClearPasscode(false)
     clearLocalPhoto()
     setRemovePhoto(false)
     setError(null)
@@ -121,6 +125,12 @@ function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
       return
     }
 
+    const trimmedPasscode = passcode.trim()
+    if (trimmedPasscode && !/^\d{4,8}$/.test(trimmedPasscode)) {
+      setError('Passcode must be 4 to 8 digits')
+      return
+    }
+
     setIsSubmitting(true)
     try {
       const photoPayload = photoFile
@@ -130,6 +140,10 @@ function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
           : isEdit
             ? {}
             : { photoUrl: null as string | null }
+
+      const passcodePayload: { passcode?: string } = {}
+      if (trimmedPasscode) passcodePayload.passcode = trimmedPasscode
+      else if (clearPasscode) passcodePayload.passcode = ''
 
       const payload = {
         name: trimmedName,
@@ -141,6 +155,7 @@ function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
         address: address.trim(),
         notes: notes.trim(),
         status,
+        ...passcodePayload,
         ...photoPayload,
       }
       const saved = isEdit
@@ -287,6 +302,44 @@ function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
           maxLength={500}
           placeholder="Shift timings, preferred zone, etc."
         />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="da-passcode">
+          Login passcode (4–8 digits) {isEdit && editing?.hasPasscode ? '— already set' : ''}
+        </label>
+        <input
+          id="da-passcode"
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          value={passcode}
+          onChange={(ev) => {
+            setPasscode(ev.target.value.replace(/\D/g, '').slice(0, 8))
+            if (ev.target.value) setClearPasscode(false)
+          }}
+          disabled={isSubmitting || clearPasscode}
+          placeholder={isEdit && editing?.hasPasscode ? 'Enter new PIN to replace' : 'e.g. 1234'}
+          maxLength={8}
+        />
+        <p className="form-hint">
+          The agent will use their phone + this PIN to sign in at <code>/delivery/login</code>.
+          {!isEdit ? ' Leave blank to onboard without sign-in access for now.' : ''}
+        </p>
+        {isEdit && editing?.hasPasscode ? (
+          <label className="checkbox-inline">
+            <input
+              type="checkbox"
+              checked={clearPasscode}
+              onChange={(ev) => {
+                setClearPasscode(ev.target.checked)
+                if (ev.target.checked) setPasscode('')
+              }}
+              disabled={isSubmitting}
+            />
+            Clear passcode (agent will no longer be able to sign in)
+          </label>
+        ) : null}
       </div>
 
       <div className="form-group">
@@ -545,6 +598,13 @@ export default function DeliveryOnboardingPage() {
                       <p className="admin-item__meta">
                         {agent.vehicleType}
                         {agent.vehicleNumber ? ` • ${agent.vehicleNumber}` : ''}
+                      </p>
+                      <p className="admin-item__meta">
+                        {agent.hasPasscode ? (
+                          <span className="status-pill status-pill--active">PIN set</span>
+                        ) : (
+                          <span className="status-pill status-pill--inactive">No PIN</span>
+                        )}
                       </p>
                       {agent.notes ? (
                         <p className="admin-item__desc">{agent.notes}</p>

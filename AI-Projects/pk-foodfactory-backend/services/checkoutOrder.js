@@ -1,5 +1,6 @@
 const Razorpay = require('razorpay');
 const Order = require('../models/Order');
+const { assignAgentToOrder } = require('./deliveryAssignment');
 
 /**
  * TEMPORARY / DEV: when true, skips real Razorpay API and signature verification so orders
@@ -97,6 +98,15 @@ async function createCheckoutOrder({
 
   const order = new Order(orderPayload);
   await order.save();
+
+  // Assign an active delivery agent immediately so the customer sees the rider
+  // in their order. Failure is non-fatal — the order is still created and can
+  // be reassigned later.
+  try {
+    await assignAgentToOrder(order);
+  } catch (assignErr) {
+    console.error('Auto-assign delivery agent failed:', assignErr.message || assignErr);
+  }
 
   return {
     orderId: order.orderId,

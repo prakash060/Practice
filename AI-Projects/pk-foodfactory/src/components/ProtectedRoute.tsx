@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
+import { useDeliveryAuth } from '../state/DeliveryAuthContext'
 import type { ReactNode } from 'react'
 
 function AuthLoading() {
@@ -42,5 +43,22 @@ export function AdminRoute({ children }: { children: ReactNode }) {
   if (!isReady) return <AuthLoading />
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />
   if (!user.isAdmin) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
+export function DeliveryProtectedRoute({ children }: { children: ReactNode }) {
+  const { agent, isReady } = useDeliveryAuth()
+  const location = useLocation()
+
+  if (!isReady) return <AuthLoading />
+  if (!agent) return <Navigate to="/delivery/login" state={{ from: location }} replace />
+  return <>{children}</>
+}
+
+export function DeliveryGuestRoute({ children }: { children: ReactNode }) {
+  const { agent, isReady } = useDeliveryAuth()
+
+  if (!isReady) return <AuthLoading />
+  if (agent) return <Navigate to="/delivery" replace />
   return <>{children}</>
 }

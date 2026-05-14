@@ -8,6 +8,7 @@ interface AdminNavItem {
 const items: AdminNavItem[] = [
   { to: '/admin', label: 'Categories & items' },
   { to: '/admin/delivery', label: 'Delivery onboarding' },
+  { to: '/admin/reset', label: 'Reset data' },
 ]
 
 export function AdminNav() {
