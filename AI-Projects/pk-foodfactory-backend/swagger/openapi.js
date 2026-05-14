@@ -16,6 +16,7 @@ const openapi = {
     { name: 'Users', description: 'Registration, login, profile (JWT)' },
     { name: 'Payment', description: 'Razorpay payment flow' },
     { name: 'Orders', description: 'Orders CRUD' },
+    { name: 'FoodItems', description: 'Menu items (public list; admin-only writes)' },
   ],
   components: {
     securitySchemes: {
@@ -59,6 +60,27 @@ const openapi = {
           email: { type: 'string' },
           phone: { type: 'string' },
           address: { type: 'string' },
+          isAdmin: {
+            type: 'boolean',
+            description: 'True when the user email matches the configured ADMIN_EMAIL',
+          },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      FoodItem: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          category: { type: 'string', enum: ['Biryani', 'Icecream', 'Chats', 'Pizza', 'Sweets'] },
+          name: { type: 'string' },
+          description: { type: 'string' },
+          price: { type: 'number' },
+          imageUrl: {
+            type: 'string',
+            nullable: true,
+            description: 'HTTPS URL, base64 data URL, or null (UI shows category default).',
+          },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
         },
@@ -370,6 +392,113 @@ const openapi = {
           '200': { description: 'Order document' },
           '404': { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '500': { description: 'Server error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/api/food-items': {
+      get: {
+        tags: ['FoodItems'],
+        summary: 'List food items',
+        parameters: [
+          {
+            name: 'category',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', enum: ['Biryani', 'Icecream', 'Chats', 'Pizza', 'Sweets'] },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'List of food items',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/FoodItem' } },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ['FoodItems'],
+        summary: 'Create a food item (admin only)',
+        description:
+          'Multipart form. Provide `image` file (optional) OR `imageUrl` string. Requires Bearer token whose email matches ADMIN_EMAIL.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['category', 'name'],
+                properties: {
+                  category: { type: 'string' },
+                  name: { type: 'string' },
+                  description: { type: 'string' },
+                  price: { type: 'number' },
+                  imageUrl: { type: 'string', nullable: true },
+                  image: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Created',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/FoodItem' } } },
+          },
+          '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+        },
+      },
+    },
+    '/api/food-items/{id}': {
+      put: {
+        tags: ['FoodItems'],
+        summary: 'Update a food item (admin only)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  category: { type: 'string' },
+                  name: { type: 'string' },
+                  description: { type: 'string' },
+                  price: { type: 'number' },
+                  imageUrl: { type: 'string', nullable: true },
+                  image: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Updated',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/FoodItem' } } },
+          },
+          '400': { description: 'Validation error' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+          '404': { description: 'Not found' },
+        },
+      },
+      delete: {
+        tags: ['FoodItems'],
+        summary: 'Delete a food item (admin only)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Deleted' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+          '404': { description: 'Not found' },
         },
       },
     },

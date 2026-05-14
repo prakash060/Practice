@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { signToken, requireAuth } = require('../middleware/auth');
+const { isAdminEmail } = require('../middleware/admin');
 const {
   validateName,
   validateEmail,
@@ -19,6 +20,7 @@ function safeUser(doc) {
     email: doc.email,
     phone: doc.phone,
     address: doc.address,
+    isAdmin: isAdminEmail(doc.email),
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -180,6 +182,7 @@ router.get('/', requireAuth, async (req, res) => {
       email: u.email,
       phone: u.phone,
       address: u.address,
+      isAdmin: isAdminEmail(u.email),
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
     }));

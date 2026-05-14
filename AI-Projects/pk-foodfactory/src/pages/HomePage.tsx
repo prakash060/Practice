@@ -11,7 +11,17 @@ import { useToast } from '../state/ToastContext'
 export default function HomePage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { categories, selectedCategory, setSelectedCategory, menuItems, cartItems, removeFromCart, clearCart } = useFood()
+  const {
+    categories,
+    selectedCategory,
+    setSelectedCategory,
+    menuItems,
+    cartItems,
+    removeFromCart,
+    clearCart,
+    isLoadingMenu,
+    menuError,
+  } = useFood()
 
   const selectedMeta = getCategoryMeta(selectedCategory)
   const { showToast } = useToast()
@@ -58,7 +68,12 @@ export default function HomePage() {
       <section className="content-grid">
         <div className="content-grid__main">
           <h2>{selectedCategory} menu</h2>
-          <FoodList items={menuItems} />
+          {menuError ? <p className="error-message">{menuError}</p> : null}
+          {isLoadingMenu ? (
+            <p className="empty-state">Loading menu…</p>
+          ) : (
+            <FoodList items={menuItems} />
+          )}
         </div>
         <aside className="content-grid__side">
           <OrderSummary cartItems={cartItems} onRemoveItem={removeFromCart} onClearCart={clearCart} onCheckout={handleCheckout} />

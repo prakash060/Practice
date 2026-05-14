@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { FoodProvider } from './state/FoodContext'
 import { AuthProvider } from './state/AuthContext'
 import { ToastProvider } from './state/ToastContext'
-import { ProtectedRoute, GuestRoute, AuthCatchAll } from './components/ProtectedRoute'
+import { ProtectedRoute, GuestRoute, AuthCatchAll, AdminRoute } from './components/ProtectedRoute'
 import { ToastHost } from './components/ToastHost'
 import HomePage from './pages/HomePage'
 import CheckoutPage from './pages/CheckoutPage'
@@ -12,6 +12,7 @@ import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import ProfilePage from './pages/ProfilePage'
 import MyOrdersPage from './pages/MyOrdersPage'
+import AdminPage from './pages/AdminPage'
 import './App.css'
 
 function App() {
@@ -84,6 +85,14 @@ function App() {
                 <ProtectedRoute>
                   <MyOrdersPage />
                 </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminPage />
+                </AdminRoute>
               }
             />
               <Route path="*" element={<AuthCatchAll />} />

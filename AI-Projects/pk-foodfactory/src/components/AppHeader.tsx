@@ -38,7 +38,8 @@ export function AppHeaderAuth({ title }: { title: string }) {
 }
 
 export function AppHeaderApp() {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
+  const isAdmin = Boolean(user?.isAdmin)
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
@@ -108,6 +109,16 @@ export function AppHeaderApp() {
               >
                 Edit profile
               </Link>
+              {isAdmin ? (
+                <Link
+                  to="/admin"
+                  className="header-user-dropdown__item"
+                  role="menuitem"
+                  onClick={close}
+                >
+                  Administration
+                </Link>
+              ) : null}
               <button
                 type="button"
                 className="header-user-dropdown__item header-user-dropdown__item--danger"

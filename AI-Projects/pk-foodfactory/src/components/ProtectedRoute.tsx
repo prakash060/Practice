@@ -34,3 +34,13 @@ export function AuthCatchAll() {
   if (user) return <Navigate to="/" replace />
   return <Navigate to="/login" replace />
 }
+
+export function AdminRoute({ children }: { children: ReactNode }) {
+  const { user, isReady } = useAuth()
+  const location = useLocation()
+
+  if (!isReady) return <AuthLoading />
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />
+  if (!user.isAdmin) return <Navigate to="/" replace />
+  return <>{children}</>
+}

@@ -1,6 +1,6 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { categories } from '../constants/categories'
-import { getFoodItemsByCategory } from '../services/foodService'
+import { fetchFoodItems } from '../services/foodService'
 import type { FoodItem } from '../types/food'
 
 export interface CartItem extends FoodItem {
@@ -12,10 +12,14 @@ interface FoodContextValue {
   selectedCategory: (typeof categories)[number]
   setSelectedCategory: (category: (typeof categories)[number]) => void
   menuItems: FoodItem[]
+  allItems: FoodItem[]
   cartItems: CartItem[]
   addToCart: (item: FoodItem) => void
   removeFromCart: (itemId: string) => void
   clearCart: () => void
+  isLoadingMenu: boolean
+  menuError: string | null
+  reloadMenu: () => Promise<void>
 }
 
 const FoodContext = createContext<FoodContextValue | undefined>(undefined)
@@ -23,10 +27,31 @@ const FoodContext = createContext<FoodContextValue | undefined>(undefined)
 export function FoodProvider({ children }: { children: React.ReactNode }) {
   const [selectedCategory, setSelectedCategory] = useState<(typeof categories)[number]>(categories[0])
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [allItems, setAllItems] = useState<FoodItem[]>([])
+  const [isLoadingMenu, setIsLoadingMenu] = useState(true)
+  const [menuError, setMenuError] = useState<string | null>(null)
+
+  const reloadMenu = useCallback(async () => {
+    setIsLoadingMenu(true)
+    setMenuError(null)
+    try {
+      const items = await fetchFoodItems()
+      setAllItems(items)
+    } catch (err) {
+      console.error('Failed to load menu:', err)
+      setMenuError('Could not load the menu. Please try again later.')
+    } finally {
+      setIsLoadingMenu(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void reloadMenu()
+  }, [reloadMenu])
 
   const menuItems = useMemo(
-    () => getFoodItemsByCategory(selectedCategory),
-    [selectedCategory],
+    () => allItems.filter((item) => item.category === selectedCategory),
+    [allItems, selectedCategory]
   )
 
   const addToCart = (item: FoodItem) => {
@@ -34,12 +59,9 @@ export function FoodProvider({ children }: { children: React.ReactNode }) {
       const existing = current.find((line) => line.id === item.id)
       if (existing) {
         return current.map((line) =>
-          line.id === item.id
-            ? { ...line, quantity: line.quantity + 1 }
-            : line,
+          line.id === item.id ? { ...line, quantity: line.quantity + 1 } : line,
         )
       }
-
       return [...current, { ...item, quantity: 1 }]
     })
   }
@@ -48,9 +70,7 @@ export function FoodProvider({ children }: { children: React.ReactNode }) {
     setCartItems((current) =>
       current
         .map((line) =>
-          line.id === itemId
-            ? { ...line, quantity: Math.max(line.quantity - 1, 0) }
-            : line,
+          line.id === itemId ? { ...line, quantity: Math.max(line.quantity - 1, 0) } : line,
         )
         .filter((line) => line.quantity > 0),
     )
@@ -65,10 +85,14 @@ export function FoodProvider({ children }: { children: React.ReactNode }) {
         selectedCategory,
         setSelectedCategory,
         menuItems,
+        allItems,
         cartItems,
         addToCart,
         removeFromCart,
         clearCart,
+        isLoadingMenu,
+        menuError,
+        reloadMenu,
       }}
     >
       {children}

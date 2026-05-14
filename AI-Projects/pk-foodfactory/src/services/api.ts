@@ -53,8 +53,20 @@ export interface UserPublic {
   email: string;
   phone: string;
   address: string;
+  isAdmin?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FoodItemDoc {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RegisterResponse extends UserPublic {
@@ -205,6 +217,69 @@ export const authAPI = {
 
   updateMe: async (body: { name: string; phone: string; address: string }): Promise<UserPublic> => {
     const response = await api.put<UserPublic>('/users/me', body);
+    return response.data;
+  },
+};
+
+export interface FoodItemInput {
+  category: string;
+  name: string;
+  description?: string;
+  price?: number;
+  /** Optional image file. If omitted, `imageUrl` is used (or null = use default). */
+  image?: File | null;
+  /** Optional URL fallback when no file is provided. Pass null to clear. */
+  imageUrl?: string | null;
+}
+
+function buildFoodItemForm(body: FoodItemInput): FormData {
+  const fd = new FormData();
+  fd.append('category', body.category);
+  fd.append('name', body.name);
+  if (body.description !== undefined) fd.append('description', body.description);
+  if (body.price !== undefined) fd.append('price', String(body.price));
+  if (body.image) {
+    fd.append('image', body.image);
+  } else if (body.imageUrl !== undefined) {
+    fd.append('imageUrl', body.imageUrl === null ? '' : body.imageUrl);
+  }
+  return fd;
+}
+
+// Letting axios/browser set Content-Type itself adds the multipart boundary.
+// We can't pre-set 'multipart/form-data' or the request body becomes unparseable.
+const multipartConfig = {
+  headers: { 'Content-Type': undefined as unknown as string },
+};
+
+export const foodItemsAPI = {
+  list: async (category?: string): Promise<FoodItemDoc[]> => {
+    const response = await api.get<FoodItemDoc[]>('/food-items', {
+      params: category ? { category } : undefined,
+    });
+    return response.data;
+  },
+
+  create: async (body: FoodItemInput): Promise<FoodItemDoc> => {
+    const response = await api.post<FoodItemDoc>(
+      '/food-items',
+      buildFoodItemForm(body),
+      multipartConfig
+    );
+    return response.data;
+  },
+
+  update: async (id: string, body: Partial<FoodItemInput>): Promise<FoodItemDoc> => {
+    const response = await api.put<FoodItemDoc>(
+      `/food-items/${id}`,
+      buildFoodItemForm(body as FoodItemInput),
+      multipartConfig
+    );
+    return response.data;
+  },
+
+  remove: async (id: string): Promise<{ success: boolean; id: string }> => {
+    const response = await api.delete<{ success: boolean; id: string }>(`/food-items/${id}`);
     return response.data;
   },
 };
