@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
+import { AdminNav } from '../components/AdminNav'
 import { AppHeaderApp } from '../components/AppHeader'
 import { CategoryTabs } from '../components/CategoryTabs/CategoryTabs'
 import { GENERIC_FOOD_IMAGE } from '../constants/categories'
@@ -688,6 +689,10 @@ export default function AdminPage() {
             Create or edit categories, then add and edit items in each one. Images are optional.
           </p>
         </div>
+      </section>
+
+      <section className="panel">
+        <AdminNav />
       </section>
 
       {loadError ? (

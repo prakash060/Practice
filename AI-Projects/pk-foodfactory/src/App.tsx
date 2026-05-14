@@ -13,6 +13,7 @@ import SignupPage from './pages/SignupPage'
 import ProfilePage from './pages/ProfilePage'
 import MyOrdersPage from './pages/MyOrdersPage'
 import AdminPage from './pages/AdminPage'
+import DeliveryOnboardingPage from './pages/DeliveryOnboardingPage'
 import './App.css'
 
 function App() {
@@ -92,6 +93,14 @@ function App() {
               element={
                 <AdminRoute>
                   <AdminPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/delivery"
+              element={
+                <AdminRoute>
+                  <DeliveryOnboardingPage />
                 </AdminRoute>
               }
             />

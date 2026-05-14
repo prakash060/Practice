@@ -124,6 +124,7 @@ app.use('/api/orders', requireMongo, require('./routes/orders'));
 app.use('/api/users', requireMongo, require('./routes/users'));
 app.use('/api/categories', requireMongo, require('./routes/categories'));
 app.use('/api/food-items', requireMongo, require('./routes/foodItems'));
+app.use('/api/delivery-agents', requireMongo, require('./routes/deliveryAgents'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

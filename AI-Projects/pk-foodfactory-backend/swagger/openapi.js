@@ -18,6 +18,7 @@ const openapi = {
     { name: 'Orders', description: 'Orders CRUD' },
     { name: 'Categories', description: 'Food categories (public list; admin-only writes)' },
     { name: 'FoodItems', description: 'Menu items (public list; admin-only writes)' },
+    { name: 'DeliveryAgents', description: 'Onboarded delivery riders (admin only)' },
   ],
   components: {
     securitySchemes: {
@@ -78,6 +79,24 @@ const openapi = {
           emoji: { type: 'string' },
           accent: { type: 'string', description: 'Hex color, e.g. #6b5ef7' },
           imageUrl: { type: 'string', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      DeliveryAgent: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          phone: { type: 'string' },
+          email: { type: 'string', nullable: true },
+          vehicleType: { type: 'string', enum: ['Bike', 'Scooter', 'Bicycle', 'Car', 'Other'] },
+          vehicleNumber: { type: 'string' },
+          licenseNumber: { type: 'string' },
+          address: { type: 'string' },
+          photoUrl: { type: 'string', nullable: true },
+          status: { type: 'string', enum: ['active', 'inactive'] },
+          notes: { type: 'string' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
         },
@@ -610,6 +629,137 @@ const openapi = {
       delete: {
         tags: ['FoodItems'],
         summary: 'Delete a food item (admin only)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Deleted' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+          '404': { description: 'Not found' },
+        },
+      },
+    },
+    '/api/delivery-agents': {
+      get: {
+        tags: ['DeliveryAgents'],
+        summary: 'List onboarded delivery agents (admin only)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['active', 'inactive'] } },
+        ],
+        responses: {
+          '200': {
+            description: 'List of delivery agents',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/DeliveryAgent' } },
+              },
+            },
+          },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+        },
+      },
+      post: {
+        tags: ['DeliveryAgents'],
+        summary: 'Onboard a new delivery agent (admin only)',
+        description: 'Multipart form. Provide `photo` file or `photoUrl` string.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['name', 'phone'],
+                properties: {
+                  name: { type: 'string' },
+                  phone: { type: 'string' },
+                  email: { type: 'string' },
+                  vehicleType: { type: 'string' },
+                  vehicleNumber: { type: 'string' },
+                  licenseNumber: { type: 'string' },
+                  address: { type: 'string' },
+                  notes: { type: 'string' },
+                  status: { type: 'string', enum: ['active', 'inactive'] },
+                  photoUrl: { type: 'string', nullable: true },
+                  photo: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Created',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/DeliveryAgent' } } },
+          },
+          '400': { description: 'Validation error' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+          '409': { description: 'Duplicate phone number' },
+        },
+      },
+    },
+    '/api/delivery-agents/{id}': {
+      get: {
+        tags: ['DeliveryAgents'],
+        summary: 'Get a delivery agent (admin only)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Delivery agent',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/DeliveryAgent' } } },
+          },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+          '404': { description: 'Not found' },
+        },
+      },
+      put: {
+        tags: ['DeliveryAgents'],
+        summary: 'Update a delivery agent (admin only)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  phone: { type: 'string' },
+                  email: { type: 'string' },
+                  vehicleType: { type: 'string' },
+                  vehicleNumber: { type: 'string' },
+                  licenseNumber: { type: 'string' },
+                  address: { type: 'string' },
+                  notes: { type: 'string' },
+                  status: { type: 'string', enum: ['active', 'inactive'] },
+                  photoUrl: { type: 'string', nullable: true },
+                  photo: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Updated',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/DeliveryAgent' } } },
+          },
+          '400': { description: 'Validation error' },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Admin access required' },
+          '404': { description: 'Not found' },
+          '409': { description: 'Duplicate phone number' },
+        },
+      },
+      delete: {
+        tags: ['DeliveryAgents'],
+        summary: 'Delete a delivery agent (admin only)',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: {

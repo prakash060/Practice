@@ -110,14 +110,24 @@ export function AppHeaderApp() {
                 Edit profile
               </Link>
               {isAdmin ? (
-                <Link
-                  to="/admin"
-                  className="header-user-dropdown__item"
-                  role="menuitem"
-                  onClick={close}
-                >
-                  Administration
-                </Link>
+                <>
+                  <Link
+                    to="/admin"
+                    className="header-user-dropdown__item"
+                    role="menuitem"
+                    onClick={close}
+                  >
+                    Administration
+                  </Link>
+                  <Link
+                    to="/admin/delivery"
+                    className="header-user-dropdown__item"
+                    role="menuitem"
+                    onClick={close}
+                  >
+                    Delivery onboarding
+                  </Link>
+                </>
               ) : null}
               <button
                 type="button"

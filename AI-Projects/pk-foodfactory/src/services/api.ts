@@ -80,6 +80,25 @@ export interface CategoryDoc {
   updatedAt?: string;
 }
 
+export type DeliveryVehicleType = 'Bike' | 'Scooter' | 'Bicycle' | 'Car' | 'Other';
+export type DeliveryAgentStatus = 'active' | 'inactive';
+
+export interface DeliveryAgentDoc {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  vehicleType: DeliveryVehicleType;
+  vehicleNumber: string;
+  licenseNumber: string;
+  address: string;
+  photoUrl: string | null;
+  status: DeliveryAgentStatus;
+  notes: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface RegisterResponse extends UserPublic {
   token: string;
 }
@@ -346,6 +365,76 @@ export const categoriesAPI = {
     const response = await api.delete<{ success: boolean; id: string; itemsDeleted: number }>(
       `/categories/${id}`
     );
+    return response.data;
+  },
+};
+
+export interface DeliveryAgentInput {
+  name: string;
+  phone: string;
+  email?: string;
+  vehicleType?: DeliveryVehicleType;
+  vehicleNumber?: string;
+  licenseNumber?: string;
+  address?: string;
+  notes?: string;
+  status?: DeliveryAgentStatus;
+  photo?: File | null;
+  photoUrl?: string | null;
+}
+
+function buildDeliveryAgentForm(body: Partial<DeliveryAgentInput>): FormData {
+  const fd = new FormData();
+  if (body.name !== undefined) fd.append('name', body.name);
+  if (body.phone !== undefined) fd.append('phone', body.phone);
+  if (body.email !== undefined) fd.append('email', body.email);
+  if (body.vehicleType !== undefined) fd.append('vehicleType', body.vehicleType);
+  if (body.vehicleNumber !== undefined) fd.append('vehicleNumber', body.vehicleNumber);
+  if (body.licenseNumber !== undefined) fd.append('licenseNumber', body.licenseNumber);
+  if (body.address !== undefined) fd.append('address', body.address);
+  if (body.notes !== undefined) fd.append('notes', body.notes);
+  if (body.status !== undefined) fd.append('status', body.status);
+  if (body.photo) {
+    fd.append('photo', body.photo);
+  } else if (body.photoUrl !== undefined) {
+    fd.append('photoUrl', body.photoUrl === null ? '' : body.photoUrl);
+  }
+  return fd;
+}
+
+export const deliveryAgentsAPI = {
+  list: async (status?: DeliveryAgentStatus): Promise<DeliveryAgentDoc[]> => {
+    const response = await api.get<DeliveryAgentDoc[]>('/delivery-agents', {
+      params: status ? { status } : undefined,
+    });
+    return response.data;
+  },
+
+  get: async (id: string): Promise<DeliveryAgentDoc> => {
+    const response = await api.get<DeliveryAgentDoc>(`/delivery-agents/${id}`);
+    return response.data;
+  },
+
+  create: async (body: DeliveryAgentInput): Promise<DeliveryAgentDoc> => {
+    const response = await api.post<DeliveryAgentDoc>(
+      '/delivery-agents',
+      buildDeliveryAgentForm(body),
+      multipartConfig
+    );
+    return response.data;
+  },
+
+  update: async (id: string, body: Partial<DeliveryAgentInput>): Promise<DeliveryAgentDoc> => {
+    const response = await api.put<DeliveryAgentDoc>(
+      `/delivery-agents/${id}`,
+      buildDeliveryAgentForm(body),
+      multipartConfig
+    );
+    return response.data;
+  },
+
+  remove: async (id: string): Promise<{ success: boolean; id: string }> => {
+    const response = await api.delete<{ success: boolean; id: string }>(`/delivery-agents/${id}`);
     return response.data;
   },
 };
