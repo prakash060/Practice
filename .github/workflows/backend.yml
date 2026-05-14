@@ -70,6 +70,7 @@ jobs:
           DUMMY_PAYMENT_MODE: ${{ secrets.DUMMY_PAYMENT_MODE }}
           RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
         run: |
           set -e
           if [ -z "${MONGODB_URI:-}" ]; then
@@ -86,6 +87,7 @@ jobs:
             --arg DUMMY_PAYMENT_MODE "$DUMMY_PAYMENT_MODE" \
             --arg RAZORPAY_WEBHOOK_SECRET "$RAZORPAY_WEBHOOK_SECRET" \
             --arg JWT_SECRET "$JWT_SECRET" \
+            --arg ADMIN_EMAIL "$ADMIN_EMAIL" \
             --arg EMAIL_USER "$EMAIL_USER" \
             --arg EMAIL_PASS "$EMAIL_PASS" \
             '{
@@ -101,6 +103,7 @@ jobs:
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "DUMMY_PAYMENT_MODE", Value: $DUMMY_PAYMENT_MODE},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "RAZORPAY_WEBHOOK_SECRET", Value: $RAZORPAY_WEBHOOK_SECRET},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "JWT_SECRET", Value: $JWT_SECRET},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "ADMIN_EMAIL", Value: $ADMIN_EMAIL},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "EMAIL_USER", Value: $EMAIL_USER},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "EMAIL_PASS", Value: $EMAIL_PASS}
                 ]
