@@ -1,23 +1,98 @@
-import { useEffect, useMemo, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type ReactElement,
+} from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
-import { ChevronLeftIcon } from '../components/Icons'
+import {
+  AlertIcon,
+  BankIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  CreditCardIcon,
+  LockIcon,
+  QrCodeIcon,
+  ShieldCheckIcon,
+  SmartphoneIcon,
+  ZapIcon,
+  type IconProps,
+} from '../components/Icons'
 import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useFood } from '../hooks/useFood'
 import { useAuth } from '../state/AuthContext'
 import { ordersAPI, paymentAPI } from '../services/api'
 
-type Method = 'upi' | 'card' | 'netbanking' | 'wallet'
+type Method = 'upi' | 'card' | 'netbanking'
 
-const METHOD_UI: Record<Method, { title: string; icon: string; subtitle: string }> = {
-  upi: { title: 'UPI', icon: '📱', subtitle: 'Google Pay, PhonePe, Paytm, etc.' },
-  card: { title: 'Card', icon: '💳', subtitle: 'Credit / Debit card via Razorpay' },
-  netbanking: { title: 'Net Banking', icon: '🏦', subtitle: 'Pay via your bank using Razorpay' },
-  wallet: { title: 'Wallet', icon: '👛', subtitle: 'Paytm, Amazon Pay and others (as enabled)' },
+interface MethodTheme {
+  title: string
+  subtitle: string
+  Icon: (props: IconProps) => ReactElement
+  accent: string
+  /** Razorpay's UI display label (kept identical to previous behaviour) */
+  rzpLabel: string
 }
 
+const METHOD_THEME: Record<Method, MethodTheme> = {
+  upi: {
+    title: 'UPI',
+    subtitle: 'Pay instantly using any UPI app on your phone.',
+    Icon: SmartphoneIcon,
+    accent: '#6b5ef7',
+    rzpLabel: 'Pay via UPI',
+  },
+  card: {
+    title: 'Credit / Debit card',
+    subtitle: 'Visa, Mastercard, RuPay and Amex accepted.',
+    Icon: CreditCardIcon,
+    accent: '#1e457a',
+    rzpLabel: 'Pay via Card',
+  },
+  netbanking: {
+    title: 'Net Banking',
+    subtitle: 'Securely log in to your bank to confirm the payment.',
+    Icon: BankIcon,
+    accent: '#1f6f3b',
+    rzpLabel: 'Pay via Netbanking',
+  },
+}
+
+const UPI_APPS = [
+  { id: 'gpay', label: 'Google Pay', hint: 'phone@oksbi' },
+  { id: 'phonepe', label: 'PhonePe', hint: 'phone@ybl' },
+  { id: 'paytm', label: 'Paytm', hint: 'phone@paytm' },
+  { id: 'bhim', label: 'BHIM', hint: 'phone@upi' },
+]
+
+const BANKS = [
+  { id: 'hdfc', name: 'HDFC Bank', short: 'HDFC' },
+  { id: 'icici', name: 'ICICI Bank', short: 'ICICI' },
+  { id: 'sbi', name: 'State Bank of India', short: 'SBI' },
+  { id: 'axis', name: 'Axis Bank', short: 'AXIS' },
+  { id: 'kotak', name: 'Kotak Mahindra', short: 'KOTAK' },
+  { id: 'pnb', name: 'Punjab National Bank', short: 'PNB' },
+  { id: 'bob', name: 'Bank of Baroda', short: 'BoB' },
+  { id: 'yes', name: 'Yes Bank', short: 'YES' },
+]
+
+const CARD_BRANDS = ['Visa', 'Mastercard', 'RuPay', 'Amex']
+
 function isMethod(value: string | undefined): value is Method {
-  return value === 'upi' || value === 'card' || value === 'netbanking' || value === 'wallet'
+  return value === 'upi' || value === 'card' || value === 'netbanking'
+}
+
+function formatCardNumber(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 16)
+  return digits.replace(/(.{4})/g, '$1 ').trim()
+}
+
+function formatExpiry(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 4)
+  if (digits.length <= 2) return digits
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`
 }
 
 export default function PaymentMethodPage() {
@@ -33,13 +108,26 @@ export default function PaymentMethodPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState('')
 
-  const total = useMemo(
+  // UPI form state (decorative — real payment still goes through Razorpay/dummy)
+  const [upiId, setUpiId] = useState('')
+
+  // Card form state
+  const [cardNumber, setCardNumber] = useState('')
+  const [cardHolder, setCardHolder] = useState('')
+  const [cardExpiry, setCardExpiry] = useState('')
+  const [cardCvv, setCardCvv] = useState('')
+
+  // Net banking form state
+  const [selectedBank, setSelectedBank] = useState<string>('')
+
+  const subtotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cartItems]
   )
+  const tax = useMemo(() => Math.round(subtotal * 0.05), [subtotal])
   const finalAmount = useMemo(
-    () => total + DELIVERY_FEE_INR + Math.round(total * 0.05),
-    [total]
+    () => subtotal + DELIVERY_FEE_INR + tax,
+    [subtotal, tax]
   )
 
   useEffect(() => {
@@ -54,18 +142,11 @@ export default function PaymentMethodPage() {
   }, [cartItems.length, method, navigate])
 
   const getCheckoutConfig = (preferred: Method) => {
-    const titles: Record<Method, string> = {
-      upi: 'Pay via UPI',
-      card: 'Pay via Card',
-      netbanking: 'Pay via Netbanking',
-      wallet: 'Pay via Wallet',
-    }
-
     return {
       display: {
         blocks: {
           preferred: {
-            name: titles[preferred],
+            name: METHOD_THEME[preferred].rzpLabel,
             instruments: [{ method: preferred }],
           },
         },
@@ -111,7 +192,6 @@ export default function PaymentMethodPage() {
             razorpay_signature: 'dummy',
           })
 
-          // Only after create + verify succeeds: clear cart and redirect home with status.
           clearCart()
           navigate('/', {
             replace: true,
@@ -148,7 +228,10 @@ export default function PaymentMethodPage() {
               razorpay_signature: rpRes.razorpay_signature,
             })
             clearCart()
-            navigate('/payment', { replace: true, state: { paidOrderId: response.orderId } })
+            navigate('/payment', {
+              replace: true,
+              state: { paidOrderId: response.orderId },
+            })
           } catch (e) {
             console.error('Payment verification failed:', e)
             setError('Payment verification failed. Please contact support.')
@@ -172,57 +255,325 @@ export default function PaymentMethodPage() {
     } catch (err: any) {
       console.error('Payment initiation failed:', err)
       const backendMsg = err?.response?.data?.error
-      setError(backendMsg || 'Failed to start Razorpay Checkout. Please check backend credentials and try again.')
+      setError(
+        backendMsg ||
+          'Failed to start the payment gateway. Please check your connection and try again.'
+      )
     } finally {
       setIsProcessing(false)
     }
   }
 
   if (!method) return null
-  const ui = METHOD_UI[method]
+  const theme = METHOD_THEME[method]
+  const { Icon } = theme
+
+  // ----- per-method body -----
+  let methodBody: ReactElement | null = null
+
+  if (method === 'upi') {
+    methodBody = (
+      <div className="pm-form">
+        <div className="pm-upi-grid">
+          <div className="pm-upi-input">
+            <label htmlFor="upi-id">Your UPI ID</label>
+            <div className="pm-input-wrap">
+              <SmartphoneIcon size={16} />
+              <input
+                id="upi-id"
+                type="text"
+                placeholder="yourname@bank"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                autoComplete="off"
+                disabled={isProcessing}
+              />
+            </div>
+            <p className="pm-form__hint">
+              You'll get a payment request on the linked UPI app.
+            </p>
+          </div>
+          <div className="pm-upi-qr" aria-hidden="true">
+            <div className="pm-upi-qr__inner">
+              <QrCodeIcon size={56} />
+              <span>Scan with any UPI app</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="pm-divider">
+          <span>or pick an app</span>
+        </div>
+
+        <div className="pm-upi-apps">
+          {UPI_APPS.map((app) => (
+            <button
+              key={app.id}
+              type="button"
+              className="pm-upi-app"
+              onClick={() => setUpiId((cur) => cur || `your${app.hint.slice(5)}`)}
+              disabled={isProcessing}
+            >
+              <span className="pm-upi-app__badge">
+                {app.label.slice(0, 1)}
+              </span>
+              <span>
+                <strong>{app.label}</strong>
+                <span className="pm-upi-app__hint">{app.hint}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  } else if (method === 'card') {
+    const previewNumber = cardNumber || '•••• •••• •••• ••••'
+    const previewName = cardHolder.trim() || 'YOUR NAME'
+    const previewExpiry = cardExpiry || 'MM/YY'
+    methodBody = (
+      <div className="pm-form">
+        <div className="pm-card-preview" aria-hidden="true">
+          <div className="pm-card-preview__row">
+            <span className="pm-card-preview__brand">PK FOOD FACTORY</span>
+            <CreditCardIcon size={22} />
+          </div>
+          <div className="pm-card-preview__chip" />
+          <div className="pm-card-preview__number">{previewNumber}</div>
+          <div className="pm-card-preview__bottom">
+            <div>
+              <span className="pm-card-preview__label">Card holder</span>
+              <span className="pm-card-preview__value">{previewName}</span>
+            </div>
+            <div>
+              <span className="pm-card-preview__label">Expires</span>
+              <span className="pm-card-preview__value">{previewExpiry}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="pm-card-grid">
+          <div className="pm-card-field pm-card-field--full">
+            <label htmlFor="card-number">Card number</label>
+            <div className="pm-input-wrap">
+              <CreditCardIcon size={16} />
+              <input
+                id="card-number"
+                type="text"
+                inputMode="numeric"
+                autoComplete="cc-number"
+                placeholder="1234 5678 9012 3456"
+                value={cardNumber}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setCardNumber(formatCardNumber(e.target.value))
+                }
+                disabled={isProcessing}
+              />
+            </div>
+          </div>
+          <div className="pm-card-field pm-card-field--full">
+            <label htmlFor="card-holder">Name on card</label>
+            <div className="pm-input-wrap">
+              <input
+                id="card-holder"
+                type="text"
+                autoComplete="cc-name"
+                placeholder="As printed on the card"
+                value={cardHolder}
+                onChange={(e) =>
+                  setCardHolder(e.target.value.toUpperCase().slice(0, 32))
+                }
+                disabled={isProcessing}
+              />
+            </div>
+          </div>
+          <div className="pm-card-field">
+            <label htmlFor="card-expiry">Expiry</label>
+            <div className="pm-input-wrap">
+              <input
+                id="card-expiry"
+                type="text"
+                inputMode="numeric"
+                autoComplete="cc-exp"
+                placeholder="MM/YY"
+                value={cardExpiry}
+                onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
+                disabled={isProcessing}
+              />
+            </div>
+          </div>
+          <div className="pm-card-field">
+            <label htmlFor="card-cvv">CVV</label>
+            <div className="pm-input-wrap">
+              <LockIcon size={16} />
+              <input
+                id="card-cvv"
+                type="password"
+                inputMode="numeric"
+                autoComplete="cc-csc"
+                placeholder="•••"
+                value={cardCvv}
+                onChange={(e) =>
+                  setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))
+                }
+                disabled={isProcessing}
+                maxLength={4}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="pm-card-brands">
+          {CARD_BRANDS.map((b) => (
+            <span key={b} className="pm-card-brand">
+              {b}
+            </span>
+          ))}
+        </div>
+      </div>
+    )
+  } else if (method === 'netbanking') {
+    methodBody = (
+      <div className="pm-form">
+        <p className="pm-form__hint pm-form__hint--lead">
+          Choose your bank — we'll take you to its secure login page to confirm
+          the payment.
+        </p>
+        <div className="pm-bank-grid">
+          {BANKS.map((b) => {
+            const isSelected = selectedBank === b.id
+            return (
+              <button
+                key={b.id}
+                type="button"
+                className={`pm-bank-tile ${isSelected ? 'pm-bank-tile--selected' : ''}`}
+                onClick={() => setSelectedBank(b.id)}
+                disabled={isProcessing}
+                aria-pressed={isSelected}
+              >
+                <span className="pm-bank-tile__logo">{b.short}</span>
+                <span className="pm-bank-tile__name">{b.name}</span>
+                {isSelected ? (
+                  <span className="pm-bank-tile__check">
+                    <CheckIcon size={14} />
+                  </span>
+                ) : null}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <main className="payment-page">
+    <main className="payment-shell">
       <AppHeaderApp />
-      <header className="payment-header">
+
+      <section
+        className={`pm-hero pm-hero--${method}`}
+        style={{ ['--method-accent' as never]: theme.accent }}
+      >
         <button
           type="button"
-          className="back-button btn-icon"
+          className="back-button btn-icon pm-hero__back"
           onClick={() => navigate('/payment')}
           disabled={isProcessing}
         >
           <ChevronLeftIcon />
-          <span>Back</span>
+          <span>Change Payment Method</span>
         </button>
-        <h1>{ui.title}</h1>
-      </header>
+        <div className="pm-hero__content pm-hero__content--with-icon">
+          <span className="pm-hero__method-icon" aria-hidden="true">
+            <Icon size={28} />
+          </span>
+          <div>
+            <p className="pm-hero__kicker">
+              <ZapIcon size={14} />
+              <span>Secure checkout</span>
+            </p>
+            <h1>{theme.title}</h1>
+            <p className="pm-hero__subtitle">{theme.subtitle}</p>
+          </div>
+        </div>
+      </section>
 
-      <section className="payment-content">
-        <div className="payment-container">
-          <div className="payment-summary">
-            <h2>
-              {ui.icon} {ui.title}
-            </h2>
-            <p className="payment-disclaimer">{ui.subtitle}</p>
+      <section className="pm-layout">
+        <aside className="pm-summary">
+          <h2 className="pm-summary__title">Order summary</h2>
+          <ul className="pm-summary__list">
+            <li>
+              <span>Subtotal</span>
+              <span>₹{subtotal}</span>
+            </li>
+            <li>
+              <span>Delivery fee</span>
+              <span>₹{DELIVERY_FEE_INR}</span>
+            </li>
+            <li>
+              <span>Tax (5%)</span>
+              <span>₹{tax}</span>
+            </li>
+          </ul>
+          <div className="pm-summary__total">
+            <span>Total</span>
+            <strong>₹{finalAmount}</strong>
+          </div>
+          <div className="pm-trust">
+            <span className="pm-trust__chip">
+              <LockIcon size={14} />
+              <span>SSL secured</span>
+            </span>
+            <span className="pm-trust__chip">
+              <ShieldCheckIcon size={14} />
+              <span>PCI compliant</span>
+            </span>
+          </div>
+        </aside>
 
-            <div className="summary-item">
-              <span>Total Amount</span>
-              <strong>₹{finalAmount}</strong>
+        <div className="pm-detail">
+          <div className="pm-detail__card">
+            {error ? (
+              <div
+                className="orders-banner orders-banner--error pm-detail__error"
+                role="alert"
+              >
+                <AlertIcon />
+                <span>{error}</span>
+              </div>
+            ) : null}
+
+            {methodBody}
+
+            <div className="pm-cta">
+              <button
+                type="button"
+                className="proceed-payment-button btn-icon pm-cta__btn"
+                onClick={handlePay}
+                disabled={isProcessing}
+              >
+                <LockIcon />
+                <span>
+                  {isProcessing
+                    ? 'Processing payment…'
+                    : `Pay ₹${finalAmount} securely`}
+                </span>
+              </button>
+              <p className="pm-cta__note">
+                <ShieldCheckIcon size={14} />
+                <span>
+                  By continuing you agree to our terms. Your card and bank
+                  details are never stored on our servers.
+                </span>
+              </p>
+              {orderId ? (
+                <p className="pm-cta__hint">
+                  Created order reference: <strong>{orderId}</strong>
+                </p>
+              ) : null}
             </div>
           </div>
-
-          <div className="payment-methods">
-            {error && <p className="error-message">{error}</p>}
-          </div>
-
-          <button type="button" className="proceed-payment-button" onClick={handlePay} disabled={isProcessing}>
-            {isProcessing ? 'Opening Razorpay...' : `Pay with Razorpay (${ui.title})`}
-          </button>
-
-          {orderId ? <p className="payment-disclaimer">Created order: #{orderId}</p> : null}
         </div>
       </section>
     </main>
   )
 }
-

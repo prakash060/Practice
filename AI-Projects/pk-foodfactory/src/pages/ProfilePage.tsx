@@ -135,7 +135,7 @@ export default function ProfilePage() {
               disabled={isSubmitting}
             >
               <ChevronLeftIcon />
-              <span>Back to menu</span>
+              <span>Return to Menu</span>
             </button>
             <button
               type="submit"

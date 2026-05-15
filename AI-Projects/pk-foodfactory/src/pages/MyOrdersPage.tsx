@@ -150,7 +150,7 @@ export default function MyOrdersPage() {
           onClick={() => navigate('/')}
         >
           <ChevronLeftIcon />
-          <span>Back to Home</span>
+          <span>Continue Shopping</span>
         </button>
         <div className="orders-hero__content">
           <p className="orders-hero__kicker">

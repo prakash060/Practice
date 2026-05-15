@@ -924,7 +924,7 @@ export default function AdminPage() {
           onClick={() => navigate('/')}
         >
           <ChevronLeftIcon />
-          <span>Back to menu</span>
+          <span>Exit Admin</span>
         </button>
       </section>
     </main>

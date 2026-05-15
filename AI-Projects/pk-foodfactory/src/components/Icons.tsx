@@ -292,6 +292,78 @@ export function PackageIcon(props: IconProps) {
   )
 }
 
+export function LockIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </Svg>
+  )
+}
+
+export function ShieldCheckIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <polyline points="9 12 11 14 15 10" />
+    </Svg>
+  )
+}
+
+export function SmartphoneIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="6" y="2" width="12" height="20" rx="2" />
+      <line x1="10" y1="18" x2="14" y2="18" />
+    </Svg>
+  )
+}
+
+export function BankIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <line x1="3" y1="21" x2="21" y2="21" />
+      <polyline points="3 10 12 4 21 10" />
+      <line x1="5" y1="10" x2="5" y2="20" />
+      <line x1="9" y1="10" x2="9" y2="20" />
+      <line x1="15" y1="10" x2="15" y2="20" />
+      <line x1="19" y1="10" x2="19" y2="20" />
+    </Svg>
+  )
+}
+
+export function QrCodeIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <line x1="14" y1="14" x2="14" y2="14" />
+      <line x1="18" y1="14" x2="18" y2="14" />
+      <line x1="14" y1="18" x2="18" y2="18" />
+      <line x1="14" y1="21" x2="21" y2="21" />
+      <line x1="21" y1="14" x2="21" y2="18" />
+    </Svg>
+  )
+}
+
+export function ZapIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </Svg>
+  )
+}
+
+export function MapPinIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </Svg>
+  )
+}
+
 export function SaveIcon(props: IconProps) {
   return (
     <Svg {...props}>

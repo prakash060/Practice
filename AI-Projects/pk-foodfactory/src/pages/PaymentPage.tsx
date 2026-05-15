@@ -1,12 +1,55 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
-import { ChevronLeftIcon } from '../components/Icons'
+import {
+  ArrowRightIcon,
+  BankIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  CreditCardIcon,
+  LockIcon,
+  ReceiptIcon,
+  ShieldCheckIcon,
+  SmartphoneIcon,
+  type IconProps,
+} from '../components/Icons'
 import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useFood } from '../hooks/useFood'
 
 type PaymentScreen = 'checkout' | 'success'
-type Method = 'upi' | 'card' | 'netbanking' | 'wallet'
+type Method = 'upi' | 'card' | 'netbanking'
+
+interface MethodCard {
+  id: Method
+  title: string
+  description: string
+  badges: string[]
+  Icon: (props: IconProps) => ReactElement
+}
+
+const METHODS: MethodCard[] = [
+  {
+    id: 'upi',
+    title: 'UPI',
+    description: 'Pay instantly using any UPI app on your phone.',
+    badges: ['GPay', 'PhonePe', 'Paytm', 'BHIM'],
+    Icon: SmartphoneIcon,
+  },
+  {
+    id: 'card',
+    title: 'Credit / Debit card',
+    description: 'Visa, Mastercard, RuPay and American Express accepted.',
+    badges: ['Visa', 'Mastercard', 'RuPay', 'Amex'],
+    Icon: CreditCardIcon,
+  },
+  {
+    id: 'netbanking',
+    title: 'Net Banking',
+    description: 'Securely log in to your bank to confirm the payment.',
+    badges: ['HDFC', 'ICICI', 'SBI', 'Axis', '+more'],
+    Icon: BankIcon,
+  },
+]
 
 export default function PaymentPage() {
   const navigate = useNavigate()
@@ -15,13 +58,14 @@ export default function PaymentPage() {
   const [currentScreen, setCurrentScreen] = useState<PaymentScreen>('checkout')
   const [orderId, setOrderId] = useState<string>('')
 
-  const total = useMemo(
+  const subtotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cartItems]
   )
+  const tax = useMemo(() => Math.round(subtotal * 0.05), [subtotal])
   const finalAmount = useMemo(
-    () => total + DELIVERY_FEE_INR + Math.round(total * 0.05),
-    [total]
+    () => subtotal + DELIVERY_FEE_INR + tax,
+    [subtotal, tax]
   )
 
   useEffect(() => {
@@ -36,7 +80,6 @@ export default function PaymentPage() {
     if (state.paidOrderId) {
       setOrderId(state.paidOrderId)
       setCurrentScreen('success')
-      // clear state so refresh/back doesn't keep replaying success
       navigate('/payment', { replace: true })
     }
   }, [location.state, navigate])
@@ -49,8 +92,6 @@ export default function PaymentPage() {
     navigate(`/payment/${method}`)
   }
 
-  // When user comes back to this page after paying on a method page,
-  // we show a brief success state then redirect home.
   useEffect(() => {
     if (currentScreen !== 'success') return
     clearCart()
@@ -68,121 +109,136 @@ export default function PaymentPage() {
 
   if (cartItems.length === 0 && currentScreen !== 'success') {
     return (
-      <main className="payment-page">
+      <main className="payment-shell">
         <AppHeaderApp />
-        <div className="payment-container">
-          <p className="empty-state">Your cart is empty. Redirecting to menu...</p>
+        <div className="orders-banner orders-banner--error">
+          Your cart is empty. Redirecting to the menu…
         </div>
       </main>
     )
   }
 
+  if (currentScreen === 'success') {
+    return (
+      <main className="payment-shell">
+        <AppHeaderApp />
+        <section className="pm-success">
+          <div className="pm-success__icon">
+            <CheckIcon size={48} />
+          </div>
+          <h2>Payment successful</h2>
+          <p>Your order has been placed.</p>
+          {orderId ? (
+            <p className="pm-success__id">
+              Order ID: <strong>{orderId}</strong>
+            </p>
+          ) : null}
+          <p className="pm-success__hint">Redirecting to home…</p>
+        </section>
+      </main>
+    )
+  }
+
   return (
-    <main className="payment-page">
+    <main className="payment-shell">
       <AppHeaderApp />
-      <header className="payment-header">
+
+      <section className="pm-hero">
         <button
           type="button"
-          className="back-button btn-icon"
+          className="back-button btn-icon pm-hero__back"
           onClick={handleBackToCheckout}
-          disabled={currentScreen === 'success'}
+          disabled={currentScreen !== 'checkout'}
         >
           <ChevronLeftIcon />
-          <span>Back</span>
+          <span>Edit Order</span>
         </button>
-        <h1>Payment</h1>
-      </header>
+        <div className="pm-hero__content">
+          <p className="pm-hero__kicker">
+            <ReceiptIcon size={14} />
+            <span>Step 2 of 2</span>
+          </p>
+          <h1>Choose a payment method</h1>
+          <p className="pm-hero__subtitle">
+            Pick how you'd like to pay <strong>₹{finalAmount}</strong>. All
+            methods are secured end-to-end.
+          </p>
+        </div>
+      </section>
 
-      <section className="payment-content">
-        {currentScreen === 'success' ? (
-          <div className="payment-container">
-            <div className="success-message">
-              <div className="success-icon">✓</div>
-              <h2>Payment Successful!</h2>
-              <p>Your order has been placed successfully.</p>
-              <p className="order-id">Order ID: #{orderId}</p>
-              <p className="redirect-message">Redirecting to home...</p>
-            </div>
+      <section className="pm-layout">
+        <aside className="pm-summary">
+          <h2 className="pm-summary__title">Order summary</h2>
+          <ul className="pm-summary__list">
+            <li>
+              <span>Subtotal</span>
+              <span>₹{subtotal}</span>
+            </li>
+            <li>
+              <span>Delivery fee</span>
+              <span>₹{DELIVERY_FEE_INR}</span>
+            </li>
+            <li>
+              <span>Tax (5%)</span>
+              <span>₹{tax}</span>
+            </li>
+          </ul>
+          <div className="pm-summary__total">
+            <span>Total</span>
+            <strong>₹{finalAmount}</strong>
           </div>
-        ) : currentScreen === 'checkout' ? (
-          <div className="payment-container">
-            <div className="payment-summary">
-              <h2>Checkout</h2>
-              <div className="summary-item">
-                <span>Subtotal</span>
-                <span>₹{total}</span>
-              </div>
-              <div className="summary-item">
-                <span>Delivery Fee</span>
-                <span>₹{DELIVERY_FEE_INR}</span>
-              </div>
-              <div className="summary-item">
-                <span>Tax (5%)</span>
-                <span>₹{Math.round(total * 0.05)}</span>
-              </div>
-              <div className="summary-divider"></div>
-              <div className="summary-total">
-                <span>Total Amount</span>
-                <strong>₹{finalAmount}</strong>
-              </div>
-            </div>
-
-            <div className="payment-methods">
-              <h2 style={{ marginTop: 8 }}>Choose a payment option</h2>
-              <p className="payment-disclaimer" style={{ marginTop: 0 }}>
-                All options open the Razorpay Checkout gateway. This just takes you directly to the method you prefer.
-              </p>
-
-              <div className="method-option">
-                <button type="button" className="method-button" onClick={() => goToMethodPage('upi')}>
-                  <div className="method-icon">📱</div>
-                  <div className="method-info">
-                    <strong>UPI</strong>
-                    <p>Google Pay, PhonePe, Paytm, etc.</p>
-                  </div>
-                  <div className="method-arrow">→</div>
-                </button>
-              </div>
-
-              <div className="method-option">
-                <button type="button" className="method-button" onClick={() => goToMethodPage('card')}>
-                  <div className="method-icon">💳</div>
-                  <div className="method-info">
-                    <strong>Credit / Debit Card</strong>
-                    <p>Visa, MasterCard, RuPay</p>
-                  </div>
-                  <div className="method-arrow">→</div>
-                </button>
-              </div>
-
-              <div className="method-option">
-                <button type="button" className="method-button" onClick={() => goToMethodPage('netbanking')}>
-                  <div className="method-icon">🏦</div>
-                  <div className="method-info">
-                    <strong>Net Banking</strong>
-                    <p>HDFC, ICICI, SBI, Axis, etc.</p>
-                  </div>
-                  <div className="method-arrow">→</div>
-                </button>
-              </div>
-
-              <div className="method-option">
-                <button type="button" className="method-button" onClick={() => goToMethodPage('wallet')}>
-                  <div className="method-icon">👛</div>
-                  <div className="method-info">
-                    <strong>Digital Wallet</strong>
-                    <p>Paytm Wallet, Amazon Pay</p>
-                  </div>
-                  <div className="method-arrow">→</div>
-                </button>
-              </div>
-
-              <p className="form-hint" style={{ marginTop: 10 }}>
-                Select any one payment method above to proceed.
-              </p>
-            </div>
+          <div className="pm-trust">
+            <span className="pm-trust__chip">
+              <LockIcon size={14} />
+              <span>SSL secured</span>
+            </span>
+            <span className="pm-trust__chip">
+              <ShieldCheckIcon size={14} />
+              <span>PCI compliant</span>
+            </span>
           </div>
-        ) : null}
+        </aside>
+
+        <div className="pm-method-list">
+          <h2 className="pm-method-list__title">Payment options</h2>
+          <p className="pm-method-list__hint">
+            We never store your card or banking details.
+          </p>
+
+          {METHODS.map(({ id, title, description, badges, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              className="pm-method-card"
+              onClick={() => goToMethodPage(id)}
+            >
+              <span className="pm-method-card__icon" aria-hidden="true">
+                <Icon size={22} />
+              </span>
+              <span className="pm-method-card__body">
+                <span className="pm-method-card__title">{title}</span>
+                <span className="pm-method-card__desc">{description}</span>
+                <span className="pm-method-card__badges">
+                  {badges.map((b) => (
+                    <span key={b} className="pm-method-card__badge">
+                      {b}
+                    </span>
+                  ))}
+                </span>
+              </span>
+              <span className="pm-method-card__arrow" aria-hidden="true">
+                <ArrowRightIcon size={18} />
+              </span>
+            </button>
+          ))}
+
+          <p className="pm-footer-note">
+            <ShieldCheckIcon size={14} />
+            <span>
+              Your details are processed over a secure, encrypted channel.
+            </span>
+          </p>
+        </div>
       </section>
     </main>
   )

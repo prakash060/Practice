@@ -286,7 +286,7 @@ export default function AdminResetPage() {
           onClick={() => navigate('/admin')}
         >
           <ChevronLeftIcon />
-          <span>Back to admin</span>
+          <span>Return to Admin</span>
         </button>
       </section>
     </main>

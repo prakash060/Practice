@@ -673,7 +673,7 @@ export default function DeliveryOnboardingPage() {
           onClick={() => navigate('/')}
         >
           <ChevronLeftIcon />
-          <span>Back to menu</span>
+          <span>Exit Admin</span>
         </button>
       </section>
     </main>
