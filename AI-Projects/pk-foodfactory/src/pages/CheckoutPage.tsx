@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
+import { ArrowRightIcon, ChevronLeftIcon } from '../components/Icons'
 import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useAuth } from '../state/AuthContext'
 import { useFood } from '../hooks/useFood'
@@ -25,8 +26,13 @@ export default function CheckoutPage() {
     <main className="checkout-page">
       <AppHeaderApp />
       <header className="checkout-header">
-        <button type="button" className="back-button" onClick={handleBackToMenu}>
-          ← Back to Menu
+        <button
+          type="button"
+          className="back-button btn-icon"
+          onClick={handleBackToMenu}
+        >
+          <ChevronLeftIcon />
+          <span>Back to Menu</span>
         </button>
         <h1>Order Review</h1>
       </header>
@@ -77,12 +83,13 @@ export default function CheckoutPage() {
                 <p className="note">Update your address anytime from Profile.</p>
               </div>
 
-              <button 
-                type="button" 
-                className="proceed-payment-button"
+              <button
+                type="button"
+                className="proceed-payment-button btn-icon"
                 onClick={handleProceedToPayment}
               >
-                Proceed to Payment
+                <span>Proceed to Payment</span>
+                <ArrowRightIcon />
               </button>
             </>
           )}

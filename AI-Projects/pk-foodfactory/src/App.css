@@ -1974,3 +1974,111 @@
     justify-content: flex-end;
   }
 }
+
+/* ====================================================================
+   Icon button system
+   --------------------------------------------------------------------
+   `.app-icon`   — the SVG itself (sized, stroked, inherits color)
+   `.btn-icon`   — any button that contains an inline icon + label
+   `.icon-only`  — a button rendered as a compact square with just an icon
+   `.header-user-dropdown__item-icon` — leading icon inside dropdown items
+   ==================================================================== */
+
+.app-icon {
+  flex: 0 0 auto;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+button .app-icon {
+  pointer-events: none;
+}
+
+/* Any button that pairs an icon with a text label. Works with our existing
+   button classes (back-button, proceed-payment-button, admin-item__edit, ...). */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.btn-icon > .app-icon {
+  margin-right: 0;
+}
+
+/* Square icon-only buttons (used for compact Edit / Delete actions). */
+.icon-only {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+}
+
+.icon-only .app-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Subtle hover lift for icon buttons that don't already have one. */
+.btn-icon,
+.icon-only {
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.btn-icon:hover:not(:disabled),
+.icon-only:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+/* Make admin row actions sit side-by-side on wider screens now that buttons
+   are more compact with icons. The mobile rule below still stacks them. */
+.admin-item__actions--stack {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.admin-item__actions--stack .icon-only {
+  flex: 0 0 auto;
+}
+
+/* Dropdown item icons (profile menu) */
+.header-user-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-user-dropdown__item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  color: #6b5ef7;
+  flex-shrink: 0;
+}
+
+.header-user-dropdown__item--danger .header-user-dropdown__item-icon {
+  color: #b3261e;
+}
+
+/* Small order summary trash button — keep circular but use an icon */
+.remove-button.icon-only {
+  width: 36px;
+  height: 36px;
+  font-size: 0;
+}
+
+@media (max-width: 720px) {
+  .admin-item__actions--stack {
+    flex-direction: column;
+  }
+}
+

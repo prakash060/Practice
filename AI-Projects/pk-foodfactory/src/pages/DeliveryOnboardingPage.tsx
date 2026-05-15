@@ -3,6 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AdminNav } from '../components/AdminNav'
 import { AppHeaderApp } from '../components/AppHeader'
+import {
+  CheckIcon,
+  ChevronLeftIcon,
+  EditIcon,
+  PauseIcon,
+  PlayIcon,
+  RotateLeftIcon,
+  TrashIcon,
+  XIcon,
+} from '../components/Icons'
 import { GENERIC_FOOD_IMAGE } from '../constants/categories'
 import {
   deliveryAgentsAPI,
@@ -388,28 +398,33 @@ function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
         {isEdit ? (
           <button
             type="button"
-            className="back-button"
+            className="back-button btn-icon"
             onClick={() => onCancelEdit?.()}
             disabled={isSubmitting}
           >
-            Cancel
+            <XIcon />
+            <span>Cancel</span>
           </button>
         ) : (
           <button
             type="button"
-            className="back-button"
+            className="back-button btn-icon"
             onClick={resetCreate}
             disabled={isSubmitting}
           >
-            Reset
+            <RotateLeftIcon />
+            <span>Reset</span>
           </button>
         )}
         <button
           type="submit"
-          className="proceed-payment-button auth-submit profile-save"
+          className="proceed-payment-button auth-submit profile-save btn-icon"
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Onboard agent'}
+          <CheckIcon />
+          <span>
+            {isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Onboard agent'}
+          </span>
         </button>
       </div>
     </form>
@@ -613,24 +628,34 @@ export default function DeliveryOnboardingPage() {
                     <div className="admin-item__actions admin-item__actions--stack">
                       <button
                         type="button"
-                        className="back-button admin-item__edit"
+                        className="back-button admin-item__edit icon-only"
                         onClick={() => setEditingId(agent.id)}
+                        aria-label={`Edit ${agent.name}`}
+                        title="Edit agent"
                       >
-                        Edit
+                        <EditIcon />
                       </button>
                       <button
                         type="button"
-                        className="back-button"
+                        className="back-button icon-only"
                         onClick={() => handleToggleStatus(agent)}
+                        aria-label={
+                          agent.status === 'active'
+                            ? `Deactivate ${agent.name}`
+                            : `Activate ${agent.name}`
+                        }
+                        title={agent.status === 'active' ? 'Deactivate' : 'Activate'}
                       >
-                        {agent.status === 'active' ? 'Deactivate' : 'Activate'}
+                        {agent.status === 'active' ? <PauseIcon /> : <PlayIcon />}
                       </button>
                       <button
                         type="button"
-                        className="back-button admin-item__delete"
+                        className="back-button admin-item__delete icon-only"
                         onClick={() => handleDelete(agent)}
+                        aria-label={`Delete ${agent.name}`}
+                        title="Delete agent"
                       >
-                        Delete
+                        <TrashIcon />
                       </button>
                     </div>
                   </li>
@@ -642,8 +667,13 @@ export default function DeliveryOnboardingPage() {
       </section>
 
       <section className="panel admin-footer-actions">
-        <button type="button" className="back-button" onClick={() => navigate('/')}>
-          ← Back to menu
+        <button
+          type="button"
+          className="back-button btn-icon"
+          onClick={() => navigate('/')}
+        >
+          <ChevronLeftIcon />
+          <span>Back to menu</span>
         </button>
       </section>
     </main>

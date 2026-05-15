@@ -4,6 +4,14 @@ import { isAxiosError } from 'axios'
 import { AdminNav } from '../components/AdminNav'
 import { AppHeaderApp } from '../components/AppHeader'
 import { CategoryTabs } from '../components/CategoryTabs/CategoryTabs'
+import {
+  CheckIcon,
+  ChevronLeftIcon,
+  EditIcon,
+  RotateLeftIcon,
+  TrashIcon,
+  XIcon,
+} from '../components/Icons'
 import { GENERIC_FOOD_IMAGE } from '../constants/categories'
 import { useFood } from '../hooks/useFood'
 import {
@@ -228,28 +236,33 @@ function CategoryForm({ editing, onSaved, onCancelEdit }: CategoryFormProps) {
         {isEdit ? (
           <button
             type="button"
-            className="back-button"
+            className="back-button btn-icon"
             onClick={() => onCancelEdit?.()}
             disabled={isSubmitting}
           >
-            Cancel
+            <XIcon />
+            <span>Cancel</span>
           </button>
         ) : (
           <button
             type="button"
-            className="back-button"
+            className="back-button btn-icon"
             onClick={resetCreate}
             disabled={isSubmitting}
           >
-            Reset
+            <RotateLeftIcon />
+            <span>Reset</span>
           </button>
         )}
         <button
           type="submit"
-          className="proceed-payment-button auth-submit profile-save"
+          className="proceed-payment-button auth-submit profile-save btn-icon"
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save category'}
+          <CheckIcon />
+          <span>
+            {isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save category'}
+          </span>
         </button>
       </div>
     </form>
@@ -482,28 +495,33 @@ function ItemForm({
         {isEdit ? (
           <button
             type="button"
-            className="back-button"
+            className="back-button btn-icon"
             onClick={() => onCancelEdit?.()}
             disabled={isSubmitting}
           >
-            Cancel
+            <XIcon />
+            <span>Cancel</span>
           </button>
         ) : (
           <button
             type="button"
-            className="back-button"
+            className="back-button btn-icon"
             onClick={resetCreate}
             disabled={isSubmitting}
           >
-            Reset
+            <RotateLeftIcon />
+            <span>Reset</span>
           </button>
         )}
         <button
           type="submit"
-          className="proceed-payment-button auth-submit profile-save"
+          className="proceed-payment-button auth-submit profile-save btn-icon"
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save item'}
+          <CheckIcon />
+          <span>
+            {isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save item'}
+          </span>
         </button>
       </div>
     </form>
@@ -764,17 +782,21 @@ export default function AdminPage() {
                     <div className="admin-item__actions admin-item__actions--stack">
                       <button
                         type="button"
-                        className="back-button admin-item__edit"
+                        className="back-button admin-item__edit icon-only"
                         onClick={() => setEditingCategoryId(cat.id)}
+                        aria-label={`Edit ${cat.label || cat.name}`}
+                        title="Edit category"
                       >
-                        Edit
+                        <EditIcon />
                       </button>
                       <button
                         type="button"
-                        className="back-button admin-item__delete"
+                        className="back-button admin-item__delete icon-only"
                         onClick={() => handleDeleteCategory(cat)}
+                        aria-label={`Delete ${cat.label || cat.name}`}
+                        title="Delete category"
                       >
-                        Delete
+                        <TrashIcon />
                       </button>
                     </div>
                   </li>
@@ -869,17 +891,21 @@ export default function AdminPage() {
                       <div className="admin-item__actions admin-item__actions--stack">
                         <button
                           type="button"
-                          className="back-button admin-item__edit"
+                          className="back-button admin-item__edit icon-only"
                           onClick={() => setEditingItemId(item.id)}
+                          aria-label={`Edit ${item.name}`}
+                          title="Edit item"
                         >
-                          Edit
+                          <EditIcon />
                         </button>
                         <button
                           type="button"
-                          className="back-button admin-item__delete"
+                          className="back-button admin-item__delete icon-only"
                           onClick={() => handleDeleteItem(item)}
+                          aria-label={`Delete ${item.name}`}
+                          title="Delete item"
                         >
-                          Delete
+                          <TrashIcon />
                         </button>
                       </div>
                     </li>
@@ -892,8 +918,13 @@ export default function AdminPage() {
       ) : null}
 
       <section className="panel admin-footer-actions">
-        <button type="button" className="back-button" onClick={() => navigate('/')}>
-          ← Back to menu
+        <button
+          type="button"
+          className="back-button btn-icon"
+          onClick={() => navigate('/')}
+        >
+          <ChevronLeftIcon />
+          <span>Back to menu</span>
         </button>
       </section>
     </main>

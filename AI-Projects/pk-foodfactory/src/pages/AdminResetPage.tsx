@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AdminNav } from '../components/AdminNav'
 import { AppHeaderApp } from '../components/AppHeader'
+import {
+  AlertIcon,
+  ChevronLeftIcon,
+  RotateLeftIcon,
+  TrashIcon,
+} from '../components/Icons'
 import { adminResetAPI, type ResetResponse, type ResetSummary } from '../services/api'
 import { useFoodContext } from '../state/FoodContext'
 import { useToast } from '../state/ToastContext'
@@ -58,11 +64,12 @@ function ScopeCard({
       <p className="reset-card__body">{subtitle}</p>
       <button
         type="button"
-        className={`back-button reset-card__btn ${danger ? 'admin-item__delete' : ''}`}
+        className={`back-button reset-card__btn btn-icon ${danger ? 'admin-item__delete' : ''}`}
         disabled={busy || disabled}
         onClick={handleClick}
       >
-        {busy ? 'Clearing…' : disabled ? 'Nothing to clear' : 'Reset'}
+        {danger ? <TrashIcon /> : <RotateLeftIcon />}
+        <span>{busy ? 'Clearing…' : disabled ? 'Nothing to clear' : 'Reset'}</span>
       </button>
     </article>
   )
@@ -261,17 +268,25 @@ export default function AdminResetPage() {
           </div>
           <button
             type="submit"
-            className="proceed-payment-button admin-item__delete reset-all__btn"
+            className="proceed-payment-button admin-item__delete reset-all__btn btn-icon"
             disabled={busyScope === 'all' || confirmAll.trim().toUpperCase() !== 'RESET'}
           >
-            {busyScope === 'all' ? 'Resetting everything…' : 'Reset everything'}
+            <AlertIcon />
+            <span>
+              {busyScope === 'all' ? 'Resetting everything…' : 'Reset everything'}
+            </span>
           </button>
         </form>
       </section>
 
       <section className="panel admin-footer-actions">
-        <button type="button" className="back-button" onClick={() => navigate('/admin')}>
-          ← Back to admin
+        <button
+          type="button"
+          className="back-button btn-icon"
+          onClick={() => navigate('/admin')}
+        >
+          <ChevronLeftIcon />
+          <span>Back to admin</span>
         </button>
       </section>
     </main>

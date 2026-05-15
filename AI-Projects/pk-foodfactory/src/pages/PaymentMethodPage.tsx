@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
+import { ChevronLeftIcon } from '../components/Icons'
 import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useFood } from '../hooks/useFood'
 import { useAuth } from '../state/AuthContext'
@@ -184,8 +185,14 @@ export default function PaymentMethodPage() {
     <main className="payment-page">
       <AppHeaderApp />
       <header className="payment-header">
-        <button type="button" className="back-button" onClick={() => navigate('/payment')} disabled={isProcessing}>
-          ← Back
+        <button
+          type="button"
+          className="back-button btn-icon"
+          onClick={() => navigate('/payment')}
+          disabled={isProcessing}
+        >
+          <ChevronLeftIcon />
+          <span>Back</span>
         </button>
         <h1>{ui.title}</h1>
       </header>

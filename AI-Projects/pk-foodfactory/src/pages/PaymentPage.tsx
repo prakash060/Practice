@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
+import { ChevronLeftIcon } from '../components/Icons'
 import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useFood } from '../hooks/useFood'
 
@@ -80,13 +81,14 @@ export default function PaymentPage() {
     <main className="payment-page">
       <AppHeaderApp />
       <header className="payment-header">
-        <button 
-          type="button" 
-          className="back-button" 
+        <button
+          type="button"
+          className="back-button btn-icon"
           onClick={handleBackToCheckout}
           disabled={currentScreen === 'success'}
         >
-          ← Back
+          <ChevronLeftIcon />
+          <span>Back</span>
         </button>
         <h1>Payment</h1>
       </header>

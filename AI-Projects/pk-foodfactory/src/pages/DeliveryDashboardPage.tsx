@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { isAxiosError } from 'axios'
+import {
+  CheckIcon,
+  LogoutIcon,
+  RefreshIcon,
+  TruckIcon,
+  XIcon,
+} from '../components/Icons'
 import { agentOrdersAPI, type DeliveryStatus, type OrderDoc } from '../services/api'
 import { useDeliveryAuth } from '../state/DeliveryAuthContext'
 import { useToast } from '../state/ToastContext'
@@ -105,24 +112,26 @@ function OrderCard({ order, busy, onUpdate }: OrderCardProps) {
             {status === 'assigned' ? (
               <button
                 type="button"
-                className="back-button"
+                className="back-button btn-icon"
                 disabled={busy}
                 onClick={() => onUpdate(order.orderId, 'out_for_delivery')}
               >
-                Mark out for delivery
+                <TruckIcon />
+                <span>Mark out for delivery</span>
               </button>
             ) : null}
             <button
               type="button"
-              className="proceed-payment-button delivery-order__btn"
+              className="proceed-payment-button delivery-order__btn btn-icon"
               disabled={busy}
               onClick={() => onUpdate(order.orderId, 'delivered', notes.trim() || undefined)}
             >
-              Mark delivered
+              <CheckIcon />
+              <span>Mark delivered</span>
             </button>
             <button
               type="button"
-              className="back-button admin-item__delete"
+              className="back-button admin-item__delete btn-icon"
               disabled={busy}
               onClick={() => {
                 if (!showNotes) {
@@ -132,7 +141,8 @@ function OrderCard({ order, busy, onUpdate }: OrderCardProps) {
                 void onUpdate(order.orderId, 'not_delivered', notes.trim() || undefined)
               }}
             >
-              {showNotes ? 'Confirm not delivered' : 'Mark not delivered'}
+              <XIcon />
+              <span>{showNotes ? 'Confirm not delivered' : 'Mark not delivered'}</span>
             </button>
           </div>
         </>
@@ -226,8 +236,9 @@ export default function DeliveryDashboardPage() {
           </div>
         </div>
         <div className="brand-header__right brand-header__actions">
-          <button type="button" className="back-button" onClick={logout}>
-            Sign out
+          <button type="button" className="back-button btn-icon" onClick={logout}>
+            <LogoutIcon />
+            <span>Sign out</span>
           </button>
         </div>
       </header>
@@ -244,8 +255,13 @@ export default function DeliveryDashboardPage() {
             <option value="all">All assigned to me</option>
           </select>
         </div>
-        <button type="button" className="back-button" onClick={() => void loadOrders()}>
-          Refresh
+        <button
+          type="button"
+          className="back-button btn-icon"
+          onClick={() => void loadOrders()}
+        >
+          <RefreshIcon />
+          <span>Refresh</span>
         </button>
       </section>
 

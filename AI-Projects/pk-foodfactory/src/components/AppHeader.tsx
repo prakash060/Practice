@@ -1,6 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useAuth } from '../state/AuthContext'
+import {
+  AlertIcon,
+  LogoutIcon,
+  ReceiptIcon,
+  ShieldIcon,
+  UserIcon as SharedUserIcon,
+} from './Icons'
 
 function UserIcon({ className }: { className?: string }) {
   return (
@@ -99,6 +106,9 @@ export function AppHeaderApp() {
                 role="menuitem"
                 onClick={close}
               >
+                <span className="header-user-dropdown__item-icon">
+                  <ReceiptIcon />
+                </span>
                 My orders
               </Link>
               <Link
@@ -107,6 +117,9 @@ export function AppHeaderApp() {
                 role="menuitem"
                 onClick={close}
               >
+                <span className="header-user-dropdown__item-icon">
+                  <SharedUserIcon />
+                </span>
                 Edit profile
               </Link>
               {isAdmin ? (
@@ -117,6 +130,9 @@ export function AppHeaderApp() {
                     role="menuitem"
                     onClick={close}
                   >
+                    <span className="header-user-dropdown__item-icon">
+                      <ShieldIcon />
+                    </span>
                     Administration
                   </Link>
                   <Link
@@ -125,6 +141,9 @@ export function AppHeaderApp() {
                     role="menuitem"
                     onClick={close}
                   >
+                    <span className="header-user-dropdown__item-icon">
+                      <AlertIcon />
+                    </span>
                     Reset data
                   </Link>
                 </>
@@ -138,6 +157,9 @@ export function AppHeaderApp() {
                   logout()
                 }}
               >
+                <span className="header-user-dropdown__item-icon">
+                  <LogoutIcon />
+                </span>
                 Logout
               </button>
             </div>

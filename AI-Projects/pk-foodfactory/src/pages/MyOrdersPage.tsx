@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
+import { ChevronLeftIcon } from '../components/Icons'
 import { ordersAPI, type DeliveryStatus, type OrderDoc } from '../services/api'
 
 function formatDate(iso: string): string {
@@ -59,8 +60,13 @@ export default function MyOrdersPage() {
     <main className="checkout-page">
       <AppHeaderApp />
       <header className="checkout-header">
-        <button type="button" className="back-button" onClick={() => navigate('/')}>
-          ← Back to Home
+        <button
+          type="button"
+          className="back-button btn-icon"
+          onClick={() => navigate('/')}
+        >
+          <ChevronLeftIcon />
+          <span>Back to Home</span>
         </button>
         <h1>{title}</h1>
       </header>

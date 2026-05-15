@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderApp } from '../components/AppHeader'
+import { CheckIcon, ChevronLeftIcon } from '../components/Icons'
 import { useAuth } from '../state/AuthContext'
 import { validateProfileForm } from '../utils/userValidators'
 
@@ -129,18 +130,20 @@ export default function ProfilePage() {
           <div className="profile-actions">
             <button
               type="button"
-              className="back-button"
+              className="back-button btn-icon"
               onClick={() => navigate('/')}
               disabled={isSubmitting}
             >
-              ← Back to menu
+              <ChevronLeftIcon />
+              <span>Back to menu</span>
             </button>
             <button
               type="submit"
-              className="proceed-payment-button auth-submit profile-save"
+              className="proceed-payment-button auth-submit profile-save btn-icon"
               disabled={isSubmitting || !canSubmit}
             >
-              {isSubmitting ? 'Saving…' : 'Save changes'}
+              <CheckIcon />
+              <span>{isSubmitting ? 'Saving…' : 'Save changes'}</span>
             </button>
           </div>
         </form>
