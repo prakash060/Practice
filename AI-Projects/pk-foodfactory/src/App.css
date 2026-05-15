@@ -2082,3 +2082,546 @@ button .app-icon {
   }
 }
 
+/* ====================================================================
+   My Orders page — refreshed visual design
+   ==================================================================== */
+
+.my-orders-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+
+/* Hero header */
+.orders-hero {
+  position: relative;
+  margin: 18px 0 24px;
+  padding: 28px 32px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(107, 94, 247, 0.18) 0%, transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(255, 173, 122, 0.18) 0%, transparent 55%),
+    linear-gradient(135deg, #ffffff 0%, #f7f4ff 100%);
+  border: 1px solid #ece6ff;
+  box-shadow: 0 18px 40px rgba(96, 82, 163, 0.08);
+  overflow: hidden;
+}
+
+.orders-hero__back {
+  margin-bottom: 16px;
+}
+
+.orders-hero__content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.orders-hero__kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6b5ef7;
+}
+
+.orders-hero__heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.orders-hero__heading h1 {
+  margin: 0;
+  font-size: 2.1rem;
+  line-height: 1.1;
+  color: #1f1f28;
+}
+
+.orders-hero__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #6b5ef7;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  box-shadow: 0 6px 14px rgba(107, 94, 247, 0.35);
+}
+
+.orders-hero__subtitle {
+  margin: 4px 0 0;
+  color: #5d5a6c;
+  font-size: 0.98rem;
+}
+
+/* Content container */
+.orders-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.orders-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.orders-banner--error {
+  background: #fdecea;
+  color: #b3261e;
+  border: 1px solid #f0c8c5;
+}
+
+/* Order cards */
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.order-card {
+  position: relative;
+  padding: 20px 22px;
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #ece6ff;
+  box-shadow: 0 10px 24px rgba(96, 82, 163, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.order-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 18px 0 0 18px;
+  background: linear-gradient(180deg, #6b5ef7 0%, #a99cff 100%);
+  opacity: 0.85;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(96, 82, 163, 0.12);
+  border-color: #d8d0ff;
+}
+
+.order-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.order-card__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.order-card__id {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1f1f28;
+  word-break: break-all;
+}
+
+.order-card__id-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #efeaff;
+  color: #6b5ef7;
+}
+
+.order-card__date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #7a7593;
+  font-size: 0.88rem;
+}
+
+.order-card__total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.order-card__total-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a7593;
+  font-weight: 700;
+}
+
+.order-card__total strong {
+  font-size: 1.35rem;
+  color: #4032b1;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.order-card__statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Status pills get a leading icon variant */
+.status-pill--icon {
+  gap: 6px;
+  margin-left: 0;
+  padding: 4px 10px;
+}
+
+.status-pill--icon > .app-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Items section */
+.order-card__items-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed #ece6ff;
+}
+
+.order-card__items-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7a7593;
+}
+
+.order-card__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.order-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f5f2ff;
+  border: 1px solid #e6dfff;
+  color: #3e3a4e;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.order-chip__sep {
+  color: #a9a3c5;
+  font-weight: 600;
+}
+
+.order-chip strong {
+  color: #4032b1;
+  font-weight: 700;
+}
+
+.order-chip--muted {
+  color: #7a7593;
+  background: #f5f4fa;
+  border-color: #ebe9f3;
+}
+
+/* Rider info card */
+.order-card__rider {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #faf8ff;
+  border: 1px solid #ebe6ff;
+  border-radius: 14px;
+}
+
+.order-card__rider-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background:
+    linear-gradient(135deg, #ddd6ff 0%, #c7bcff 100%) center / cover no-repeat;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a3fb7;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px rgba(96, 82, 163, 0.18);
+}
+
+.order-card__rider-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.order-card__rider-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.order-card__rider-name strong {
+  font-size: 0.98rem;
+  color: #1f1f28;
+}
+
+.order-card__rider-role {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b5ef7;
+  background: #efeaff;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.order-card__rider-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.order-card__rider-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #ebe6ff;
+  color: #4a4858;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+a.order-card__rider-chip:hover {
+  background: #f5f2ff;
+  border-color: #d6cefa;
+}
+
+.order-card__rider-chip--muted {
+  color: #7a7593;
+}
+
+/* Rider note (highlighted info box) */
+.order-card__note {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  background: #fff8ea;
+  border: 1px solid #f6e3a6;
+  border-radius: 12px;
+  color: #6b4d00;
+}
+
+.order-card__note > .app-icon {
+  margin-top: 2px;
+  color: #b07b00;
+}
+
+.order-card__note strong {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b4d00;
+  margin-bottom: 2px;
+}
+
+.order-card__note p {
+  margin: 0;
+  color: #4a3500;
+  font-size: 0.93rem;
+}
+
+/* Empty state */
+.orders-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  background: #ffffff;
+  border-radius: 22px;
+  border: 1px dashed #d8d0ff;
+  text-align: center;
+}
+
+.orders-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #efeaff 0%, #ddd6ff 100%);
+  color: #6b5ef7;
+}
+
+.orders-empty h2 {
+  margin: 4px 0 0;
+  color: #1f1f28;
+  font-size: 1.3rem;
+}
+
+.orders-empty p {
+  margin: 0;
+  color: #5d5a6c;
+  max-width: 360px;
+}
+
+.orders-empty .proceed-payment-button {
+  margin-top: 6px;
+  width: auto;
+  padding: 12px 22px;
+}
+
+/* Skeleton placeholders */
+.order-card--skeleton {
+  pointer-events: none;
+}
+
+.order-card--skeleton::before {
+  opacity: 0.4;
+}
+
+.skeleton {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    #f1eefb 0%,
+    #e7e2f6 50%,
+    #f1eefb 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.skeleton--line {
+  height: 14px;
+  margin: 4px 0;
+}
+
+.skeleton--w-20 {
+  width: 56px;
+}
+
+.skeleton--w-30 {
+  width: 110px;
+}
+
+.skeleton--w-40 {
+  width: 160px;
+}
+
+.skeleton--pill {
+  width: 110px;
+  height: 22px;
+  border-radius: 999px;
+}
+
+.skeleton--chip {
+  width: 80px;
+  height: 26px;
+  border-radius: 999px;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .my-orders-page {
+    padding: 18px 14px 36px;
+  }
+
+  .orders-hero {
+    padding: 22px 20px;
+  }
+
+  .orders-hero__heading h1 {
+    font-size: 1.7rem;
+  }
+
+  .order-card {
+    padding: 18px 18px 18px 22px;
+  }
+
+  .order-card__head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .order-card__total {
+    align-items: flex-start;
+  }
+
+  .order-card__rider {
+    grid-template-columns: 40px 1fr;
+  }
+
+  .order-card__rider-avatar {
+    width: 40px;
+    height: 40px;
+  }
+}
+
