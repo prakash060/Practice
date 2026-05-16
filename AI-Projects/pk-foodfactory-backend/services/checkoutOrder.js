@@ -63,6 +63,16 @@ function getRazorpay() {
   return razorpay;
 }
 
+function normalizeIndianPhone(raw) {
+  if (!raw) return '';
+  const digits = String(raw).replace(/\D/g, '').slice(-10);
+  return /^[6-9]\d{9}$/.test(digits) ? digits : '';
+}
+
+function isEmailValid(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 function computeTotals(items) {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deliveryFee = 0;
@@ -129,6 +139,21 @@ async function initiateCheckout({
     throw badRequest('Amount and items are required');
   }
 
+  const cd = customerDetails || {};
+  if (!isEmailValid(cd.email)) {
+    throw badRequest('A valid email is required for payment');
+  }
+  const normalizedPhone = normalizeIndianPhone(cd.phone);
+  if (!normalizedPhone) {
+    throw badRequest('A valid 10-digit Indian mobile number is required for payment');
+  }
+  const sanitizedCustomerDetails = {
+    name: cd.name,
+    email: cd.email,
+    phone: normalizedPhone,
+    address: cd.address,
+  };
+
   const { subtotal, deliveryFee, tax, totalAmount } = computeTotals(items);
 
   if (Math.abs(amount - totalAmount) > 1) {
@@ -152,7 +177,7 @@ async function initiateCheckout({
     deliveryFee,
     tax,
     totalAmount,
-    customerDetails: customerDetails || {},
+    customerDetails: sanitizedCustomerDetails,
     status: 'awaiting_payment',
     expiresAt: new Date(Date.now() + INTENT_TTL_MS),
   });

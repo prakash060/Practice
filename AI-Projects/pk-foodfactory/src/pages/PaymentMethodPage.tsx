@@ -95,6 +95,35 @@ function formatExpiry(value: string): string {
   return `${digits.slice(0, 2)}/${digits.slice(2)}`
 }
 
+function normalizeIndianPhone(raw?: string): string {
+  if (!raw) return ''
+  const digits = raw.replace(/\D/g, '').slice(-10)
+  return /^[6-9]\d{9}$/.test(digits) ? digits : ''
+}
+
+function isEmailValid(email?: string): boolean {
+  return !!email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function razorpayFailureMessage(failRes?: {
+  error?: { code?: string; description?: string; reason?: string }
+}): string {
+  const code = failRes?.error?.code
+  const desc = failRes?.error?.description
+  switch (code) {
+    case 'BAD_REQUEST_ERROR':
+      return 'Invalid payment details. Please try again.'
+    case 'GATEWAY_ERROR':
+      return 'Bank or UPI app rejected the payment. Please try another method.'
+    case 'NETWORK_ERROR':
+      return 'Network issue during payment. Please check your connection and retry.'
+    case 'SERVER_ERROR':
+      return 'Razorpay server error. Please retry in a moment.'
+    default:
+      return desc || 'Payment failed. Please try again or choose another method.'
+  }
+}
+
 export default function PaymentMethodPage() {
   const navigate = useNavigate()
   const params = useParams()
@@ -140,31 +169,6 @@ export default function PaymentMethodPage() {
     }
   }, [cartItems.length, method, navigate])
 
-  const getCheckoutConfig = (preferred: Method) => {
-    // Razorpay rejects an instrument like { method: 'upi' } with
-    // show_default_blocks=false unless flows are declared, which is what causes
-    // "No appropriate payment method found" for UPI apps like PhonePe.
-    const instrumentByMethod: Record<Method, Record<string, unknown>> = {
-      upi: { method: 'upi', flows: ['collect', 'intent', 'qr'] },
-      card: { method: 'card' },
-      netbanking: { method: 'netbanking' },
-    }
-    return {
-      display: {
-        blocks: {
-          preferred: {
-            name: METHOD_THEME[preferred].rzpLabel,
-            instruments: [instrumentByMethod[preferred]],
-          },
-        },
-        sequence: ['block.preferred'],
-        preferences: {
-          show_default_blocks: false,
-        },
-      },
-    }
-  }
-
   const buildMethodFilter = (preferred: Method) => ({
     upi: preferred === 'upi',
     card: preferred === 'card',
@@ -180,6 +184,15 @@ export default function PaymentMethodPage() {
       setIsProcessing(true)
       setError('')
 
+      const phone = normalizeIndianPhone(user?.phone)
+      if (!phone || !isEmailValid(user?.email)) {
+        setError(
+          'Please complete your profile with a valid email and a 10-digit Indian mobile number before paying.'
+        )
+        setIsProcessing(false)
+        return
+      }
+
       const orderData = {
         amount: finalAmount,
         currency: 'INR',
@@ -192,7 +205,7 @@ export default function PaymentMethodPage() {
         customerDetails: {
           name: user?.name,
           email: user?.email,
-          phone: user?.phone,
+          phone,
           address: user?.address,
         },
       }
@@ -211,7 +224,11 @@ export default function PaymentMethodPage() {
         name: 'PK Food Factory',
         description: 'Food Order Payment',
         method: buildMethodFilter(method),
-        config: getCheckoutConfig(method),
+        notes: {
+          razorpayOrderId: response.razorpayOrderId,
+          userEmail: user?.email ?? '',
+          preferredMethod: method,
+        },
         handler: async (rpRes: {
           razorpay_order_id: string
           razorpay_payment_id: string
@@ -238,7 +255,7 @@ export default function PaymentMethodPage() {
         prefill: {
           name: user?.name ?? '',
           email: user?.email ?? '',
-          contact: user?.phone ?? '',
+          contact: phone,
         },
         theme: { color: '#6b5ef7' },
         modal: {
@@ -247,13 +264,13 @@ export default function PaymentMethodPage() {
       }
 
       const rzp = new (window as any).Razorpay(options)
-      rzp.on('payment.failed', (failRes: { error?: { description?: string } }) => {
-        setIsProcessing(false)
-        setError(
-          failRes?.error?.description ||
-            'Payment failed. Please try again or choose another method.'
-        )
-      })
+      rzp.on(
+        'payment.failed',
+        (failRes: { error?: { code?: string; description?: string } }) => {
+          setIsProcessing(false)
+          setError(razorpayFailureMessage(failRes))
+        }
+      )
       rzp.open()
     } catch (err: any) {
       console.error('Payment initiation failed:', err)
