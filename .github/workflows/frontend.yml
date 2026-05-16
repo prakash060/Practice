@@ -63,9 +63,9 @@ jobs:
         run: |
           aws s3 sync AI-Projects/pk-foodfactory/dist "s3://${{ secrets.AWS_S3_BUCKET_FRONTEND }}" --delete
 
-      # SPA: direct visits to /login, /checkout, etc. must return index.html so React Router runs.
-      # Without this, S3 returns 404 XML for paths that are not real objects.
-      - name: Configure S3 static website (SPA error document)
+      # S3 website ErrorDocument only applies to the s3-website endpoint, NOT CloudFront REST origin.
+      # Reload on /login needs CloudFront custom error responses (see configure_cloudfront_spa.py).
+      - name: Configure S3 static website (optional; not used by CloudFront origin)
         run: |
           aws s3api put-bucket-website \
             --bucket "${{ secrets.AWS_S3_BUCKET_FRONTEND }}" \
@@ -73,6 +73,19 @@ jobs:
               "IndexDocument": {"Suffix": "index.html"},
               "ErrorDocument": {"Key": "index.html"}
             }'
+
+      - name: Configure CloudFront SPA error pages
+        env:
+          CF_DIST_ID: ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          set -e
+          if [ -z "${CF_DIST_ID:-}" ]; then
+            echo "::warning::AWS_CLOUDFRONT_DISTRIBUTION_ID is not set — skipping SPA error page configuration."
+            echo "Without this, reloading https://your-cf-domain/login returns S3 AccessDenied XML."
+            echo "Set the secret (Distribution ID starting with E) or configure error pages manually in AWS Console."
+            exit 0
+          fi
+          python3 AI-Projects/pk-foodfactory/scripts/configure_cloudfront_spa.py --distribution-id "$CF_DIST_ID"
 
       - name: Invalidate frontend CloudFront cache
         env:
