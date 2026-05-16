@@ -227,15 +227,10 @@ const openapi = {
       CreateOrderResponse: {
         type: 'object',
         properties: {
-          orderId: { type: 'string' },
           razorpayOrderId: { type: 'string' },
           amount: { type: 'number', description: 'Amount in paise' },
           currency: { type: 'string' },
-          key: { type: 'string', description: 'Razorpay key id' },
-          checkoutDummy: {
-            type: 'boolean',
-            description: 'True when DUMMY_PAYMENT_MODE is on (no live Razorpay order)',
-          },
+          key: { type: 'string', description: 'Razorpay key id for Checkout' },
         },
       },
       VerifyPaymentRequest: {
@@ -364,7 +359,8 @@ const openapi = {
     '/api/payment/create-order': {
       post: {
         tags: ['Payment'],
-        summary: 'Create Razorpay order + DB order',
+        summary: 'Initiate checkout (Razorpay order + checkout intent)',
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateOrderRequest' } } },
@@ -382,7 +378,8 @@ const openapi = {
     '/api/payment/verify': {
       post: {
         tags: ['Payment'],
-        summary: 'Verify payment signature',
+        summary: 'Verify payment signature and create order',
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { $ref: '#/components/schemas/VerifyPaymentRequest' } } },
@@ -424,9 +421,9 @@ const openapi = {
     '/api/orders/checkout': {
       post: {
         tags: ['Orders'],
-        summary: 'Create checkout order (Razorpay + DB)',
+        summary: 'Initiate checkout (Razorpay order + checkout intent)',
         description:
-          'Requires Bearer token. Saves order linked to the current user; merges profile into customer details when form fields are empty. With DUMMY_PAYMENT_MODE, skips live Razorpay order creation.',
+          'Requires Bearer token. Creates a Razorpay order and checkout intent; the PK order is created only after successful payment verification.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,

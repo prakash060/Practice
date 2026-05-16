@@ -104,11 +104,10 @@ export default function PaymentMethodPage() {
   const methodParam = params.method
   const method = isMethod(methodParam) ? methodParam : null
 
-  const [orderId, setOrderId] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState('')
 
-  // UPI form state (decorative — real payment still goes through Razorpay/dummy)
+  // UPI form state (decorative — real payment goes through Razorpay Checkout)
   const [upiId, setUpiId] = useState('')
 
   // Card form state
@@ -182,31 +181,6 @@ export default function PaymentMethodPage() {
       }
 
       const response = await ordersAPI.createCheckoutOrder(orderData)
-      setOrderId(response.orderId)
-
-      if (response.checkoutDummy) {
-        try {
-          await paymentAPI.verifyPayment({
-            razorpay_order_id: response.razorpayOrderId,
-            razorpay_payment_id: 'dummy_payment_id',
-            razorpay_signature: 'dummy',
-          })
-
-          clearCart()
-          navigate('/', {
-            replace: true,
-            state: {
-              orderId: response.orderId,
-              status: 'Order placed successfully (dummy payment)',
-            },
-          })
-          return
-        } catch (e) {
-          console.error('Payment verification failed:', e)
-          setError('Payment verification failed. Please contact support.')
-          return
-        }
-      }
 
       if (!(window as any).Razorpay) {
         throw new Error('Razorpay script not loaded')
@@ -220,9 +194,13 @@ export default function PaymentMethodPage() {
         name: 'PK Food Factory',
         description: 'Food Order Payment',
         config: getCheckoutConfig(method),
-        handler: async (rpRes: any) => {
+        handler: async (rpRes: {
+          razorpay_order_id: string
+          razorpay_payment_id: string
+          razorpay_signature: string
+        }) => {
           try {
-            await paymentAPI.verifyPayment({
+            const verified = await paymentAPI.verifyPayment({
               razorpay_order_id: rpRes.razorpay_order_id,
               razorpay_payment_id: rpRes.razorpay_payment_id,
               razorpay_signature: rpRes.razorpay_signature,
@@ -230,7 +208,7 @@ export default function PaymentMethodPage() {
             clearCart()
             navigate('/payment', {
               replace: true,
-              state: { paidOrderId: response.orderId },
+              state: { paidOrderId: verified.orderId },
             })
           } catch (e) {
             console.error('Payment verification failed:', e)
@@ -251,6 +229,13 @@ export default function PaymentMethodPage() {
       }
 
       const rzp = new (window as any).Razorpay(options)
+      rzp.on('payment.failed', (failRes: { error?: { description?: string } }) => {
+        setIsProcessing(false)
+        setError(
+          failRes?.error?.description ||
+            'Payment failed. Please try again or choose another method.'
+        )
+      })
       rzp.open()
     } catch (err: any) {
       console.error('Payment initiation failed:', err)
@@ -565,11 +550,6 @@ export default function PaymentMethodPage() {
                   details are never stored on our servers.
                 </span>
               </p>
-              {orderId ? (
-                <p className="pm-cta__hint">
-                  Created order reference: <strong>{orderId}</strong>
-                </p>
-              ) : null}
             </div>
           </div>
         </div>

@@ -6,11 +6,23 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const openapi = require('./swagger/openapi');
+const { handleRazorpayWebhook, isPlaceholderKey } = require('./services/checkoutOrder');
 require('dotenv').config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 const isProd = process.env.NODE_ENV === 'production';
+
+if (isProd) {
+  if (
+    isPlaceholderKey(process.env.RAZORPAY_KEY_ID) ||
+    isPlaceholderKey(process.env.RAZORPAY_KEY_SECRET)
+  ) {
+    console.error(
+      'WARN: RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are missing or placeholder in production.'
+    );
+  }
+}
 
 app.set('trust proxy', 1);
 
@@ -23,8 +35,6 @@ app.use(helmet({
 
 app.use(cors());
 app.use(morgan('combined'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
 
 const MONGO_OPTIONS = {
   serverSelectionTimeoutMS: 20000,
@@ -87,6 +97,30 @@ async function requireMongo(req, res, next) {
     });
   }
 }
+
+// Razorpay webhook must use raw body for signature verification (before express.json)
+app.post(
+  '/api/payment/webhook',
+  express.raw({ type: 'application/json' }),
+  requireMongo,
+  async (req, res) => {
+    try {
+      const signature = req.headers['x-razorpay-signature'];
+      const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from('');
+      const result = await handleRazorpayWebhook(rawBody, signature);
+      res.json(result);
+    } catch (error) {
+      if (error.statusCode === 400) {
+        return res.status(400).send(error.message);
+      }
+      console.error('Webhook error:', error);
+      res.status(500).send('Webhook processing failed');
+    }
+  }
+);
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 
 // Swagger UI (must use split mount: static assets + GET handler — see swagger-ui-express README)
 const swaggerOptions = { customSiteTitle: 'Food Factory API' };

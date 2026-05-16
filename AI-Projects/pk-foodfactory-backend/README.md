@@ -34,8 +34,9 @@ Backend API for PK Food Factory with Razorpay payment integration.
 ## API Endpoints
 
 ### Payment
-- `POST /api/payment/create-order` - Create payment order
-- `POST /api/payment/verify` - Verify payment
+- `POST /api/orders/checkout` - Initiate checkout (Razorpay order + checkout intent; requires auth)
+- `POST /api/payment/create-order` - Legacy alias for checkout initiate (requires auth)
+- `POST /api/payment/verify` - Verify payment signature and create order (requires auth)
 - `POST /api/payment/webhook` - Handle Razorpay webhooks
 - `GET /api/payment/order/:orderId` - Get order status
 
@@ -50,6 +51,14 @@ Backend API for PK Food Factory with Razorpay payment integration.
 2. Add webhook URL: `https://yourdomain.com/api/payment/webhook`
 3. Select events: `payment.captured`, `payment.failed`
 4. Copy the webhook secret to `.env` as `RAZORPAY_WEBHOOK_SECRET`
+
+## Checkout flow
+
+1. Client calls `POST /api/orders/checkout` with cart items and total (Bearer token).
+2. Server creates a Razorpay order and a `CheckoutIntent` (no PK order yet).
+3. Client opens Razorpay Checkout; on success, client calls `POST /api/payment/verify`.
+4. Server verifies the signature, creates the `Order` with `paymentStatus: paid`, and assigns a delivery agent.
+5. Razorpay webhooks (`payment.captured` / `payment.failed`) provide a backup path if the client verify call fails.
 
 ## Testing
 

@@ -67,7 +67,6 @@ jobs:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
           RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
-          DUMMY_PAYMENT_MODE: ${{ secrets.DUMMY_PAYMENT_MODE }}
           RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
@@ -84,7 +83,6 @@ jobs:
             --arg MONGODB_URI "$MONGODB_URI" \
             --arg RAZORPAY_KEY_ID "$RAZORPAY_KEY_ID" \
             --arg RAZORPAY_KEY_SECRET "$RAZORPAY_KEY_SECRET" \
-            --arg DUMMY_PAYMENT_MODE "$DUMMY_PAYMENT_MODE" \
             --arg RAZORPAY_WEBHOOK_SECRET "$RAZORPAY_WEBHOOK_SECRET" \
             --arg JWT_SECRET "$JWT_SECRET" \
             --arg ADMIN_EMAIL "$ADMIN_EMAIL" \
@@ -100,7 +98,6 @@ jobs:
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "MONGODB_URI", Value: $MONGODB_URI},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "RAZORPAY_KEY_ID", Value: $RAZORPAY_KEY_ID},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "RAZORPAY_KEY_SECRET", Value: $RAZORPAY_KEY_SECRET},
-                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "DUMMY_PAYMENT_MODE", Value: $DUMMY_PAYMENT_MODE},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "RAZORPAY_WEBHOOK_SECRET", Value: $RAZORPAY_WEBHOOK_SECRET},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "JWT_SECRET", Value: $JWT_SECRET},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "ADMIN_EMAIL", Value: $ADMIN_EMAIL},

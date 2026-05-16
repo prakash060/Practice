@@ -2,7 +2,7 @@ const express = require('express');
 const Order = require('../models/Order');
 const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
-const { createCheckoutOrder } = require('../services/checkoutOrder');
+const { initiateCheckout } = require('../services/checkoutOrder');
 
 const router = express.Router();
 
@@ -46,7 +46,7 @@ async function createCheckoutOrderForUser(req, res) {
       address: (cd && cd.address && String(cd.address).trim()) || user.address,
     };
 
-    const result = await createCheckoutOrder({
+    const result = await initiateCheckout({
       amount,
       currency,
       items,
@@ -59,8 +59,11 @@ async function createCheckoutOrderForUser(req, res) {
     if (error.statusCode === 400) {
       return res.status(400).json({ error: error.message });
     }
+    if (error.statusCode === 503) {
+      return res.status(503).json({ error: error.message });
+    }
     console.error('Create order error:', error);
-    return res.status(500).json({ error: 'Failed to create order' });
+    return res.status(500).json({ error: 'Failed to initiate checkout' });
   }
 }
 

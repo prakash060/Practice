@@ -150,13 +150,10 @@ interface CreateOrderRequest {
 }
 
 export interface CreateOrderResponse {
-  orderId: string;
   razorpayOrderId: string;
   amount: number;
   currency: string;
   key: string;
-  /** When true, backend skipped Razorpay; complete flow by calling verify with any placeholder ids. */
-  checkoutDummy?: boolean;
 }
 
 interface VerifyPaymentRequest {
@@ -220,7 +217,7 @@ export const paymentAPI = {
 
 // Orders API calls
 export const ordersAPI = {
-  /** Creates Razorpay order + DB row (requires auth; order linked to user). */
+  /** Initiates Razorpay checkout; PK order is created after payment verify. */
   createCheckoutOrder: async (orderData: CreateOrderRequest): Promise<CreateOrderResponse> => {
     const response = await api.post<CreateOrderResponse>('/orders/checkout', orderData);
     return response.data;
