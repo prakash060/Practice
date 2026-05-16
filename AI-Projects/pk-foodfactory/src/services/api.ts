@@ -13,7 +13,7 @@ function resolveApiBaseUrl(): string {
   }
   // Production static hosting (e.g. S3): localhost would mean "this phone/tablet", not your server.
   console.warn(
-    'VITE_API_URL was not set at build time. Set GitHub secret VITE_API_URL to your API base (e.g. http://your-env.elasticbeanstalk.com/api) and rebuild.'
+    'VITE_API_URL was not set at build time. Set GitHub secret VITE_API_URL to your HTTPS API CloudFront base (e.g. https://your-api.cloudfront.net/api) and rebuild.'
   );
   return '';
 }

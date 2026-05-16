@@ -41,9 +41,15 @@ jobs:
         run: |
           set -e
           if [ -z "${VITE_API_URL:-}" ]; then
-            echo "::error::Set repository secret VITE_API_URL to your deployed backend API base URL, e.g. http://foodfactory-eb-backend-env.eba-xxxx.ap-south-1.elasticbeanstalk.com/api (must match http/https and include /api)."
+            echo "::error::Set repository secret VITE_API_URL to your HTTPS API CloudFront base URL, e.g. https://d3cvs28uau3ofy.cloudfront.net/api (must include /api, no trailing slash)."
             exit 1
           fi
+          case "${VITE_API_URL}" in
+            http://*)
+              echo "::error::VITE_API_URL must use https:// when the frontend is on HTTPS CloudFront. Use your API CloudFront URL (not the raw Elastic Beanstalk http:// URL) to avoid mixed-content blocks."
+              exit 1
+              ;;
+          esac
           npm run build
 
       - name: Configure AWS credentials
@@ -67,3 +73,9 @@ jobs:
               "IndexDocument": {"Suffix": "index.html"},
               "ErrorDocument": {"Key": "index.html"}
             }'
+
+      - name: Invalidate frontend CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
