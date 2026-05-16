@@ -141,12 +141,20 @@ export default function PaymentMethodPage() {
   }, [cartItems.length, method, navigate])
 
   const getCheckoutConfig = (preferred: Method) => {
+    // Razorpay rejects an instrument like { method: 'upi' } with
+    // show_default_blocks=false unless flows are declared, which is what causes
+    // "No appropriate payment method found" for UPI apps like PhonePe.
+    const instrumentByMethod: Record<Method, Record<string, unknown>> = {
+      upi: { method: 'upi', flows: ['collect', 'intent', 'qr'] },
+      card: { method: 'card' },
+      netbanking: { method: 'netbanking' },
+    }
     return {
       display: {
         blocks: {
           preferred: {
             name: METHOD_THEME[preferred].rzpLabel,
-            instruments: [{ method: preferred }],
+            instruments: [instrumentByMethod[preferred]],
           },
         },
         sequence: ['block.preferred'],
@@ -156,6 +164,15 @@ export default function PaymentMethodPage() {
       },
     }
   }
+
+  const buildMethodFilter = (preferred: Method) => ({
+    upi: preferred === 'upi',
+    card: preferred === 'card',
+    netbanking: preferred === 'netbanking',
+    wallet: false,
+    paylater: false,
+    emi: false,
+  })
 
   const handlePay = async () => {
     if (!method) return
@@ -193,6 +210,7 @@ export default function PaymentMethodPage() {
         order_id: response.razorpayOrderId,
         name: 'PK Food Factory',
         description: 'Food Order Payment',
+        method: buildMethodFilter(method),
         config: getCheckoutConfig(method),
         handler: async (rpRes: {
           razorpay_order_id: string
