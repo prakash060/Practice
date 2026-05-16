@@ -75,7 +75,24 @@ jobs:
             }'
 
       - name: Invalidate frontend CloudFront cache
+        env:
+          CF_DIST_ID: ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
+          set -e
+          if [ -z "${CF_DIST_ID:-}" ]; then
+            echo "::warning::AWS_CLOUDFRONT_DISTRIBUTION_ID is not set — skipping CloudFront invalidation."
+            echo "Add the secret in GitHub (Settings → Secrets → Actions). Use the Distribution ID from AWS:"
+            echo "  CloudFront → Distributions → select frontend distro → General → Distribution ID (starts with E, e.g. E2XXXXXXXXXXXX)."
+            echo "Do not use the *.cloudfront.net URL prefix (e.g. d1a7288bn24qfa)."
+            exit 0
+          fi
+          case "${CF_DIST_ID}" in
+            E*|e*) ;;
+            *)
+              echo "::error::AWS_CLOUDFRONT_DISTRIBUTION_ID must be the CloudFront Distribution ID (starts with E), not the domain prefix. Found: ${CF_DIST_ID}"
+              exit 1
+              ;;
+          esac
           aws cloudfront create-invalidation \
-            --distribution-id "${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --distribution-id "$CF_DIST_ID" \
             --paths "/*"

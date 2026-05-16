@@ -14,7 +14,11 @@ Repository: `prakash060/Practice` → **Settings** → **Secrets and variables**
 
 Also ensure these secrets exist for the frontend workflow:
 
-- `AWS_CLOUDFRONT_DISTRIBUTION_ID` — frontend distribution (e.g. `d1a7288bn24qfa` or the distribution ID from AWS console)
+| Secret | Value |
+|--------|--------|
+| `AWS_CLOUDFRONT_DISTRIBUTION_ID` | Distribution ID from **AWS Console → CloudFront → Distributions → General** (starts with `E`, e.g. `E2ABCDEFGHIJK`). **Not** the `d1a7288bn24qfa` URL prefix. |
+
+If `AWS_CLOUDFRONT_DISTRIBUTION_ID` is missing, the workflow still deploys to S3 but skips invalidation (warning only). After adding the secret, re-run the workflow or invalidate manually in the CloudFront console.
 
 ## Redeploy after updating the secret
 
