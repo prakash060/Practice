@@ -2640,6 +2640,8 @@ a.order-card__rider-chip:hover {
 .pm-hero {
   --method-accent: #6b5ef7;
   position: relative;
+  display: flex;
+  flex-direction: column;
   margin: 18px 0 24px;
   padding: 28px 32px;
   border-radius: 24px;
@@ -2652,8 +2654,36 @@ a.order-card__rider-chip:hover {
   overflow: hidden;
 }
 
-.pm-hero__back {
-  margin-bottom: 16px;
+/* Refined hero back button — sits as a lightweight pill chip at the top
+   of the hero so it reads as navigation, not a primary action, and stays
+   clearly separated from the icon/title row below. */
+.back-button.pm-hero__back {
+  display: inline-flex;
+  align-self: flex-start;
+  width: -moz-fit-content;
+  width: fit-content;
+  margin: 0 0 22px;
+  padding: 7px 14px 7px 10px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--method-accent, #6b5ef7);
+  border: 1px solid rgba(107, 94, 247, 0.2);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 12px rgba(96, 82, 163, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.back-button.pm-hero__back:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: rgba(107, 94, 247, 0.4);
+  box-shadow: 0 8px 18px rgba(96, 82, 163, 0.14);
+}
+
+.back-button.pm-hero__back .app-icon {
+  color: inherit;
 }
 
 .pm-hero__content {
@@ -3685,6 +3715,12 @@ a.order-card__rider-chip:hover {
 
   .pm-hero {
     padding: 22px 20px;
+  }
+
+  .back-button.pm-hero__back {
+    margin-bottom: 16px;
+    padding: 6px 12px 6px 8px;
+    font-size: 0.8rem;
   }
 
   .pm-hero h1 {
