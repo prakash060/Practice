@@ -37,6 +37,8 @@ Done — the GitHub Actions workflows are now created.
 - `AWS_CLOUDFRONT_DISTRIBUTION_ID`
 - `VITE_API_URL` — HTTPS API CloudFront base, e.g. `https://d3cvs28uau3ofy.cloudfront.net/api` (not http:// Elastic Beanstalk; avoids mixed content)
 
+Custom domain (www.svifoods.com): see DEPLOYMENT-PRODUCTION.md and CUSTOM-DOMAIN-CHECKLIST.md (ACM us-east-1 + registrar DNS; no workflow change).
+
 ### Backend
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`

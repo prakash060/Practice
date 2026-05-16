@@ -68,6 +68,117 @@ aws cloudfront create-invalidation --distribution-id "$CF_DIST_ID" --paths "/*"
 - `https://d1a7288bn24qfa.cloudfront.net/checkout` — direct open + reload
 - `https://d1a7288bn24qfa.cloudfront.net/` — home still loads
 
+## Custom domain — `www.svifoods.com` (instead of cloudfront.net)
+
+CloudFront always provides a default hostname (`d1a7288bn24qfa.cloudfront.net`). Your browser shows that URL until you attach a **custom domain** and point **DNS** at the distribution. No React code changes are required.
+
+**Current frontend CloudFront hostname:** `d1a7288bn24qfa.cloudfront.net`
+
+| URL after setup | Role |
+|-----------------|------|
+| `https://www.svifoods.com` | Primary site (recommended) |
+| `https://svifoods.com` | Apex — redirect to `www` at your registrar (easiest with external DNS) |
+| `https://d1a7288bn24qfa.cloudfront.net` | Still works (AWS default) |
+
+DNS is managed at your **domain registrar** (not Route 53). Follow the checklist below in order.
+
+### Checklist
+
+- [ ] **Step 1 — ACM certificate (us-east-1 only)**
+- [ ] **Step 2 — CloudFront alternate domain names**
+- [ ] **Step 3 — Registrar DNS (`www` CNAME + apex redirect)**
+- [ ] **Step 4 — Verify HTTPS and SPA reload**
+
+---
+
+### Step 1 — ACM certificate (must be `us-east-1`)
+
+CloudFront only uses certificates from **ACM in N. Virginia (`us-east-1`)**, even if the app runs in `ap-south-1`.
+
+1. AWS Console → **Certificate Manager** → region **US East (N. Virginia)**.
+2. **Request certificate** → **Public**.
+3. Add domain names:
+   - `svifoods.com`
+   - `www.svifoods.com`
+4. Validation method: **DNS validation**.
+5. Copy the **CNAME** records ACM shows and add them in your **registrar’s DNS** panel for `svifoods.com`.
+6. Wait until certificate status is **Issued**.
+
+---
+
+### Step 2 — Attach domain to frontend CloudFront
+
+Distribution: the one whose domain is `d1a7288bn24qfa.cloudfront.net` (Distribution ID starts with `E` — same value as `AWS_CLOUDFRONT_DISTRIBUTION_ID`).
+
+1. **CloudFront** → **Distributions** → select that distribution → **Edit**.
+2. **Alternate domain name (CNAME)** — add:
+   - `www.svifoods.com`
+   - `svifoods.com` (optional until apex DNS/redirect is ready; you can add only `www` first)
+3. **Custom SSL certificate** — select the ACM certificate from Step 1.
+4. Save and wait until status is **Deployed**.
+
+SPA error pages (403/404 → `/index.html`) stay on this distribution; no extra change for custom domain.
+
+---
+
+### Step 3 — DNS at your registrar
+
+In your registrar’s DNS settings for `svifoods.com`:
+
+#### `www` (required)
+
+| Type | Host / Name | Value | TTL |
+|------|-------------|-------|-----|
+| **CNAME** | `www` | `d1a7288bn24qfa.cloudfront.net` | 300–3600 |
+
+#### Apex `svifoods.com` (choose one)
+
+Many registrars cannot CNAME the bare `@` record to CloudFront.
+
+**Option A (recommended):** Registrar **URL forwarding / redirect**
+
+- `http://svifoods.com` and `https://svifoods.com` → `https://www.svifoods.com`
+
+**Option B:** Move DNS to Route 53 (change nameservers only) and use an **ALIAS A** record for `@` to the CloudFront distribution.
+
+**Option C:** DNS provider with apex **ANAME/ALIAS** (e.g. Cloudflare) → `d1a7288bn24qfa.cloudfront.net`.
+
+Propagation: usually minutes to 1 hour; up to 48 hours.
+
+---
+
+### Step 4 — Verify custom domain
+
+- [ ] `nslookup www.svifoods.com` resolves (CloudFront edge IPs or CNAME to `*.cloudfront.net`)
+- [ ] `https://www.svifoods.com` loads with a valid padlock
+- [ ] `https://www.svifoods.com/login` — open and **reload** (login page, not XML)
+- [ ] `https://d1a7288bn24qfa.cloudfront.net/login` still works (optional)
+
+---
+
+### Optional — branded API (`api.svifoods.com`)
+
+The site can use `www.svifoods.com` while the API keeps using `https://d3cvs28uau3ofy.cloudfront.net/api` (current `VITE_API_URL`). No change required for launch.
+
+To brand the API later:
+
+1. ACM cert + alternate name on the **API** CloudFront distribution for `api.svifoods.com`.
+2. Registrar CNAME: `api` → `d3cvs28uau3ofy.cloudfront.net`.
+3. Update GitHub secret `VITE_API_URL` to `https://api.svifoods.com/api` and redeploy the frontend.
+
+---
+
+### Custom domain — common mistakes
+
+| Mistake | Result |
+|---------|--------|
+| ACM cert only in `ap-south-1` | CloudFront cannot select it — use **us-east-1** |
+| CNAME `www` points to S3 bucket URL | Wrong origin / broken site |
+| ACM validation CNAMEs not added at registrar | Certificate stays **Pending validation** |
+| `www` in DNS but not in CloudFront alternate names | TLS or access errors |
+
+---
+
 ## Set secret via GitHub CLI (optional)
 
 ```bash
