@@ -2095,6 +2095,11 @@ button .app-icon {
 /* Hero header */
 .orders-hero {
   position: relative;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px 24px;
   margin: 18px 0 24px;
   padding: 28px 32px;
   border-radius: 24px;
@@ -2107,14 +2112,46 @@ button .app-icon {
   overflow: hidden;
 }
 
-.orders-hero__back {
-  margin-bottom: 16px;
+/* Refined orders back button — matches the .pm-hero__back chip style and
+   sits in the top-right of the hero so the card feels balanced left-to-right
+   instead of leaving the entire right half visually empty. */
+.back-button.orders-hero__back {
+  display: inline-flex;
+  order: 2;
+  align-self: flex-start;
+  width: -moz-fit-content;
+  width: fit-content;
+  margin: 0 0 0 auto;
+  padding: 7px 14px 7px 10px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #6b5ef7;
+  border: 1px solid rgba(107, 94, 247, 0.2);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 12px rgba(96, 82, 163, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.back-button.orders-hero__back:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: rgba(107, 94, 247, 0.4);
+  box-shadow: 0 8px 18px rgba(96, 82, 163, 0.14);
+}
+
+.back-button.orders-hero__back .app-icon {
+  color: inherit;
 }
 
 .orders-hero__content {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  order: 1;
+  flex: 1 1 320px;
+  min-width: 0;
 }
 
 .orders-hero__kicker {
@@ -2594,7 +2631,20 @@ a.order-card__rider-chip:hover {
   }
 
   .orders-hero {
+    flex-direction: column;
     padding: 22px 20px;
+  }
+
+  .back-button.orders-hero__back {
+    order: 0;
+    margin: 0 0 16px;
+    padding: 6px 12px 6px 8px;
+    font-size: 0.8rem;
+  }
+
+  .orders-hero__content {
+    order: 1;
+    flex: 1 1 auto;
   }
 
   .orders-hero__heading h1 {
@@ -2641,7 +2691,10 @@ a.order-card__rider-chip:hover {
   --method-accent: #6b5ef7;
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px 24px;
   margin: 18px 0 24px;
   padding: 28px 32px;
   border-radius: 24px;
@@ -2654,15 +2707,16 @@ a.order-card__rider-chip:hover {
   overflow: hidden;
 }
 
-/* Refined hero back button — sits as a lightweight pill chip at the top
-   of the hero so it reads as navigation, not a primary action, and stays
-   clearly separated from the icon/title row below. */
+/* Refined hero back button — sits as a lightweight pill chip in the
+   top-right of the hero so it balances the title content on the left
+   and fills the otherwise empty right side of the card. */
 .back-button.pm-hero__back {
   display: inline-flex;
+  order: 2;
   align-self: flex-start;
   width: -moz-fit-content;
   width: fit-content;
-  margin: 0 0 22px;
+  margin: 0 0 0 auto;
   padding: 7px 14px 7px 10px;
   background: rgba(255, 255, 255, 0.78);
   color: var(--method-accent, #6b5ef7);
@@ -2690,6 +2744,9 @@ a.order-card__rider-chip:hover {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  order: 1;
+  flex: 1 1 320px;
+  min-width: 0;
 }
 
 .pm-hero__content--with-icon {
@@ -3714,13 +3771,20 @@ a.order-card__rider-chip:hover {
   }
 
   .pm-hero {
+    flex-direction: column;
     padding: 22px 20px;
   }
 
   .back-button.pm-hero__back {
-    margin-bottom: 16px;
+    order: 0;
+    margin: 0 0 16px;
     padding: 6px 12px 6px 8px;
     font-size: 0.8rem;
+  }
+
+  .pm-hero__content {
+    order: 1;
+    flex: 1 1 auto;
   }
 
   .pm-hero h1 {
