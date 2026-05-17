@@ -27,9 +27,6 @@ router.post('/create-order', requireAuth, async (req, res) => {
     if (error.statusCode === 503) {
       return res.status(503).json({ error: error.message });
     }
-    if (error.statusCode === 502) {
-      return res.status(502).json({ error: error.message });
-    }
     console.error('Create order error:', error);
     res.status(500).json({ error: 'Failed to initiate checkout' });
   }

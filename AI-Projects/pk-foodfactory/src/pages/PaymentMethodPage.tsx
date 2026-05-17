@@ -169,23 +169,14 @@ export default function PaymentMethodPage() {
     }
   }, [cartItems.length, method, navigate])
 
-  /** Prefer the user's chosen method first; keep Razorpay defaults as fallback. */
-  const buildCheckoutDisplay = (preferred: Method) => {
-    const sequence: Method[] =
-      preferred === 'upi'
-        ? ['upi', 'card', 'netbanking']
-        : preferred === 'card'
-          ? ['card', 'upi', 'netbanking']
-          : ['netbanking', 'upi', 'card']
-    return {
-      display: {
-        sequence,
-        preferences: {
-          show_default_blocks: true,
-        },
-      },
-    }
-  }
+  const buildMethodFilter = (preferred: Method) => ({
+    upi: preferred === 'upi',
+    card: preferred === 'card',
+    netbanking: preferred === 'netbanking',
+    wallet: false,
+    paylater: false,
+    emi: false,
+  })
 
   const handlePay = async () => {
     if (!method) return
@@ -232,7 +223,7 @@ export default function PaymentMethodPage() {
         order_id: response.razorpayOrderId,
         name: 'PK Food Factory',
         description: 'Food Order Payment',
-        config: buildCheckoutDisplay(method),
+        method: buildMethodFilter(method),
         notes: {
           razorpayOrderId: response.razorpayOrderId,
           userEmail: user?.email ?? '',
@@ -281,16 +272,12 @@ export default function PaymentMethodPage() {
         }
       )
       rzp.open()
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('Payment initiation failed:', err)
-      const axiosErr = err as { response?: { data?: { error?: string }; status?: number } }
-      const backendMsg = axiosErr?.response?.data?.error
-      const status = axiosErr?.response?.status
+      const backendMsg = err?.response?.data?.error
       setError(
         backendMsg ||
-          (status === 502
-            ? 'Payment gateway error. Check Razorpay keys on the server or try again.'
-            : 'Failed to start the payment gateway. Please check your connection and try again.')
+          'Failed to start the payment gateway. Please check your connection and try again.'
       )
     } finally {
       setIsProcessing(false)
