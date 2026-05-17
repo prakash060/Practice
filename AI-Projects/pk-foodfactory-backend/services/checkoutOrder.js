@@ -73,6 +73,48 @@ function isEmailValid(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function gatewayError(err, fallback = 'Payment gateway error') {
+  const description =
+    err?.error?.description ||
+    err?.error?.reason ||
+    (typeof err?.error === 'string' ? err.error : null) ||
+    err?.description ||
+    err?.message ||
+    fallback;
+  const statusCode =
+    err?.statusCode === 401 || err?.statusCode === 403 ? 503 : 502;
+  const e = new Error(description);
+  e.statusCode = statusCode;
+  return e;
+}
+
+function sanitizeLineItems(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw badRequest('At least one cart item is required');
+  }
+
+  const sanitized = items.map((item, index) => {
+    const foodId = String(item.foodId ?? item.id ?? '').trim();
+    const name = String(item.name ?? `Item ${index + 1}`).trim();
+    const price = Number(item.price);
+    const quantity = Math.floor(Number(item.quantity));
+
+    if (!foodId) {
+      throw badRequest('Each cart item must have a valid food id');
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      throw badRequest(`Invalid price for item "${name}"`);
+    }
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      throw badRequest(`Invalid quantity for item "${name}"`);
+    }
+
+    return { foodId, name, price, quantity };
+  });
+
+  return sanitized;
+}
+
 function computeTotals(items) {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deliveryFee = 0;
@@ -135,9 +177,16 @@ async function initiateCheckout({
   if (!userId) {
     throw badRequest('User authentication is required for checkout');
   }
-  if (!amount || !items || items.length === 0) {
-    throw badRequest('Amount and items are required');
+  if (!mongoose.Types.ObjectId.isValid(String(userId))) {
+    throw badRequest('Invalid user session. Please log in again.');
   }
+
+  const parsedAmount = Number(amount);
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    throw badRequest('A valid order amount is required');
+  }
+
+  const lineItems = sanitizeLineItems(items);
 
   const cd = customerDetails || {};
   if (!isEmailValid(cd.email)) {
@@ -149,30 +198,53 @@ async function initiateCheckout({
   }
   const sanitizedCustomerDetails = {
     name: cd.name,
-    email: cd.email,
+    email: String(cd.email).trim(),
     phone: normalizedPhone,
     address: cd.address,
   };
 
-  const { subtotal, deliveryFee, tax, totalAmount } = computeTotals(items);
+  const { subtotal, deliveryFee, tax, totalAmount } = computeTotals(lineItems);
 
-  if (Math.abs(amount - totalAmount) > 1) {
-    throw badRequest('Amount mismatch');
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+    throw badRequest('Order total could not be calculated');
+  }
+
+  if (Math.abs(parsedAmount - totalAmount) > 1) {
+    throw badRequest(
+      `Amount mismatch: expected ₹${totalAmount}, received ₹${parsedAmount}`
+    );
+  }
+
+  const amountPaise = Math.round(totalAmount * 100);
+  if (amountPaise < 100) {
+    throw badRequest('Minimum order amount for online payment is ₹1');
   }
 
   const options = {
-    amount: Math.round(totalAmount * 100),
-    currency,
-    receipt: `receipt_${Date.now()}`,
-    payment_capture: 1,
+    amount: amountPaise,
+    currency: currency || 'INR',
+    receipt: `pk_${Date.now()}`,
   };
 
-  const razorpayOrder = await getRazorpay().orders.create(options);
+  let razorpayOrder;
+  try {
+    razorpayOrder = await getRazorpay().orders.create(options);
+  } catch (err) {
+    console.error('Razorpay orders.create failed:', err);
+    throw gatewayError(err, 'Could not create Razorpay order');
+  }
+
+  if (!razorpayOrder?.id) {
+    throw gatewayError(
+      { message: 'Razorpay did not return an order id' },
+      'Could not create Razorpay order'
+    );
+  }
 
   const intent = new CheckoutIntent({
     razorpayOrderId: razorpayOrder.id,
     userId,
-    items,
+    items: lineItems,
     subtotal,
     deliveryFee,
     tax,
@@ -181,7 +253,19 @@ async function initiateCheckout({
     status: 'awaiting_payment',
     expiresAt: new Date(Date.now() + INTENT_TTL_MS),
   });
-  await intent.save();
+
+  try {
+    await intent.save();
+  } catch (err) {
+    console.error('CheckoutIntent save failed:', err);
+    if (err.name === 'ValidationError') {
+      throw badRequest(err.message || 'Invalid checkout data');
+    }
+    if (err.code === 11000) {
+      throw badRequest('Checkout already in progress. Please wait a moment and retry.');
+    }
+    throw err;
+  }
 
   return {
     razorpayOrderId: razorpayOrder.id,
@@ -319,4 +403,6 @@ module.exports = {
   handleRazorpayWebhook,
   assertRazorpayConfigured,
   isPlaceholderKey,
+  normalizeIndianPhone,
+  isEmailValid,
 };
