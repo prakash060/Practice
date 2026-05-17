@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
 import {
@@ -7,14 +7,11 @@ import {
   BankIcon,
   CheckIcon,
   ChevronLeftIcon,
-  ClockIcon,
   CreditCardIcon,
   LockIcon,
-  QrCodeIcon,
   ReceiptIcon,
   ShieldCheckIcon,
   SmartphoneIcon,
-  XIcon,
   type IconProps,
 } from '../components/Icons'
 import { DELIVERY_FEE_INR } from '../constants/pricing'
@@ -22,18 +19,8 @@ import { useFood } from '../hooks/useFood'
 import { useAuth } from '../state/AuthContext'
 import { ordersAPI, paymentAPI } from '../services/api'
 
-type PaymentScreen = 'checkout' | 'qr' | 'success'
-type ModalMethod = 'upi' | 'card' | 'netbanking'
-type Method = ModalMethod | 'upi_qr'
-
-const QR_POLL_INTERVAL_MS = 3000
-
-interface QrSession {
-  qrCodeId: string
-  imageUrl: string
-  amount: number
-  expiresAt: string
-}
+type PaymentScreen = 'checkout' | 'success'
+type Method = 'upi' | 'card' | 'netbanking'
 
 interface MethodCard {
   id: Method
@@ -64,13 +51,6 @@ const METHODS: MethodCard[] = [
     description: 'Securely log in to your bank to confirm the payment.',
     badges: ['HDFC', 'ICICI', 'SBI', 'Axis', '+more'],
     Icon: BankIcon,
-  },
-  {
-    id: 'upi_qr',
-    title: 'Scan & Pay (UPI QR)',
-    description: 'Show a QR code — scan with any UPI app and pay.',
-    badges: ['GPay', 'PhonePe', 'Paytm', 'BHIM'],
-    Icon: QrCodeIcon,
   },
 ]
 
@@ -111,7 +91,7 @@ function razorpayFailureMessage(failRes?: {
  * naturally — this matches what users expect from "Razorpay's default page" while still landing
  * them on the method they picked.
  */
-function buildPreferredMethod(preferred: ModalMethod): { method: ModalMethod } {
+function buildPreferredMethod(preferred: Method): { method: Method } {
   return { method: preferred }
 }
 
@@ -124,10 +104,6 @@ export default function PaymentPage() {
   const [orderId, setOrderId] = useState<string>('')
   const [activeMethod, setActiveMethod] = useState<Method | null>(null)
   const [error, setError] = useState<string>('')
-  const [qrSession, setQrSession] = useState<QrSession | null>(null)
-  const [qrSecondsLeft, setQrSecondsLeft] = useState<number>(0)
-  const [qrCancelling, setQrCancelling] = useState<boolean>(false)
-  const cancelledQrRef = useRef<string | null>(null)
 
   const subtotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -140,11 +116,7 @@ export default function PaymentPage() {
   )
 
   useEffect(() => {
-    if (
-      cartItems.length === 0 &&
-      currentScreen !== 'success' &&
-      currentScreen !== 'qr'
-    ) {
+    if (cartItems.length === 0 && currentScreen !== 'success') {
       const t = setTimeout(() => navigate('/'), 1200)
       return () => clearTimeout(t)
     }
@@ -197,81 +169,9 @@ export default function PaymentPage() {
     }
   }, [currentScreen, goToHome])
 
-  // QR countdown — drives the "expires in N min" chip.
-  useEffect(() => {
-    if (currentScreen !== 'qr' || !qrSession) {
-      setQrSecondsLeft(0)
-      return
-    }
-    const expiresAtMs = new Date(qrSession.expiresAt).getTime()
-    const updateLeft = () => {
-      const left = Math.max(0, Math.ceil((expiresAtMs - Date.now()) / 1000))
-      setQrSecondsLeft(left)
-    }
-    updateLeft()
-    const tick = window.setInterval(updateLeft, 1000)
-    return () => window.clearInterval(tick)
-  }, [currentScreen, qrSession])
-
-  // QR polling — checks payment status every QR_POLL_INTERVAL_MS.
-  useEffect(() => {
-    if (currentScreen !== 'qr' || !qrSession) return
-    const qrCodeId = qrSession.qrCodeId
-    let cancelled = false
-
-    const poll = async () => {
-      if (cancelled) return
-      if (cancelledQrRef.current === qrCodeId) return
-      try {
-        const result = await paymentAPI.getUpiQrStatus(qrCodeId)
-        if (cancelled || cancelledQrRef.current === qrCodeId) return
-        if (result.status === 'completed' && result.orderId) {
-          clearCart()
-          setOrderId(result.orderId)
-          setQrSession(null)
-          setCurrentScreen('success')
-        } else if (result.status === 'failed') {
-          setError(
-            'The QR code expired or was cancelled. Please start a new payment.'
-          )
-          setQrSession(null)
-          setCurrentScreen('checkout')
-        }
-      } catch (err) {
-        // Transient network errors are fine — next tick will retry.
-        console.warn('UPI QR poll failed:', err)
-      }
-    }
-
-    const id = window.setInterval(poll, QR_POLL_INTERVAL_MS)
-    void poll()
-    return () => {
-      cancelled = true
-      window.clearInterval(id)
-    }
-  }, [currentScreen, qrSession, clearCart])
-
   const handleBackToCheckout = () => {
     navigate('/checkout')
   }
-
-  const reportPaymentError = useCallback((err: unknown, fallback: string) => {
-    console.error('Payment initiation failed:', err)
-    const axiosErr = err as {
-      response?: { data?: { error?: string }; status?: number }
-      message?: string
-    }
-    const backendMsg = axiosErr?.response?.data?.error
-    const status = axiosErr?.response?.status
-    setError(
-      backendMsg ||
-        (status === 502
-          ? 'Payment gateway error. Please try again or use another method.'
-          : status === 503
-            ? 'Payment gateway is unavailable right now. Please try again in a moment or contact support.'
-            : axiosErr?.message || fallback)
-    )
-  }, [])
 
   const startPayment = async (method: Method) => {
     if (activeMethod) return
@@ -309,20 +209,6 @@ export default function PaymentPage() {
           phone,
           address: user?.address,
         },
-      }
-
-      if (method === 'upi_qr') {
-        const qr = await paymentAPI.createUpiQr(orderData)
-        cancelledQrRef.current = null
-        setQrSession({
-          qrCodeId: qr.qrCodeId,
-          imageUrl: qr.imageUrl,
-          amount: qr.amount,
-          expiresAt: qr.expiresAt,
-        })
-        setCurrentScreen('qr')
-        setActiveMethod(null)
-        return
       }
 
       const response = await ordersAPI.createCheckoutOrder(orderData)
@@ -370,7 +256,7 @@ export default function PaymentPage() {
           name: user?.name ?? '',
           email: user?.email ?? '',
           contact: phone,
-          ...buildPreferredMethod(method as ModalMethod),
+          ...buildPreferredMethod(method),
         },
         theme: { color: '#6b5ef7' },
         modal: {
@@ -395,112 +281,33 @@ export default function PaymentPage() {
       })
       rzp.open()
     } catch (err: unknown) {
-      reportPaymentError(
-        err,
-        'Failed to start the payment gateway. Please check your connection and try again.'
+      console.error('Payment initiation failed:', err)
+      const axiosErr = err as {
+        response?: { data?: { error?: string }; status?: number }
+        message?: string
+      }
+      const backendMsg = axiosErr?.response?.data?.error
+      const status = axiosErr?.response?.status
+      setError(
+        backendMsg ||
+          (status === 502
+            ? 'Payment gateway error. Please try again or use another method.'
+            : status === 503
+              ? 'Payment gateway is unavailable right now. Please try again in a moment or contact support.'
+              : axiosErr?.message ||
+                'Failed to start the payment gateway. Please check your connection and try again.')
       )
       setActiveMethod(null)
     }
   }
 
-  const cancelQrSession = useCallback(
-    async (silent = false) => {
-      if (!qrSession) {
-        setCurrentScreen('checkout')
-        return
-      }
-      const qrCodeId = qrSession.qrCodeId
-      cancelledQrRef.current = qrCodeId
-      setQrCancelling(true)
-      try {
-        await paymentAPI.cancelUpiQr(qrCodeId)
-      } catch (err) {
-        if (!silent) {
-          console.warn('UPI QR cancel failed:', err)
-        }
-      } finally {
-        setQrCancelling(false)
-        setQrSession(null)
-        setCurrentScreen('checkout')
-      }
-    },
-    [qrSession]
-  )
-
-  if (
-    cartItems.length === 0 &&
-    currentScreen !== 'success' &&
-    currentScreen !== 'qr'
-  ) {
+  if (cartItems.length === 0 && currentScreen !== 'success') {
     return (
       <main className="payment-shell">
         <AppHeaderApp />
         <div className="orders-banner orders-banner--error">
           Your cart is empty. Redirecting to the menu…
         </div>
-      </main>
-    )
-  }
-
-  if (currentScreen === 'qr' && qrSession) {
-    const minutes = Math.floor(qrSecondsLeft / 60)
-    const seconds = qrSecondsLeft % 60
-    const expiresLabel = `${String(minutes).padStart(2, '0')}:${String(
-      seconds
-    ).padStart(2, '0')}`
-    const amountInr = (qrSession.amount / 100).toFixed(2).replace(/\.00$/, '')
-
-    return (
-      <main className="payment-shell">
-        <AppHeaderApp />
-        <section className="pm-qr">
-          <header className="pm-qr__header">
-            <p className="pm-hero__kicker">
-              <QrCodeIcon size={14} />
-              <span>Scan & Pay</span>
-            </p>
-            <h2>Open any UPI app and scan</h2>
-            <p className="pm-qr__subtitle">
-              GPay, PhonePe, Paytm, BHIM — anything that supports UPI works.
-              We'll confirm payment automatically.
-            </p>
-          </header>
-
-          <div className="pm-qr__card">
-            <img
-              src={qrSession.imageUrl}
-              alt="Razorpay UPI QR code"
-              className="pm-qr__image"
-              width={280}
-              height={280}
-            />
-            <div className="pm-qr__amount">
-              <span className="pm-qr__amount-label">Amount</span>
-              <strong>₹{amountInr}</strong>
-            </div>
-            <div className="pm-qr__chip">
-              <ClockIcon size={14} />
-              <span>
-                {qrSecondsLeft > 0
-                  ? `Expires in ${expiresLabel}`
-                  : 'QR code expired'}
-              </span>
-            </div>
-            <p className="pm-qr__waiting" role="status">
-              Waiting for payment confirmation…
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="back-button btn-icon pm-qr__cancel"
-            onClick={() => cancelQrSession()}
-            disabled={qrCancelling}
-          >
-            <XIcon size={16} />
-            <span>{qrCancelling ? 'Cancelling…' : 'Cancel & choose another method'}</span>
-          </button>
-        </section>
       </main>
     )
   }

@@ -176,23 +176,6 @@ interface OrderStatusResponse {
   items: OrderItem[];
 }
 
-export interface CreateUpiQrResponse {
-  qrCodeId: string;
-  imageUrl: string;
-  amount: number;
-  currency: string;
-  expiresAt: string;
-}
-
-export type UpiQrStatus = 'pending' | 'completed' | 'failed';
-
-export interface UpiQrStatusResponse {
-  status: UpiQrStatus;
-  orderId?: string;
-  paymentId?: string;
-  expiresAt?: string;
-}
-
 export type OrderDoc = {
   orderId: string;
   userId?: string | null;
@@ -228,23 +211,6 @@ export const paymentAPI = {
 
   getOrderStatus: async (orderId: string): Promise<OrderStatusResponse> => {
     const response = await api.get(`/payment/order/${orderId}`);
-    return response.data;
-  },
-
-  createUpiQr: async (orderData: CreateOrderRequest): Promise<CreateUpiQrResponse> => {
-    const response = await api.post<CreateUpiQrResponse>('/payment/upi-qr', orderData);
-    return response.data;
-  },
-
-  getUpiQrStatus: async (qrCodeId: string): Promise<UpiQrStatusResponse> => {
-    const response = await api.get<UpiQrStatusResponse>(`/payment/upi-qr/${qrCodeId}`);
-    return response.data;
-  },
-
-  cancelUpiQr: async (qrCodeId: string): Promise<{ ok: true; alreadyCompleted?: boolean }> => {
-    const response = await api.post<{ ok: true; alreadyCompleted?: boolean }>(
-      `/payment/upi-qr/${qrCodeId}/cancel`
-    );
     return response.data;
   },
 };

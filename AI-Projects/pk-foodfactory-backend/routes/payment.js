@@ -5,9 +5,6 @@ const { requireAdmin } = require('../middleware/admin');
 const {
   initiateCheckout,
   finalizeCheckoutPayment,
-  initiateUpiQrCheckout,
-  getUpiQrCheckoutStatus,
-  cancelUpiQrCheckout,
   probeRazorpayCredentials,
 } = require('../services/checkoutOrder');
 
@@ -72,81 +69,6 @@ router.post('/verify', requireAuth, async (req, res) => {
     }
     console.error('Payment verification error:', error);
     res.status(500).json({ error: 'Payment verification failed' });
-  }
-});
-
-// ---- Dynamic UPI QR ("Scan & Pay") ----
-// Mints a single-use QR; an Order is created only after qr_code.credited webhook
-// or after the polling endpoint reconciles a captured payment with Razorpay.
-router.post('/upi-qr', requireAuth, async (req, res) => {
-  try {
-    const { amount, items, customerDetails } = req.body;
-    const result = await initiateUpiQrCheckout({
-      amount,
-      items,
-      customerDetails,
-      userId: req.userId,
-    });
-    res.json(result);
-  } catch (error) {
-    if (error.statusCode === 400) {
-      return res.status(400).json({ error: error.message });
-    }
-    if (error.statusCode === 502) {
-      return res.status(502).json({ error: error.message });
-    }
-    if (error.statusCode === 503) {
-      return res.status(503).json({ error: error.message });
-    }
-    console.error('Create UPI QR error:', error);
-    res.status(500).json({ error: 'Failed to create UPI QR' });
-  }
-});
-
-router.get('/upi-qr/:qrCodeId', requireAuth, async (req, res) => {
-  try {
-    const result = await getUpiQrCheckoutStatus({
-      qrCodeId: req.params.qrCodeId,
-      userId: req.userId,
-    });
-    res.json(result);
-  } catch (error) {
-    if (error.statusCode === 400) {
-      return res.status(400).json({ error: error.message });
-    }
-    if (error.statusCode === 403) {
-      return res.status(403).json({ error: error.message });
-    }
-    if (error.statusCode === 404) {
-      return res.status(404).json({ error: error.message });
-    }
-    if (error.statusCode === 503) {
-      return res.status(503).json({ error: error.message });
-    }
-    console.error('UPI QR status error:', error);
-    res.status(500).json({ error: 'Failed to get UPI QR status' });
-  }
-});
-
-router.post('/upi-qr/:qrCodeId/cancel', requireAuth, async (req, res) => {
-  try {
-    const result = await cancelUpiQrCheckout({
-      qrCodeId: req.params.qrCodeId,
-      userId: req.userId,
-    });
-    res.json(result);
-  } catch (error) {
-    if (error.statusCode === 400) {
-      return res.status(400).json({ error: error.message });
-    }
-    if (error.statusCode === 403) {
-      return res.status(403).json({ error: error.message });
-    }
-    if (error.statusCode === 404) {
-      return res.status(404).json({ error: error.message });
-    }
-    console.error('UPI QR cancel error:', error);
-    res.status(500).json({ error: 'Failed to cancel UPI QR' });
   }
 });
 

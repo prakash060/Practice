@@ -24,7 +24,6 @@ const orderSchema = new mongoose.Schema({
     default: 'pending'
   },
   razorpayOrderId: { type: String },
-  razorpayQrCodeId: { type: String },
   customerDetails: {
     name: String,
     email: String,
