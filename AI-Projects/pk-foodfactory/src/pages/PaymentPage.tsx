@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
 import {
@@ -130,20 +130,43 @@ export default function PaymentPage() {
     }
   }, [location.state, navigate])
 
+  const REDIRECT_DELAY_MS = 10000
+  const [redirectSecondsLeft, setRedirectSecondsLeft] = useState<number>(
+    Math.round(REDIRECT_DELAY_MS / 1000)
+  )
+
+  const goToHome = useCallback(() => {
+    navigate('/', {
+      replace: true,
+      state: {
+        orderId,
+        status: 'Order placed successfully',
+      },
+    })
+  }, [navigate, orderId])
+
   useEffect(() => {
-    if (currentScreen !== 'success') return
-    clearCart()
-    const t = setTimeout(() => {
-      navigate('/', {
-        replace: true,
-        state: {
-          orderId,
-          status: 'Order placed successfully',
-        },
-      })
-    }, 3000)
-    return () => clearTimeout(t)
-  }, [clearCart, currentScreen, navigate, orderId])
+    if (currentScreen !== 'success') {
+      setRedirectSecondsLeft(Math.round(REDIRECT_DELAY_MS / 1000))
+      return
+    }
+
+    const startedAt = Date.now()
+    const tick = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt
+      const remaining = Math.max(
+        0,
+        Math.ceil((REDIRECT_DELAY_MS - elapsed) / 1000)
+      )
+      setRedirectSecondsLeft(remaining)
+    }, 250)
+    const redirect = window.setTimeout(goToHome, REDIRECT_DELAY_MS)
+
+    return () => {
+      window.clearInterval(tick)
+      window.clearTimeout(redirect)
+    }
+  }, [currentScreen, goToHome])
 
   const handleBackToCheckout = () => {
     navigate('/checkout')
@@ -303,7 +326,19 @@ export default function PaymentPage() {
               Order ID: <strong>{orderId}</strong>
             </p>
           ) : null}
-          <p className="pm-success__hint">Redirecting to home…</p>
+          <p className="pm-success__hint">
+            {redirectSecondsLeft > 0
+              ? `Redirecting to home in ${redirectSecondsLeft} second${redirectSecondsLeft === 1 ? '' : 's'}…`
+              : 'Redirecting to home…'}
+          </p>
+          <button
+            type="button"
+            className="proceed-payment-button btn-icon pm-cta__btn"
+            onClick={goToHome}
+          >
+            <ArrowRightIcon />
+            <span>Go to home now</span>
+          </button>
         </section>
       </main>
     )

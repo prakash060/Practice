@@ -94,7 +94,7 @@ export function FoodProvider({ children }: { children: React.ReactNode }) {
     [allItems, selectedCategory]
   )
 
-  const addToCart = (item: FoodItem) => {
+  const addToCart = useCallback((item: FoodItem) => {
     setCartItems((current) => {
       const existing = current.find((line) => line.id === item.id)
       if (existing) {
@@ -104,9 +104,9 @@ export function FoodProvider({ children }: { children: React.ReactNode }) {
       }
       return [...current, { ...item, quantity: 1 }]
     })
-  }
+  }, [])
 
-  const removeFromCart = (itemId: string) => {
+  const removeFromCart = useCallback((itemId: string) => {
     setCartItems((current) =>
       current
         .map((line) =>
@@ -114,9 +114,9 @@ export function FoodProvider({ children }: { children: React.ReactNode }) {
         )
         .filter((line) => line.quantity > 0),
     )
-  }
+  }, [])
 
-  const clearCart = () => setCartItems([])
+  const clearCart = useCallback(() => setCartItems([]), [])
 
   return (
     <FoodContext.Provider
