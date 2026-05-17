@@ -2,7 +2,11 @@ const express = require('express');
 const Order = require('../models/Order');
 const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
-const { initiateCheckout } = require('../services/checkoutOrder');
+const {
+  initiateCheckout,
+  normalizeIndianPhone,
+  isEmailValid,
+} = require('../services/checkoutOrder');
 
 const router = express.Router();
 
@@ -39,10 +43,28 @@ async function createCheckoutOrderForUser(req, res) {
     }
 
     const { amount, currency, items, customerDetails: cd } = req.body;
+    const email =
+      (cd && cd.email && String(cd.email).trim()) || user.email || '';
+    const phoneRaw =
+      (cd && cd.phone && String(cd.phone).trim()) || user.phone || '';
+    const phone = normalizeIndianPhone(phoneRaw);
+
+    if (!isEmailValid(email)) {
+      return res.status(400).json({
+        error: 'A valid email is required. Update your profile and try again.',
+      });
+    }
+    if (!phone) {
+      return res.status(400).json({
+        error:
+          'A valid 10-digit Indian mobile number is required. Update your profile and try again.',
+      });
+    }
+
     const customerDetails = {
       name: (cd && cd.name && String(cd.name).trim()) || user.name,
-      email: (cd && cd.email && String(cd.email).trim()) || user.email,
-      phone: (cd && cd.phone && String(cd.phone).trim()) || user.phone,
+      email,
+      phone,
       address: (cd && cd.address && String(cd.address).trim()) || user.address,
     };
 
@@ -58,6 +80,9 @@ async function createCheckoutOrderForUser(req, res) {
   } catch (error) {
     if (error.statusCode === 400) {
       return res.status(400).json({ error: error.message });
+    }
+    if (error.statusCode === 502) {
+      return res.status(502).json({ error: error.message });
     }
     if (error.statusCode === 503) {
       return res.status(503).json({ error: error.message });

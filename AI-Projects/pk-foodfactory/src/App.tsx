@@ -15,7 +15,6 @@ import { ToastHost } from './components/ToastHost'
 import HomePage from './pages/HomePage'
 import CheckoutPage from './pages/CheckoutPage'
 import PaymentPage from './pages/PaymentPage'
-import PaymentMethodPage from './pages/PaymentMethodPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import ProfilePage from './pages/ProfilePage'
@@ -73,14 +72,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PaymentPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/payment/:method"
-              element={
-                <ProtectedRoute>
-                  <PaymentMethodPage />
                 </ProtectedRoute>
               }
             />

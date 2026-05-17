@@ -24,6 +24,9 @@ router.post('/create-order', requireAuth, async (req, res) => {
     if (error.statusCode === 400) {
       return res.status(400).json({ error: error.message });
     }
+    if (error.statusCode === 502) {
+      return res.status(502).json({ error: error.message });
+    }
     if (error.statusCode === 503) {
       return res.status(503).json({ error: error.message });
     }
