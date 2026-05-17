@@ -1,9 +1,11 @@
 const express = require('express');
 const Order = require('../models/Order');
 const { requireAuth } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/admin');
 const {
   initiateCheckout,
   finalizeCheckoutPayment,
+  probeRazorpayCredentials,
 } = require('../services/checkoutOrder');
 
 const router = express.Router();
@@ -68,6 +70,24 @@ router.post('/verify', requireAuth, async (req, res) => {
     console.error('Payment verification error:', error);
     res.status(500).json({ error: 'Payment verification failed' });
   }
+});
+
+// Admin-only: ping Razorpay with a tiny order create to confirm credentials.
+// Useful to quickly tell whether 503/Authentication failed is a key problem.
+router.get('/diagnose', requireAuth, requireAdmin, async (req, res) => {
+  const result = await probeRazorpayCredentials();
+  if (result.ok) {
+    return res.json({
+      ok: true,
+      mode: result.mode,
+      message: `Razorpay credentials work in ${result.mode} mode.`,
+    });
+  }
+  return res.status(result.statusCode || 502).json({
+    ok: false,
+    mode: result.mode,
+    error: result.error,
+  });
 });
 
 router.get('/order/:orderId', async (req, res) => {

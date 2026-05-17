@@ -6,23 +6,35 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const openapi = require('./swagger/openapi');
-const { handleRazorpayWebhook, isPlaceholderKey } = require('./services/checkoutOrder');
+const {
+  handleRazorpayWebhook,
+  isPlaceholderKey,
+  getRazorpayKeyMode,
+} = require('./services/checkoutOrder');
 require('dotenv').config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 const isProd = process.env.NODE_ENV === 'production';
 
-if (isProd) {
-  if (
-    isPlaceholderKey(process.env.RAZORPAY_KEY_ID) ||
-    isPlaceholderKey(process.env.RAZORPAY_KEY_SECRET)
-  ) {
+(function logRazorpayKeyStatus() {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (isPlaceholderKey(keyId) || isPlaceholderKey(keySecret)) {
     console.error(
-      'WARN: RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are missing or placeholder in production.'
+      'Razorpay: RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are missing or placeholder. Checkout will fail with 503 until they are set in the server environment.'
     );
+    return;
   }
-}
+  const mode = getRazorpayKeyMode(keyId);
+  if (mode === 'unknown') {
+    console.error(
+      `Razorpay: RAZORPAY_KEY_ID has an unexpected prefix (${String(keyId).trim().slice(0, 9)}…). It must start with rzp_test_ or rzp_live_.`
+    );
+    return;
+  }
+  console.log(`Razorpay: configured with ${mode}-mode key (${String(keyId).trim().slice(0, 12)}…).`);
+})();
 
 app.set('trust proxy', 1);
 

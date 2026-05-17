@@ -269,7 +269,7 @@ export default function PaymentPage() {
           (status === 502
             ? 'Payment gateway error. Please try again or use another method.'
             : status === 503
-              ? 'Payment gateway is not configured. Please contact support.'
+              ? 'Payment gateway is unavailable right now. Please try again in a moment or contact support.'
               : axiosErr?.message ||
                 'Failed to start the payment gateway. Please check your connection and try again.')
       )

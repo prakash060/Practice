@@ -42,12 +42,24 @@ function isPlaceholderKey(value) {
   );
 }
 
+function getRazorpayKeyMode(keyId) {
+  const v = (keyId || '').trim();
+  if (v.startsWith('rzp_test_')) return 'test';
+  if (v.startsWith('rzp_live_')) return 'live';
+  return 'unknown';
+}
+
 function assertRazorpayConfigured() {
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (isPlaceholderKey(keyId) || isPlaceholderKey(keySecret)) {
     throw serviceUnavailable(
-      'Payment gateway is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.'
+      'Payment gateway is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in the server environment.'
+    );
+  }
+  if (getRazorpayKeyMode(keyId) === 'unknown') {
+    throw serviceUnavailable(
+      'RAZORPAY_KEY_ID has an unexpected format. It must start with "rzp_test_" or "rzp_live_". Re-copy it from the Razorpay Dashboard.'
     );
   }
 }
@@ -74,16 +86,35 @@ function isEmailValid(email) {
 }
 
 function gatewayError(err, fallback = 'Payment gateway error') {
-  const description =
+  const rawDescription =
     (err && err.error && err.error.description) ||
     (err && err.error && err.error.reason) ||
     (err && typeof err.error === 'string' ? err.error : null) ||
     (err && err.description) ||
     (err && err.message) ||
     fallback;
+
   const upstreamStatus = err && err.statusCode;
-  const statusCode = upstreamStatus === 401 || upstreamStatus === 403 ? 503 : 502;
-  const e = new Error(description);
+  const isAuthFailure =
+    upstreamStatus === 401 ||
+    upstreamStatus === 403 ||
+    /authentication failed/i.test(String(rawDescription));
+
+  let message = rawDescription;
+  if (isAuthFailure) {
+    const mode = getRazorpayKeyMode(process.env.RAZORPAY_KEY_ID);
+    const modeHint =
+      mode === 'unknown'
+        ? 'The RAZORPAY_KEY_ID does not start with rzp_test_ or rzp_live_.'
+        : `Server is configured with a ${mode}-mode key.`;
+    message =
+      `Razorpay authentication failed. ${modeHint} Verify that RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET ` +
+      `belong to the same Razorpay account and the same mode (both test, or both live), ` +
+      `re-copy them from Razorpay Dashboard → Account & Settings → API Keys, and update them in the server environment.`;
+  }
+
+  const statusCode = isAuthFailure ? 503 : 502;
+  const e = new Error(message);
   e.statusCode = statusCode;
   return e;
 }
@@ -392,12 +423,38 @@ async function handleRazorpayWebhook(rawBody, signatureHeader) {
   return { status: 'ok', event };
 }
 
+async function probeRazorpayCredentials() {
+  assertRazorpayConfigured();
+  try {
+    const probeOrder = await getRazorpay().orders.create({
+      amount: 100,
+      currency: 'INR',
+      receipt: `probe_${Date.now()}`,
+    });
+    return {
+      ok: true,
+      mode: getRazorpayKeyMode(process.env.RAZORPAY_KEY_ID),
+      orderId: probeOrder && probeOrder.id ? probeOrder.id : null,
+    };
+  } catch (err) {
+    const wrapped = gatewayError(err, 'Razorpay probe failed');
+    return {
+      ok: false,
+      mode: getRazorpayKeyMode(process.env.RAZORPAY_KEY_ID),
+      statusCode: wrapped.statusCode,
+      error: wrapped.message,
+    };
+  }
+}
+
 module.exports = {
   initiateCheckout,
   finalizeCheckoutPayment,
   handleRazorpayWebhook,
   assertRazorpayConfigured,
   isPlaceholderKey,
+  getRazorpayKeyMode,
+  probeRazorpayCredentials,
   normalizeIndianPhone,
   isEmailValid,
 };
