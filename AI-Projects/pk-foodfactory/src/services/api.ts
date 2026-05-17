@@ -27,18 +27,10 @@ const api = axios.create({
   },
 });
 
-function setAuthHeaders(config: { headers?: unknown }, token: string) {
-  const h = config.headers as Record<string, string> | undefined;
-  if (!h) return;
-  h.Authorization = `Bearer ${token}`;
-  // Fallback when API CloudFront does not forward Authorization to Elastic Beanstalk
-  h['X-Auth-Token'] = token;
-}
-
 api.interceptors.request.use((config) => {
   const token = getStoredToken();
   if (token) {
-    setAuthHeaders(config, token);
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
@@ -543,7 +535,7 @@ const agentApi = axios.create({
 agentApi.interceptors.request.use((config) => {
   const token = getStoredAgentToken();
   if (token) {
-    setAuthHeaders(config, token);
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });

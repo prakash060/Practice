@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const { extractBearerToken } = require('./authToken');
 
 const JWT_EXPIRES = '7d';
 
@@ -25,29 +24,25 @@ function requireAuth(req, res, next) {
     return res.status(500).json({ error: 'Server authentication is not configured' });
   }
 
-  const token = extractBearerToken(req);
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const token = header.slice('Bearer '.length).trim();
   if (!token) {
-    return res.status(401).json({
-      error: 'Unauthorized',
-      code: 'AUTH_MISSING',
-    });
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
     const payload = jwt.verify(token, secret);
     if (!payload.sub) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        code: 'AUTH_INVALID',
-      });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
     req.userId = payload.sub;
     return next();
   } catch {
-    return res.status(401).json({
-      error: 'Invalid or expired token',
-      code: 'AUTH_INVALID',
-    });
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 
