@@ -33,7 +33,13 @@ app.use(helmet({
   crossOriginOpenerPolicy: false
 }));
 
-app.use(cors());
+app.use(
+  cors({
+    origin: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Auth-Token', 'x-auth-token'],
+    exposedHeaders: ['Authorization'],
+  })
+);
 app.use(morgan('combined'));
 
 const MONGO_OPTIONS = {

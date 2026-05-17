@@ -108,3 +108,15 @@ jobs:
               )
             }')
           aws elasticbeanstalk update-environment --cli-input-json "$INPUT"
+
+      - name: Configure API CloudFront to forward Authorization
+        env:
+          API_CF_DIST_ID: ${{ secrets.AWS_API_CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          set -e
+          if [ -z "${API_CF_DIST_ID:-}" ]; then
+            echo "::warning::AWS_API_CLOUDFRONT_DISTRIBUTION_ID is not set — skipping API CloudFront auth header forwarding."
+            echo "Without this, API calls through CloudFront return 401. Set the secret to your API distribution ID (starts with E)."
+            exit 0
+          fi
+          python3 AI-Projects/pk-foodfactory/scripts/configure_cloudfront_api_auth.py --distribution-id "$API_CF_DIST_ID"
