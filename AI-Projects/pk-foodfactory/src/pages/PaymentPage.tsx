@@ -83,15 +83,16 @@ function razorpayFailureMessage(failRes?: {
   }
 }
 
-function buildMethodFilter(preferred: Method) {
-  return {
-    upi: preferred === 'upi',
-    card: preferred === 'card',
-    netbanking: preferred === 'netbanking',
-    wallet: false,
-    paylater: false,
-    emi: false,
-  }
+/**
+ * Razorpay's strict `method` filter (e.g. `{ netbanking: true, others: false }`) can resolve
+ * to an empty instrument set in test mode or for merchants where only a subset of methods is
+ * enabled, which surfaces as "No appropriate payment method found". We instead pre-select the
+ * preferred method on Razorpay's default page and let the merchant's enabled methods render
+ * naturally — this matches what users expect from "Razorpay's default page" while still landing
+ * them on the method they picked.
+ */
+function buildPreferredMethod(preferred: Method): { method: Method } {
+  return { method: preferred }
 }
 
 export default function PaymentPage() {
@@ -225,7 +226,6 @@ export default function PaymentPage() {
         order_id: response.razorpayOrderId,
         name: 'PK Food Factory',
         description: 'Food Order Payment',
-        method: buildMethodFilter(method),
         notes: {
           razorpayOrderId: response.razorpayOrderId,
           userEmail: user?.email ?? '',
@@ -256,6 +256,7 @@ export default function PaymentPage() {
           name: user?.name ?? '',
           email: user?.email ?? '',
           contact: phone,
+          ...buildPreferredMethod(method),
         },
         theme: { color: '#6b5ef7' },
         modal: {
