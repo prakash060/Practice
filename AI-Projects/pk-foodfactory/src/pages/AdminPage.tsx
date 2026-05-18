@@ -853,7 +853,7 @@ export default function AdminPage() {
                     ))}
                   </select>
                 </div>
-                {!showItemEditor && selectedCategory ? (
+                {selectedCategory ? (
                   <button
                     type="button"
                     className="proceed-payment-button btn-icon admin-toolbar__add"
@@ -919,16 +919,9 @@ export default function AdminPage() {
                       <div className="admin-empty">
                         <p className="admin-empty__title">No items in this category</p>
                         <p className="admin-empty__hint">
-                          Add the first dish — set a title, price, and a picture.
+                          Use <strong>Add item</strong> above to create the first dish — set
+                          a title, price, and a picture.
                         </p>
-                        <button
-                          type="button"
-                          className="proceed-payment-button btn-icon"
-                          onClick={() => setShowItemForm(true)}
-                        >
-                          <PlusIcon />
-                          <span>Add the first item</span>
-                        </button>
                       </div>
                     ) : (
                       <ul className="admin-cards">
