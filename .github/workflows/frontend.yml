@@ -87,7 +87,7 @@ jobs:
           fi
           python3 AI-Projects/pk-foodfactory/scripts/configure_cloudfront_spa.py --distribution-id "$CF_DIST_ID"
 
-      - name: Configure API CloudFront CORS (edge headers + cache)
+      - name: Configure API CloudFront for origin CORS (Free plan)
         env:
           API_CF_DIST_ID: ${{ secrets.AWS_API_CLOUDFRONT_DISTRIBUTION_ID }}
           CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}

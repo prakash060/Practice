@@ -71,6 +71,7 @@ jobs:
           RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
         run: |
           set -e
           if [ -z "${MONGODB_URI:-}" ]; then
@@ -87,6 +88,7 @@ jobs:
             --arg RAZORPAY_WEBHOOK_SECRET "$RAZORPAY_WEBHOOK_SECRET" \
             --arg JWT_SECRET "$JWT_SECRET" \
             --arg ADMIN_EMAIL "$ADMIN_EMAIL" \
+            --arg CORS_ORIGINS "$CORS_ORIGINS" \
             --arg EMAIL_USER "$EMAIL_USER" \
             --arg EMAIL_PASS "$EMAIL_PASS" \
             '{
@@ -102,6 +104,7 @@ jobs:
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "RAZORPAY_WEBHOOK_SECRET", Value: $RAZORPAY_WEBHOOK_SECRET},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "JWT_SECRET", Value: $JWT_SECRET},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "ADMIN_EMAIL", Value: $ADMIN_EMAIL},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "CORS_ORIGINS", Value: $CORS_ORIGINS},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "EMAIL_USER", Value: $EMAIL_USER},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "EMAIL_PASS", Value: $EMAIL_PASS}
                 ]
@@ -110,7 +113,7 @@ jobs:
             }')
           aws elasticbeanstalk update-environment --cli-input-json "$INPUT"
 
-      - name: Configure API CloudFront CORS (edge headers + cache)
+      - name: Configure API CloudFront for origin CORS (Free plan)
         env:
           API_CF_DIST_ID: ${{ secrets.AWS_API_CLOUDFRONT_DISTRIBUTION_ID }}
           CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
@@ -118,7 +121,7 @@ jobs:
           set -e
           if [ -z "${API_CF_DIST_ID:-}" ]; then
             echo "::warning::AWS_API_CLOUDFRONT_DISTRIBUTION_ID is not set — skipping API CloudFront CORS setup."
-            echo "Without this, browsers may see CORS errors when the API CloudFront cache serves responses without Access-Control-Allow-Origin."
+            echo "Without this, browsers may see CORS errors when CloudFront caches API responses without forwarding Origin to Elastic Beanstalk."
             echo "Set the secret to your API distribution ID (CloudFront console → API distro → General, starts with E)."
             exit 0
           fi

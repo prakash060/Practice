@@ -36,8 +36,8 @@ Done — the GitHub Actions workflows are now created.
 - `AWS_S3_BUCKET_FRONTEND`
 - `AWS_CLOUDFRONT_DISTRIBUTION_ID`
 - `VITE_API_URL` — HTTPS API CloudFront base, e.g. `https://d3cvs28uau3ofy.cloudfront.net/api` (not http:// Elastic Beanstalk; avoids mixed content)
-- `AWS_API_CLOUDFRONT_DISTRIBUTION_ID` — API CloudFront distribution ID (starts with `E`, for `configure_cloudfront_api_cors.py`)
-- `CORS_ORIGINS` — optional comma-separated extra frontend origins for API CORS
+- `AWS_API_CLOUDFRONT_DISTRIBUTION_ID` — API CloudFront distribution ID (starts with `E`, for `configure_cloudfront_api_cors.py`; Free plan — no edge CORS policy)
+- `CORS_ORIGINS` — optional comma-separated extra frontend origins (GitHub secret + Elastic Beanstalk `CORS_ORIGINS` env)
 
 Custom domain (www.svifoods.com): see DEPLOYMENT-PRODUCTION.md and CUSTOM-DOMAIN-CHECKLIST.md (ACM us-east-1 + registrar DNS; no workflow change).
 

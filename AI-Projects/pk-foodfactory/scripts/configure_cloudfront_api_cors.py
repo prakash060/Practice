@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
-Configure the API CloudFront distribution for browser CORS and auth headers.
+Configure the API CloudFront distribution for browser CORS (Free pricing plan compatible).
 
-- Adds a response headers policy with CORS (including error responses at the edge).
-- Removes SPA-style custom error pages (403/404 -> index.html) if present on the API distro.
-- Uses CachingDisabled so stale responses without CORS are not served.
-- Forwards viewer Authorization / X-Auth-Token to Elastic Beanstalk.
+CloudFront Free distributions cannot use custom response headers policies. CORS is
+handled by the Node/Express API; this script only:
 
-Requires: AWS CLI credentials with cloudfront:* on the API distribution.
+- Removes SPA-style custom error pages (403/404 -> index.html) on the API distro.
+- Forwards Origin / preflight / auth headers to Elastic Beanstalk (legacy ForwardedValues).
+- Sets TTL 0 so CloudFront does not serve stale responses missing CORS headers.
+- Ensures OPTIONS is allowed.
+
+Requires: AWS CLI credentials with cloudfront:UpdateDistribution on the API distribution.
 
 Usage:
   export API_CF_DIST_ID=E1234567890ABC
@@ -22,22 +25,20 @@ import subprocess
 import sys
 from pathlib import Path
 
-POLICY_NAME = "svifoods-api-cors"
-MANAGED_CACHE_DISABLED = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
-MANAGED_ORIGIN_ALL_VIEWER = "216adef6-5c7f-47e4-b989-5492eafa07d3"
-
-DEFAULT_ALLOWED_ORIGINS = [
-    "https://d1a7288bn24qfa.cloudfront.net",
-    "https://www.svifoods.com",
-    "https://svifoods.com",
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
-
 SPA_ERROR_CODES = {403, 404}
 
+# Forwarded to origin so Express can reflect Access-Control-Allow-Origin correctly.
+FORWARD_HEADERS = [
+    "Origin",
+    "Access-Control-Request-Method",
+    "Access-Control-Request-Headers",
+    "Authorization",
+    "X-Auth-Token",
+    "Content-Type",
+]
 
-def run_aws(args: list[str]) -> dict:
+
+def run_aws(args: list[str], *, allow_empty: bool = False) -> dict:
     proc = subprocess.run(
         ["aws", "cloudfront", *args],
         capture_output=True,
@@ -48,103 +49,10 @@ def run_aws(args: list[str]) -> dict:
         print(proc.stderr or proc.stdout, file=sys.stderr)
         sys.exit(proc.returncode)
     if not proc.stdout.strip():
+        if allow_empty:
+            return {}
         return {}
     return json.loads(proc.stdout)
-
-
-def parse_allowed_origins() -> list[str]:
-    extra = (os.environ.get("CORS_ORIGINS") or "").split(",")
-    extra = [value.strip() for value in extra if value.strip()]
-    return list(dict.fromkeys([*DEFAULT_ALLOWED_ORIGINS, *extra]))
-
-
-def find_response_headers_policy_id(name: str) -> str | None:
-    marker = None
-    while True:
-        args = ["list-response-headers-policies", "--type", "custom"]
-        if marker:
-            args.extend(["--marker", marker])
-        data = run_aws(args)
-        listed = data.get("ResponseHeadersPolicyList", {})
-        for item in listed.get("Items", []) or []:
-            policy = item.get("ResponseHeadersPolicy", {})
-            if policy.get("ResponseHeadersPolicyConfig", {}).get("Name") == name:
-                return policy["Id"]
-        marker = listed.get("NextMarker")
-        if not marker:
-            break
-    return None
-
-
-def build_cors_policy_config(origins: list[str]) -> dict:
-    return {
-        "Name": POLICY_NAME,
-        "Comment": "CORS for SVI Foods API (frontend CloudFront + custom domain)",
-        "CorsConfig": {
-            "AccessControlAllowOrigins": {
-                "Quantity": len(origins),
-                "Items": origins,
-            },
-            "AccessControlAllowHeaders": {
-                "Quantity": 1,
-                "Items": ["*"],
-            },
-            "AccessControlAllowMethods": {
-                "Quantity": 7,
-                "Items": ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-            },
-            "AccessControlAllowCredentials": False,
-            "AccessControlExposeHeaders": {
-                "Quantity": 4,
-                "Items": [
-                    "RateLimit-Limit",
-                    "RateLimit-Remaining",
-                    "RateLimit-Reset",
-                    "RateLimit-Policy",
-                ],
-            },
-            "AccessControlMaxAgeSec": 86400,
-            "OriginOverride": True,
-        },
-    }
-
-
-def ensure_response_headers_policy(origins: list[str]) -> str:
-    existing_id = find_response_headers_policy_id(POLICY_NAME)
-    config = build_cors_policy_config(origins)
-
-    if existing_id:
-        data = run_aws(
-            ["get-response-headers-policy", "--id", existing_id]
-        )
-        etag = data["ETag"]
-        body = data["ResponseHeadersPolicy"]["ResponseHeadersPolicyConfig"]
-        body["CorsConfig"] = config["CorsConfig"]
-        body["Comment"] = config["Comment"]
-        run_aws(
-            [
-                "update-response-headers-policy",
-                "--id",
-                existing_id,
-                "--if-match",
-                etag,
-                "--response-headers-policy-config",
-                json.dumps(body),
-            ]
-        )
-        print(f"Updated response headers policy {existing_id} ({POLICY_NAME}).")
-        return existing_id
-
-    created = run_aws(
-        [
-            "create-response-headers-policy",
-            "--response-headers-policy-config",
-            json.dumps(config),
-        ]
-    )
-    policy_id = created["ResponseHeadersPolicy"]["Id"]
-    print(f"Created response headers policy {policy_id} ({POLICY_NAME}).")
-    return policy_id
 
 
 def strip_spa_error_pages(custom_errors: dict | None) -> tuple[dict, bool]:
@@ -161,8 +69,65 @@ def strip_spa_error_pages(custom_errors: dict | None) -> tuple[dict, bool]:
     return {"Quantity": len(kept), "Items": kept}, changed
 
 
+def legacy_forwarded_values() -> dict:
+    return {
+        "QueryString": True,
+        "Cookies": {"Forward": "none"},
+        "Headers": {
+            "Quantity": len(FORWARD_HEADERS),
+            "Items": FORWARD_HEADERS,
+        },
+    }
+
+
+def apply_free_tier_cache_behavior(behavior: dict) -> bool:
+    """Use legacy cache settings (compatible with CloudFront Free). Returns True if changed."""
+    changed = False
+
+    for key in (
+        "CachePolicyId",
+        "OriginRequestPolicyId",
+        "ResponseHeadersPolicyId",
+        "RealtimeLogConfigArn",
+    ):
+        if behavior.pop(key, None):
+            changed = True
+
+    wanted_forwarded = legacy_forwarded_values()
+    if behavior.get("ForwardedValues") != wanted_forwarded:
+        behavior["ForwardedValues"] = wanted_forwarded
+        changed = True
+
+    for ttl_key, ttl_value in (("MinTTL", 0), ("DefaultTTL", 0), ("MaxTTL", 0)):
+        if behavior.get(ttl_key) != ttl_value:
+            behavior[ttl_key] = ttl_value
+            changed = True
+
+    if not behavior.get("Compress", False):
+        behavior["Compress"] = True
+        changed = True
+
+    allowed_methods = behavior.get("AllowedMethods", {})
+    methods = set(allowed_methods.get("Items") or [])
+    needed = {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+    if not needed.issubset(methods):
+        behavior["AllowedMethods"] = {
+            "Quantity": len(needed),
+            "Items": sorted(needed),
+            "CachedMethods": {
+                "Quantity": 2,
+                "Items": ["GET", "HEAD"],
+            },
+        }
+        changed = True
+
+    return changed
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Configure API CloudFront CORS")
+    parser = argparse.ArgumentParser(
+        description="Configure API CloudFront for CORS (Free plan compatible)"
+    )
     parser.add_argument(
         "--distribution-id",
         default=os.environ.get("API_CF_DIST_ID")
@@ -190,58 +155,33 @@ def main() -> None:
         )
         sys.exit(1)
 
-    origins = parse_allowed_origins()
-    policy_id = ensure_response_headers_policy(origins)
-
     data = run_aws(["get-distribution-config", "--id", dist_id])
     etag = data["ETag"]
     config = data["DistributionConfig"]
 
+    changed = False
+
     custom_errors, stripped = strip_spa_error_pages(config.get("CustomErrorResponses"))
     if stripped:
         config["CustomErrorResponses"] = custom_errors
+        changed = True
         print(
-            f"Removed SPA error responses (403/404 -> /index.html) from API distribution {dist_id}."
+            f"Will remove SPA error responses (403/404 -> /index.html) from API distribution {dist_id}."
         )
 
     behavior = config["DefaultCacheBehavior"]
-    changed = stripped
-    if behavior.get("ResponseHeadersPolicyId") != policy_id:
-        behavior["ResponseHeadersPolicyId"] = policy_id
-        changed = True
-    if behavior.get("CachePolicyId") != MANAGED_CACHE_DISABLED:
-        behavior["CachePolicyId"] = MANAGED_CACHE_DISABLED
-        behavior.pop("ForwardedValues", None)
-        behavior.pop("MinTTL", None)
-        behavior.pop("MaxTTL", None)
-        behavior.pop("DefaultTTL", None)
-        changed = True
-    if behavior.get("OriginRequestPolicyId") != MANAGED_ORIGIN_ALL_VIEWER:
-        behavior["OriginRequestPolicyId"] = MANAGED_ORIGIN_ALL_VIEWER
-        behavior.pop("ForwardedValues", None)
-        changed = True
-
-    allowed_methods = behavior.get("AllowedMethods", {})
-    methods = set(allowed_methods.get("Items") or [])
-    needed = {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-    if not needed.issubset(methods):
-        behavior["AllowedMethods"] = {
-            "Quantity": len(needed),
-            "Items": sorted(needed),
-            "CachedMethods": {
-                "Quantity": 2,
-                "Items": ["GET", "HEAD"],
-            },
-        }
+    if apply_free_tier_cache_behavior(behavior):
         changed = True
 
     if not changed:
-        print(f"CloudFront API distribution {dist_id}: CORS policy already applied.")
+        print(
+            f"CloudFront API distribution {dist_id}: already configured for origin CORS (Free plan)."
+        )
     else:
         config_path = Path(os.environ.get("TMPDIR", os.environ.get("TEMP", "/tmp")))
         config_file = config_path / "cf-api-dist-config.json"
         config_file.write_text(json.dumps(config), encoding="utf-8")
-        print(f"Updating API CloudFront distribution {dist_id}...")
+        print(f"Updating API CloudFront distribution {dist_id} (Free plan / origin CORS)...")
         proc = subprocess.run(
             [
                 "aws",
@@ -261,7 +201,7 @@ def main() -> None:
         if proc.returncode != 0:
             print(proc.stderr or proc.stdout, file=sys.stderr)
             sys.exit(proc.returncode)
-        print("Update submitted. Wait until status is Deployed.")
+        print("Update submitted. Wait until distribution status is Deployed.")
 
     if not args.skip_invalidation:
         run_aws(
@@ -274,6 +214,10 @@ def main() -> None:
             ]
         )
         print(f"Invalidation created for {dist_id} (/*).")
+
+    print(
+        "CORS response headers are set by the Express API on Elastic Beanstalk, not at the CloudFront edge."
+    )
 
 
 if __name__ == "__main__":
