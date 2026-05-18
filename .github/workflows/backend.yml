@@ -11,6 +11,7 @@ on:
       - release
     paths:
       - 'AI-Projects/pk-foodfactory-backend/**'
+      - 'AI-Projects/pk-foodfactory/scripts/configure_cloudfront_api_cors.py'
       - '.github/workflows/backend.yml'
   workflow_dispatch:
 
@@ -108,3 +109,17 @@ jobs:
               )
             }')
           aws elasticbeanstalk update-environment --cli-input-json "$INPUT"
+
+      - name: Configure API CloudFront CORS (edge headers + cache)
+        env:
+          API_CF_DIST_ID: ${{ secrets.AWS_API_CLOUDFRONT_DISTRIBUTION_ID }}
+          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+        run: |
+          set -e
+          if [ -z "${API_CF_DIST_ID:-}" ]; then
+            echo "::warning::AWS_API_CLOUDFRONT_DISTRIBUTION_ID is not set — skipping API CloudFront CORS setup."
+            echo "Without this, browsers may see CORS errors when the API CloudFront cache serves responses without Access-Control-Allow-Origin."
+            echo "Set the secret to your API distribution ID (CloudFront console → API distro → General, starts with E)."
+            exit 0
+          fi
+          python3 AI-Projects/pk-foodfactory/scripts/configure_cloudfront_api_cors.py --distribution-id "$API_CF_DIST_ID"

@@ -56,6 +56,31 @@ function buildAllowedOrigins() {
 
 const allowedOrigins = buildAllowedOrigins();
 
+function applyCorsHeaders(req, res) {
+  const origin = req.headers.origin;
+  if (!origin) {
+    return;
+  }
+  if (allowedOrigins.includes(origin) || !isProd) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+}
+
+function handlePreflight(req, res) {
+  applyCorsHeaders(req, res);
+  res.setHeader(
+    'Access-Control-Allow-Methods',
+    'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS'
+  );
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, X-Auth-Token'
+  );
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.status(204).end();
+}
+
 // Swagger UI uses inline scripts/styles; relax CSP so the docs page works.
 // COOP is omitted: on HTTP (common on EB before HTTPS) browsers ignore it and log a console warning.
 // CORP must allow cross-origin reads: frontend (d1a7288…cloudfront.net) and API (d3cvs28…) are different origins.
@@ -65,21 +90,18 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return handlePreflight(req, res);
+  }
+  applyCorsHeaders(req, res);
+  next();
+});
+
 app.use(
   cors({
-    origin(origin, callback) {
-      if (!origin) {
-        return callback(null, true);
-      }
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      if (!isProd) {
-        return callback(null, true);
-      }
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
-    },
-    credentials: true,
+    origin: isProd ? allowedOrigins : true,
+    credentials: false,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Auth-Token'],
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     maxAge: 86400,
@@ -215,11 +237,16 @@ app.use('/api/admin/reset', requireMongo, require('./routes/adminReset'));
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
+  applyCorsHeaders(req, res);
+  if (err.message && err.message.startsWith('CORS blocked')) {
+    return res.status(403).json({ error: err.message });
+  }
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
 // 404 handler (no path pattern — catches only unmatched requests)
 app.use((req, res) => {
+  applyCorsHeaders(req, res);
   res.status(404).json({ error: 'Route not found' });
 });
 
