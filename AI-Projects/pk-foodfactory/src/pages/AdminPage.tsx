@@ -704,19 +704,17 @@ export default function AdminPage() {
         <section className="panel admin-stack">
           <div className="admin-toolbar">
             <h2 className="admin-section-title">Categories</h2>
-            {!showCatEditor ? (
-              <button
-                type="button"
-                className="proceed-payment-button btn-icon admin-toolbar__add"
-                onClick={() => {
-                  setEditingCategoryId(null)
-                  setShowCategoryForm(true)
-                }}
-              >
-                <PlusIcon />
-                <span>Add category</span>
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="proceed-payment-button btn-icon admin-toolbar__add"
+              onClick={() => {
+                setEditingCategoryId(null)
+                setShowCategoryForm(true)
+              }}
+            >
+              <PlusIcon />
+              <span>Add category</span>
+            </button>
           </div>
 
           {showCatEditor ? (
@@ -764,17 +762,9 @@ export default function AdminPage() {
               <div className="admin-empty">
                 <p className="admin-empty__title">No categories yet</p>
                 <p className="admin-empty__hint">
-                  Start by adding a category — pick a name, an emoji icon, and a picture
-                  for the home page hero.
+                  Use <strong>Add category</strong> above to create your first one — pick a
+                  name, an emoji icon, and a picture for the home page hero.
                 </p>
-                <button
-                  type="button"
-                  className="proceed-payment-button btn-icon"
-                  onClick={() => setShowCategoryForm(true)}
-                >
-                  <PlusIcon />
-                  <span>Add your first category</span>
-                </button>
               </div>
             ) : (
               <ul className="admin-cards">
