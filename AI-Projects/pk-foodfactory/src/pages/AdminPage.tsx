@@ -1,17 +1,23 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AdminNav } from '../components/AdminNav'
 import { AppHeaderApp } from '../components/AppHeader'
-import { CategoryTabs } from '../components/CategoryTabs/CategoryTabs'
 import {
   CheckIcon,
   ChevronLeftIcon,
   EditIcon,
+  PlusIcon,
   RotateLeftIcon,
   TrashIcon,
   XIcon,
 } from '../components/Icons'
+import {
+  ImagePicker,
+  buildImagePayload,
+  imagePickerFromExisting,
+  type ImagePickerValue,
+} from '../components/ImagePicker'
 import { GENERIC_FOOD_IMAGE } from '../constants/categories'
 import { useFood } from '../hooks/useFood'
 import {
@@ -22,7 +28,24 @@ import {
 } from '../services/api'
 import { useToast } from '../state/ToastContext'
 
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024
+const CATEGORY_EMOJI_PRESETS = [
+  '🍽️',
+  '🍛',
+  '🍕',
+  '🍔',
+  '🥤',
+  '🍰',
+  '🍗',
+  '🥗',
+  '🍜',
+  '🧁',
+  '☕',
+  '🍩',
+  '🍦',
+  '🍱',
+  '🥘',
+  '🍣',
+]
 
 function axiosErrorMessage(err: unknown, fallback: string): string {
   if (isAxiosError(err)) {
@@ -33,7 +56,7 @@ function axiosErrorMessage(err: unknown, fallback: string): string {
 }
 
 // ====================================================================
-// Category form (create + edit)
+// Category form
 // ====================================================================
 interface CategoryFormProps {
   editing?: CategoryDoc | null
@@ -45,49 +68,25 @@ function CategoryForm({ editing, onSaved, onCancelEdit }: CategoryFormProps) {
   const isEdit = Boolean(editing)
   const [name, setName] = useState(editing?.name ?? '')
   const [label, setLabel] = useState(editing?.label ?? '')
-  const [emoji, setEmoji] = useState(editing?.emoji ?? '')
+  const [emoji, setEmoji] = useState(editing?.emoji ?? '🍽️')
   const [accent, setAccent] = useState(editing?.accent ?? '#6b5ef7')
+  const [imagePicker, setImagePicker] = useState<ImagePickerValue>(() =>
+    imagePickerFromExisting(editing?.imageUrl, GENERIC_FOOD_IMAGE)
+  )
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [removeImage, setRemoveImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    return () => {
-      if (imagePreview) URL.revokeObjectURL(imagePreview)
-    }
-  }, [imagePreview])
-
-  const clearLocalImage = () => {
-    if (imagePreview) URL.revokeObjectURL(imagePreview)
-    setImageFile(null)
-    setImagePreview(null)
-  }
-
   const resetCreate = () => {
     setName('')
     setLabel('')
-    setEmoji('')
+    setEmoji('🍽️')
     setAccent('#6b5ef7')
-    clearLocalImage()
+    setImagePicker({ source: 'none', previewUrl: null, galleryId: null })
+    setImageFile(null)
     setRemoveImage(false)
     setError(null)
-  }
-
-  const onImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    setError(null)
-    clearLocalImage()
-    if (!file) return
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError('Image must be 2MB or smaller')
-      e.target.value = ''
-      return
-    }
-    setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
-    setRemoveImage(false)
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -100,17 +99,7 @@ function CategoryForm({ editing, onSaved, onCancelEdit }: CategoryFormProps) {
     }
     setIsSubmitting(true)
     try {
-      // Image rules:
-      //  - new file → upload it
-      //  - remove image checked → clear (imageUrl = null)
-      //  - otherwise → don't touch (undefined)
-      const imagePayload = imageFile
-        ? { image: imageFile }
-        : removeImage
-          ? { imageUrl: null }
-          : isEdit
-            ? {}
-            : { imageUrl: null }
+      const imagePayload = buildImagePayload(imagePicker, imageFile, removeImage, isEdit)
       const payload = {
         name: trimmedName,
         label: label.trim() || trimmedName,
@@ -124,115 +113,113 @@ function CategoryForm({ editing, onSaved, onCancelEdit }: CategoryFormProps) {
       onSaved(saved, isEdit ? 'update' : 'create')
       if (!isEdit) resetCreate()
     } catch (err) {
-      setError(axiosErrorMessage(err, isEdit ? 'Could not update category' : 'Could not create category'))
+      setError(
+        axiosErrorMessage(err, isEdit ? 'Could not update category' : 'Could not create category')
+      )
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const currentImageSrc =
-    imagePreview ||
-    (removeImage ? GENERIC_FOOD_IMAGE : editing?.imageUrl || GENERIC_FOOD_IMAGE)
-
   return (
-    <form className="auth-form" onSubmit={handleSubmit} noValidate>
-      {error ? <p className="error-message">{error}</p> : null}
+    <form className="admin-form" onSubmit={handleSubmit} noValidate>
+      {error ? <p className="error-message admin-form__error">{error}</p> : null}
 
-      <div className="form-group">
-        <label htmlFor="cat-name">Category name</label>
-        <input
-          id="cat-name"
-          type="text"
-          value={name}
-          onChange={(ev) => setName(ev.target.value)}
-          disabled={isSubmitting}
-          required
-          maxLength={60}
-          placeholder="e.g. Biryani"
-        />
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="cat-label">Display label (optional)</label>
-        <input
-          id="cat-label"
-          type="text"
-          value={label}
-          onChange={(ev) => setLabel(ev.target.value)}
-          disabled={isSubmitting}
-          maxLength={80}
-          placeholder="Defaults to the name"
-        />
-      </div>
-
-      <div className="form-row">
+      <div className="admin-form__row">
         <div className="form-group">
-          <label htmlFor="cat-emoji">Emoji</label>
+          <label htmlFor="cat-name">Category name *</label>
           <input
-            id="cat-emoji"
+            id="cat-name"
             type="text"
-            value={emoji}
-            onChange={(ev) => setEmoji(ev.target.value)}
+            value={name}
+            onChange={(ev) => setName(ev.target.value)}
             disabled={isSubmitting}
-            maxLength={8}
-            placeholder="🍽️"
+            required
+            maxLength={60}
+            placeholder="e.g. Biryani"
           />
         </div>
         <div className="form-group">
-          <label htmlFor="cat-accent">Accent color</label>
+          <label htmlFor="cat-label">Display label</label>
+          <input
+            id="cat-label"
+            type="text"
+            value={label}
+            onChange={(ev) => setLabel(ev.target.value)}
+            disabled={isSubmitting}
+            maxLength={80}
+            placeholder="Defaults to the name"
+          />
+        </div>
+      </div>
+
+      <div className="admin-form__row admin-form__row--narrow">
+        <div className="form-group">
+          <label htmlFor="cat-emoji">Icon (emoji)</label>
+          <div className="emoji-input-wrap">
+            <input
+              id="cat-emoji"
+              type="text"
+              value={emoji}
+              onChange={(ev) => setEmoji(ev.target.value)}
+              disabled={isSubmitting}
+              maxLength={8}
+              placeholder="🍽️"
+              className="emoji-input"
+            />
+            <div className="emoji-chips" role="group" aria-label="Quick pick emoji">
+              {CATEGORY_EMOJI_PRESETS.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  className={`emoji-chips__btn ${emoji === e ? 'emoji-chips__btn--active' : ''}`}
+                  onClick={() => setEmoji(e)}
+                  disabled={isSubmitting}
+                  title={`Use ${e}`}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="form-group form-group--narrow">
+          <label htmlFor="cat-accent">Accent</label>
           <input
             id="cat-accent"
             type="color"
             value={accent}
             onChange={(ev) => setAccent(ev.target.value)}
             disabled={isSubmitting}
+            className="accent-input"
           />
         </div>
       </div>
 
-      <div className="form-group">
-        <label htmlFor="cat-image">Image (optional, ≤ 2MB)</label>
-        <input
-          id="cat-image"
-          type="file"
-          accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-          onChange={onImageChange}
+      <div className="form-group admin-form__image">
+        <label className="admin-form__image-label">Category image</label>
+        <p className="form-hint admin-form__image-hint">
+          Pick a relevant picture from the gallery, upload your own, or leave it
+          for the default placeholder. The picture shows on the home hero and
+          category tabs.
+        </p>
+        <ImagePicker
+          idPrefix="cat"
+          mode="category"
+          relevanceHint={`${name} ${label}`}
+          value={imagePicker}
+          onChange={setImagePicker}
           disabled={isSubmitting}
+          allowRemove={isEdit && Boolean(editing?.imageUrl)}
+          removeChecked={removeImage}
+          onRemoveChange={setRemoveImage}
+          onFileSelected={setImageFile}
+          onValidationError={(msg) => msg && setError(msg)}
+          fallbackPreviewUrl={GENERIC_FOOD_IMAGE}
         />
-        {isEdit && editing?.imageUrl ? (
-          <label className="checkbox-inline">
-            <input
-              type="checkbox"
-              checked={removeImage}
-              onChange={(ev) => {
-                setRemoveImage(ev.target.checked)
-                if (ev.target.checked) clearLocalImage()
-              }}
-              disabled={isSubmitting}
-            />
-            Remove current image (use default)
-          </label>
-        ) : null}
-        <div className="admin-preview">
-          <img
-            src={currentImageSrc}
-            alt={imagePreview ? 'New image preview' : 'Current image'}
-          />
-          <p className="form-hint">
-            {imagePreview
-              ? 'New image — saving will replace the current one.'
-              : isEdit
-                ? removeImage
-                  ? 'Image will be cleared on save.'
-                  : editing?.imageUrl
-                    ? 'Current image. Pick a file to replace, or check the box above to clear it.'
-                    : 'No image set. Pick a file to add one.'
-                : 'No image selected — a generic placeholder will be used.'}
-          </p>
-        </div>
       </div>
 
-      <div className="profile-actions">
+      <div className="admin-form__actions">
         {isEdit ? (
           <button
             type="button"
@@ -260,9 +247,7 @@ function CategoryForm({ editing, onSaved, onCancelEdit }: CategoryFormProps) {
           disabled={isSubmitting}
         >
           <CheckIcon />
-          <span>
-            {isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save category'}
-          </span>
+          <span>{isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save category'}</span>
         </button>
       </div>
     </form>
@@ -270,14 +255,11 @@ function CategoryForm({ editing, onSaved, onCancelEdit }: CategoryFormProps) {
 }
 
 // ====================================================================
-// Item form (create + edit, with category move on edit)
+// Item form
 // ====================================================================
 interface ItemFormProps {
-  /** Pre-selected category for new items, used as fallback display image. */
   category: CategoryDoc
-  /** Existing item being edited (null = create mode). */
   editing?: FoodItemDoc | null
-  /** All categories — exposed as a select when editing so admin can move an item. */
   allCategories: CategoryDoc[]
   onSaved: (item: FoodItemDoc, mode: 'create' | 'update') => void
   onCancelEdit?: () => void
@@ -295,47 +277,30 @@ function ItemForm({
   const [name, setName] = useState(editing?.name ?? '')
   const [description, setDescription] = useState(editing?.description ?? '')
   const [price, setPrice] = useState(editing ? String(editing.price) : '2')
+  const targetCategoryImage =
+    allCategories.find((c) => c.name === (editing?.category ?? category.name))?.imageUrl ||
+    category.imageUrl ||
+    null
+  const [imagePicker, setImagePicker] = useState<ImagePickerValue>(() =>
+    imagePickerFromExisting(editing?.imageUrl, targetCategoryImage || GENERIC_FOOD_IMAGE)
+  )
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [removeImage, setRemoveImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    return () => {
-      if (imagePreview) URL.revokeObjectURL(imagePreview)
-    }
-  }, [imagePreview])
-
-  const clearLocalImage = () => {
-    if (imagePreview) URL.revokeObjectURL(imagePreview)
-    setImageFile(null)
-    setImagePreview(null)
-  }
+  const itemFallbackPreview =
+    allCategories.find((c) => c.name === categoryName)?.imageUrl || GENERIC_FOOD_IMAGE
 
   const resetCreate = () => {
     setCategoryName(category.name)
     setName('')
     setDescription('')
     setPrice('2')
-    clearLocalImage()
+    setImagePicker({ source: 'none', previewUrl: null, galleryId: null })
+    setImageFile(null)
     setRemoveImage(false)
     setError(null)
-  }
-
-  const onImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    setError(null)
-    clearLocalImage()
-    if (!file) return
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError('Image must be 2MB or smaller')
-      e.target.value = ''
-      return
-    }
-    setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
-    setRemoveImage(false)
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -353,13 +318,7 @@ function ItemForm({
     }
     setIsSubmitting(true)
     try {
-      const imagePayload = imageFile
-        ? { image: imageFile }
-        : removeImage
-          ? { imageUrl: null }
-          : isEdit
-            ? {}
-            : { imageUrl: null }
+      const imagePayload = buildImagePayload(imagePicker, imageFile, removeImage, isEdit)
       const payload = {
         category: categoryName,
         name: trimmedName,
@@ -379,19 +338,37 @@ function ItemForm({
     }
   }
 
-  // For the preview, prefer the new file, then editing.imageUrl (unless removed),
-  // then the *target* category's image (so moving updates the preview), then generic.
-  const targetCategoryImage =
-    allCategories.find((c) => c.name === categoryName)?.imageUrl || null
-  const currentImageSrc =
-    imagePreview ||
-    (removeImage
-      ? targetCategoryImage || GENERIC_FOOD_IMAGE
-      : editing?.imageUrl || targetCategoryImage || GENERIC_FOOD_IMAGE)
-
   return (
-    <form className="auth-form" onSubmit={handleSubmit} noValidate>
-      {error ? <p className="error-message">{error}</p> : null}
+    <form className="admin-form" onSubmit={handleSubmit} noValidate>
+      {error ? <p className="error-message admin-form__error">{error}</p> : null}
+
+      <div className="admin-form__row">
+        <div className="form-group">
+          <label htmlFor="item-name">Title *</label>
+          <input
+            id="item-name"
+            type="text"
+            value={name}
+            onChange={(ev) => setName(ev.target.value)}
+            disabled={isSubmitting}
+            required
+            maxLength={120}
+            placeholder="e.g. Chicken Biryani"
+          />
+        </div>
+        <div className="form-group form-group--narrow">
+          <label htmlFor="item-price">Price (₹) *</label>
+          <input
+            id="item-price"
+            type="number"
+            min="0"
+            step="0.5"
+            value={price}
+            onChange={(ev) => setPrice(ev.target.value)}
+            disabled={isSubmitting}
+          />
+        </div>
+      </div>
 
       {isEdit ? (
         <div className="form-group">
@@ -408,24 +385,12 @@ function ItemForm({
               </option>
             ))}
           </select>
+          <p className="form-hint">Move this item to a different category if needed.</p>
         </div>
       ) : null}
 
       <div className="form-group">
-        <label htmlFor="item-name">Title</label>
-        <input
-          id="item-name"
-          type="text"
-          value={name}
-          onChange={(ev) => setName(ev.target.value)}
-          disabled={isSubmitting}
-          required
-          maxLength={120}
-        />
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="item-desc">Description (optional)</label>
+        <label htmlFor="item-desc">Description</label>
         <textarea
           id="item-desc"
           rows={3}
@@ -433,65 +398,34 @@ function ItemForm({
           onChange={(ev) => setDescription(ev.target.value)}
           disabled={isSubmitting}
           maxLength={500}
+          placeholder="Short description shown on the menu card"
         />
       </div>
 
-      <div className="form-group">
-        <label htmlFor="item-price">Price (₹)</label>
-        <input
-          id="item-price"
-          type="number"
-          min="0"
-          step="0.5"
-          value={price}
-          onChange={(ev) => setPrice(ev.target.value)}
+      <div className="form-group admin-form__image">
+        <label className="admin-form__image-label">Item image</label>
+        <p className="form-hint admin-form__image-hint">
+          Pick a relevant picture from the gallery (matched against the item
+          title) or upload your own. If you don't set one, the category image is
+          used as a fallback.
+        </p>
+        <ImagePicker
+          idPrefix="item"
+          mode="item"
+          relevanceHint={`${categoryName} ${name}`}
+          value={imagePicker}
+          onChange={setImagePicker}
           disabled={isSubmitting}
+          allowRemove={isEdit && Boolean(editing?.imageUrl)}
+          removeChecked={removeImage}
+          onRemoveChange={setRemoveImage}
+          onFileSelected={setImageFile}
+          onValidationError={(msg) => msg && setError(msg)}
+          fallbackPreviewUrl={itemFallbackPreview}
         />
       </div>
 
-      <div className="form-group">
-        <label htmlFor="item-image">Image (optional, ≤ 2MB)</label>
-        <input
-          id="item-image"
-          type="file"
-          accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-          onChange={onImageChange}
-          disabled={isSubmitting}
-        />
-        {isEdit && editing?.imageUrl ? (
-          <label className="checkbox-inline">
-            <input
-              type="checkbox"
-              checked={removeImage}
-              onChange={(ev) => {
-                setRemoveImage(ev.target.checked)
-                if (ev.target.checked) clearLocalImage()
-              }}
-              disabled={isSubmitting}
-            />
-            Remove current image (use category default)
-          </label>
-        ) : null}
-        <div className="admin-preview">
-          <img
-            src={currentImageSrc}
-            alt={imagePreview ? 'New image preview' : 'Current image'}
-          />
-          <p className="form-hint">
-            {imagePreview
-              ? 'New image — saving will replace the current one.'
-              : isEdit
-                ? removeImage
-                  ? 'Image will be cleared on save.'
-                  : editing?.imageUrl
-                    ? 'Current image. Pick a file to replace, or check the box above to clear it.'
-                    : 'No image set. Pick a file to add one.'
-                : 'No image selected — the category image (or default) will be used.'}
-          </p>
-        </div>
-      </div>
-
-      <div className="profile-actions">
+      <div className="admin-form__actions">
         {isEdit ? (
           <button
             type="button"
@@ -519,9 +453,7 @@ function ItemForm({
           disabled={isSubmitting}
         >
           <CheckIcon />
-          <span>
-            {isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save item'}
-          </span>
+          <span>{isSubmitting ? 'Saving…' : isEdit ? 'Save changes' : 'Save item'}</span>
         </button>
       </div>
     </form>
@@ -531,16 +463,21 @@ function ItemForm({
 // ====================================================================
 // Admin page
 // ====================================================================
+type AdminTab = 'categories' | 'items'
+
 export default function AdminPage() {
   const navigate = useNavigate()
   const { reloadMenu } = useFood()
   const { showToast } = useToast()
 
+  const [activeTab, setActiveTab] = useState<AdminTab>('categories')
   const [categories, setCategories] = useState<CategoryDoc[]>([])
   const [items, setItems] = useState<FoodItemDoc[]>([])
   const [selectedCategoryName, setSelectedCategoryName] = useState<string | null>(null)
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [showCategoryForm, setShowCategoryForm] = useState(false)
+  const [showItemForm, setShowItemForm] = useState(false)
   const [isLoadingCats, setIsLoadingCats] = useState(true)
   const [isLoadingItems, setIsLoadingItems] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -602,20 +539,22 @@ export default function AdminPage() {
     }
     void loadItems(selectedCategoryName)
     setEditingItemId(null)
+    setShowItemForm(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategoryName])
 
   // -------- Category callbacks --------
   const handleCategorySaved = (saved: CategoryDoc, mode: 'create' | 'update') => {
     setCategories((cur) => {
-      const next = mode === 'create' ? [...cur, saved] : cur.map((c) => (c.id === saved.id ? saved : c))
+      const next =
+        mode === 'create' ? [...cur, saved] : cur.map((c) => (c.id === saved.id ? saved : c))
       return next.sort((a, b) => a.name.localeCompare(b.name))
     })
     if (mode === 'create') {
       setSelectedCategoryName(saved.name)
+      setShowCategoryForm(false)
       showToast(`Category "${saved.name}" added`, 'success')
     } else {
-      // If we renamed, update the selection so the tab stays on this category.
       setSelectedCategoryName((prev) =>
         prev === editingCategory?.name ? saved.name : prev
       )
@@ -656,8 +595,6 @@ export default function AdminPage() {
       if (mode === 'create') {
         return [...cur, saved].sort((a, b) => a.name.localeCompare(b.name))
       }
-      // On update, an item may have been moved to a different category. If so,
-      // drop it from the current list; otherwise replace in-place.
       if (selectedCategoryName && saved.category !== selectedCategoryName) {
         return cur.filter((it) => it.id !== saved.id)
       }
@@ -667,6 +604,7 @@ export default function AdminPage() {
       setEditingItemId(null)
       showToast(`Updated "${saved.name}"`, 'success')
     } else {
+      setShowItemForm(false)
       showToast(`Added "${saved.name}"`, 'success')
     }
     void reloadMenu()
@@ -690,22 +628,34 @@ export default function AdminPage() {
     [items]
   )
 
-  const heroAccent = selectedCategory?.accent || '#6b5ef7'
-  const heroImage = selectedCategory?.imageUrl || GENERIC_FOOD_IMAGE
-  const categoryNames = useMemo(() => categories.map((c) => c.name), [categories])
+  const showCatEditor = showCategoryForm || Boolean(editingCategory)
+  const showItemEditor = showItemForm || Boolean(editingItem)
 
   return (
-    <main className="app-shell">
+    <main className="app-shell admin-shell">
       <AppHeaderApp />
 
-      <section className="category-hero" style={{ ['--accent' as never]: heroAccent }}>
-        <div className="category-hero__bg" style={{ backgroundImage: `url(${heroImage})` }} />
-        <div className="category-hero__content">
-          <p className="category-hero__kicker">Administration</p>
-          <h2 className="category-hero__title">Manage categories &amp; items</h2>
-          <p className="category-hero__subtitle">
-            Create or edit categories, then add and edit items in each one. Images are optional.
+      {/* Compact header — no big hero image */}
+      <section className="admin-header">
+        <div className="admin-header__content">
+          <p className="admin-header__kicker">Administration</p>
+          <h1 className="admin-header__title">Menu &amp; categories</h1>
+          <p className="admin-header__subtitle">
+            Add or edit categories and the items underneath them. Pick a picture
+            from the gallery or upload your own.
           </p>
+        </div>
+        <div className="admin-header__stats">
+          <div className="admin-stat">
+            <span className="admin-stat__value">{categories.length}</span>
+            <span className="admin-stat__label">Categories</span>
+          </div>
+          <div className="admin-stat">
+            <span className="admin-stat__value">{items.length}</span>
+            <span className="admin-stat__label">
+              Items in {selectedCategory ? selectedCategory.label || selectedCategory.name : '—'}
+            </span>
+          </div>
         </div>
       </section>
 
@@ -719,210 +669,347 @@ export default function AdminPage() {
         </section>
       ) : null}
 
-      {/* ---- Step 1: Categories ---- */}
-      <section className="admin-grid">
-        <div className="admin-grid__form">
-          <div className="auth-card admin-card">
-            <h2 className="profile-heading">
-              {editingCategory ? `Edit category: ${editingCategory.name}` : 'Add a category'}
-            </h2>
-            <CategoryForm
-              key={editingCategory?.id ?? 'new-category'}
-              editing={editingCategory}
-              onSaved={handleCategorySaved}
-              onCancelEdit={() => setEditingCategoryId(null)}
-            />
-          </div>
+      {/* Top-level tabs: Categories | Items */}
+      <section className="panel admin-tabs-panel">
+        <div className="admin-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'categories'}
+            className={`admin-tab ${activeTab === 'categories' ? 'admin-tab--active' : ''}`}
+            onClick={() => setActiveTab('categories')}
+          >
+            <span className="admin-tab__num">1</span>
+            <span className="admin-tab__label">Categories</span>
+            <span className="admin-tab__count">{categories.length}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'items'}
+            className={`admin-tab ${activeTab === 'items' ? 'admin-tab--active' : ''}`}
+            onClick={() => setActiveTab('items')}
+            disabled={categories.length === 0}
+            title={categories.length === 0 ? 'Create a category first' : ''}
+          >
+            <span className="admin-tab__num">2</span>
+            <span className="admin-tab__label">Items</span>
+            <span className="admin-tab__count">{sortedItems.length}</span>
+          </button>
         </div>
+      </section>
 
-        <div className="admin-grid__list">
+      {/* ======= Categories tab ======= */}
+      {activeTab === 'categories' ? (
+        <section className="panel admin-stack">
+          <div className="admin-toolbar">
+            <h2 className="admin-section-title">Categories</h2>
+            {!showCatEditor ? (
+              <button
+                type="button"
+                className="proceed-payment-button btn-icon admin-toolbar__add"
+                onClick={() => {
+                  setEditingCategoryId(null)
+                  setShowCategoryForm(true)
+                }}
+              >
+                <PlusIcon />
+                <span>Add category</span>
+              </button>
+            ) : null}
+          </div>
+
+          {showCatEditor ? (
+            <div className="auth-card admin-card admin-card--editor">
+              <div className="admin-card__header">
+                <h3 className="admin-card__title">
+                  {editingCategory
+                    ? `Edit category — ${editingCategory.name}`
+                    : 'Add a new category'}
+                </h3>
+                <button
+                  type="button"
+                  className="back-button icon-only admin-card__close"
+                  onClick={() => {
+                    setEditingCategoryId(null)
+                    setShowCategoryForm(false)
+                  }}
+                  aria-label="Close editor"
+                  title="Close editor"
+                >
+                  <XIcon />
+                </button>
+              </div>
+              <CategoryForm
+                key={editingCategory?.id ?? 'new-category'}
+                editing={editingCategory}
+                onSaved={handleCategorySaved}
+                onCancelEdit={() => {
+                  setEditingCategoryId(null)
+                  setShowCategoryForm(false)
+                }}
+              />
+            </div>
+          ) : null}
+
           <div className="auth-card admin-card">
             <div className="admin-list__header">
-              <h2 className="profile-heading">Existing categories</h2>
+              <h3 className="profile-heading">Existing categories</h3>
               <span className="admin-list__count">{categories.length}</span>
             </div>
 
             {isLoadingCats ? (
               <p className="empty-state">Loading…</p>
             ) : categories.length === 0 ? (
-              <p className="empty-state">
-                No categories yet. Add one using the form on the left.
-              </p>
+              <div className="admin-empty">
+                <p className="admin-empty__title">No categories yet</p>
+                <p className="admin-empty__hint">
+                  Start by adding a category — pick a name, an emoji icon, and a picture
+                  for the home page hero.
+                </p>
+                <button
+                  type="button"
+                  className="proceed-payment-button btn-icon"
+                  onClick={() => setShowCategoryForm(true)}
+                >
+                  <PlusIcon />
+                  <span>Add your first category</span>
+                </button>
+              </div>
             ) : (
-              <ul className="admin-item-list">
+              <ul className="admin-cards">
                 {categories.map((cat) => (
                   <li
                     key={cat.id}
-                    className={`admin-item ${
-                      cat.name === selectedCategoryName ? 'admin-item--active' : ''
-                    } ${cat.id === editingCategoryId ? 'admin-item--editing' : ''}`}
+                    className={`admin-card-tile ${
+                      cat.id === editingCategoryId ? 'admin-card-tile--editing' : ''
+                    }`}
                   >
-                    <button
-                      type="button"
-                      className="admin-item__select"
-                      onClick={() => setSelectedCategoryName(cat.name)}
-                      aria-label={`Show items for ${cat.label || cat.name}`}
-                    >
-                      <span
-                        className="admin-item__thumb"
-                        style={{
-                          backgroundImage: `url(${cat.imageUrl || GENERIC_FOOD_IMAGE})`,
-                        }}
-                        aria-hidden="true"
-                      />
-                      <span className="admin-item__body">
-                        <h3>
-                          {cat.emoji} {cat.label || cat.name}
-                        </h3>
-                        <p className="admin-item__meta">
-                          name: <code>{cat.name}</code>
-                        </p>
-                      </span>
-                    </button>
-                    <div className="admin-item__actions admin-item__actions--stack">
-                      <button
-                        type="button"
-                        className="back-button admin-item__edit icon-only"
-                        onClick={() => setEditingCategoryId(cat.id)}
-                        aria-label={`Edit ${cat.label || cat.name}`}
-                        title="Edit category"
-                      >
-                        <EditIcon />
-                      </button>
-                      <button
-                        type="button"
-                        className="back-button admin-item__delete icon-only"
-                        onClick={() => handleDeleteCategory(cat)}
-                        aria-label={`Delete ${cat.label || cat.name}`}
-                        title="Delete category"
-                      >
-                        <TrashIcon />
-                      </button>
+                    <div
+                      className="admin-card-tile__thumb"
+                      style={{
+                        backgroundImage: `url("${cat.imageUrl || GENERIC_FOOD_IMAGE}")`,
+                      }}
+                      aria-hidden="true"
+                    />
+                    <div className="admin-card-tile__body">
+                      <h4 className="admin-card-tile__title">
+                        <span className="admin-card-tile__emoji">{cat.emoji}</span>
+                        {cat.label || cat.name}
+                      </h4>
+                      <p className="admin-card-tile__meta">
+                        <code>{cat.name}</code>
+                      </p>
+                      <div className="admin-card-tile__actions">
+                        <button
+                          type="button"
+                          className="back-button btn-icon admin-card-tile__btn"
+                          onClick={() => {
+                            setSelectedCategoryName(cat.name)
+                            setActiveTab('items')
+                          }}
+                          title="Manage items in this category"
+                        >
+                          <span>Manage items →</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="back-button icon-only admin-card-tile__edit"
+                          onClick={() => {
+                            setEditingCategoryId(cat.id)
+                            setShowCategoryForm(false)
+                          }}
+                          aria-label={`Edit ${cat.label || cat.name}`}
+                          title="Edit"
+                        >
+                          <EditIcon />
+                        </button>
+                        <button
+                          type="button"
+                          className="back-button icon-only admin-card-tile__delete"
+                          onClick={() => handleDeleteCategory(cat)}
+                          aria-label={`Delete ${cat.label || cat.name}`}
+                          title="Delete"
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
                     </div>
                   </li>
                 ))}
               </ul>
             )}
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
-      {/* ---- Step 2: Items ---- */}
-      <section className="panel">
-        <h2 className="admin-section-title">Items</h2>
-        {categories.length === 0 ? (
-          <p className="empty-state">Create a category first to add items.</p>
-        ) : (
-          <CategoryTabs
-            categories={categoryNames}
-            selectedCategory={selectedCategoryName ?? categoryNames[0]}
-            onSelectCategory={(c) => setSelectedCategoryName(c)}
-            getCategoryImageUrl={(c) =>
-              categories.find((cat) => cat.name === c)?.imageUrl ?? undefined
-            }
-            getCategoryEmoji={(c) =>
-              categories.find((cat) => cat.name === c)?.emoji ?? '🍽️'
-            }
-          />
-        )}
-      </section>
-
-      {selectedCategory ? (
-        <section className="admin-grid">
-          <div className="admin-grid__form">
-            <div className="auth-card admin-card">
-              <h2 className="profile-heading">
-                {editingItem
-                  ? `Edit item: ${editingItem.name}`
-                  : `Add an item to ${selectedCategory.label || selectedCategory.name}`}
-              </h2>
-              <ItemForm
-                key={editingItem?.id ?? `new-item-${selectedCategory.id}`}
-                category={selectedCategory}
-                editing={editingItem}
-                allCategories={categories}
-                onSaved={handleItemSaved}
-                onCancelEdit={() => setEditingItemId(null)}
-              />
-            </div>
-          </div>
-
-          <div className="admin-grid__list">
-            <div className="auth-card admin-card">
-              <div className="admin-list__header">
-                <h2 className="profile-heading">
-                  {selectedCategory.label || selectedCategory.name} items
-                </h2>
-                <span className="admin-list__count">{sortedItems.length}</span>
+      {/* ======= Items tab ======= */}
+      {activeTab === 'items' ? (
+        <section className="panel admin-stack">
+          {categories.length === 0 ? (
+            <p className="empty-state">Create a category first to add items.</p>
+          ) : (
+            <>
+              <div className="admin-toolbar admin-toolbar--items">
+                <div className="admin-category-pick">
+                  <label htmlFor="admin-cat-pick">Category</label>
+                  <select
+                    id="admin-cat-pick"
+                    value={selectedCategoryName ?? ''}
+                    onChange={(ev) => setSelectedCategoryName(ev.target.value)}
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.name}>
+                        {c.emoji} {c.label || c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {!showItemEditor && selectedCategory ? (
+                  <button
+                    type="button"
+                    className="proceed-payment-button btn-icon admin-toolbar__add"
+                    onClick={() => {
+                      setEditingItemId(null)
+                      setShowItemForm(true)
+                    }}
+                  >
+                    <PlusIcon />
+                    <span>Add item</span>
+                  </button>
+                ) : null}
               </div>
 
-              {isLoadingItems ? (
-                <p className="empty-state">Loading…</p>
-              ) : sortedItems.length === 0 ? (
-                <p className="empty-state">No items in this category yet.</p>
-              ) : (
-                <ul className="admin-item-list">
-                  {sortedItems.map((item) => (
-                    <li
-                      key={item.id}
-                      className={`admin-item ${
-                        item.id === editingItemId ? 'admin-item--editing' : ''
-                      }`}
-                    >
-                      <div
-                        className="admin-item__thumb"
-                        style={{
-                          backgroundImage: `url(${
-                            item.imageUrl || selectedCategory.imageUrl || GENERIC_FOOD_IMAGE
-                          })`,
+              {selectedCategory ? (
+                <>
+                  {showItemEditor ? (
+                    <div className="auth-card admin-card admin-card--editor">
+                      <div className="admin-card__header">
+                        <h3 className="admin-card__title">
+                          {editingItem
+                            ? `Edit item — ${editingItem.name}`
+                            : `Add an item to ${selectedCategory.label || selectedCategory.name}`}
+                        </h3>
+                        <button
+                          type="button"
+                          className="back-button icon-only admin-card__close"
+                          onClick={() => {
+                            setEditingItemId(null)
+                            setShowItemForm(false)
+                          }}
+                          aria-label="Close editor"
+                          title="Close editor"
+                        >
+                          <XIcon />
+                        </button>
+                      </div>
+                      <ItemForm
+                        key={editingItem?.id ?? `new-item-${selectedCategory.id}`}
+                        category={selectedCategory}
+                        editing={editingItem}
+                        allCategories={categories}
+                        onSaved={handleItemSaved}
+                        onCancelEdit={() => {
+                          setEditingItemId(null)
+                          setShowItemForm(false)
                         }}
-                        aria-hidden="true"
                       />
-                      <div className="admin-item__body">
-                        <h3>{item.name}</h3>
-                        <p className="admin-item__meta">
-                          ₹{item.price}
-                          {item.imageUrl ? ' • custom image' : ' • default image'}
+                    </div>
+                  ) : null}
+
+                  <div className="auth-card admin-card">
+                    <div className="admin-list__header">
+                      <h3 className="profile-heading">
+                        {selectedCategory.label || selectedCategory.name} items
+                      </h3>
+                      <span className="admin-list__count">{sortedItems.length}</span>
+                    </div>
+
+                    {isLoadingItems ? (
+                      <p className="empty-state">Loading…</p>
+                    ) : sortedItems.length === 0 ? (
+                      <div className="admin-empty">
+                        <p className="admin-empty__title">No items in this category</p>
+                        <p className="admin-empty__hint">
+                          Add the first dish — set a title, price, and a picture.
                         </p>
-                        {item.description ? (
-                          <p className="admin-item__desc">{item.description}</p>
-                        ) : null}
-                      </div>
-                      <div className="admin-item__actions admin-item__actions--stack">
                         <button
                           type="button"
-                          className="back-button admin-item__edit icon-only"
-                          onClick={() => setEditingItemId(item.id)}
-                          aria-label={`Edit ${item.name}`}
-                          title="Edit item"
+                          className="proceed-payment-button btn-icon"
+                          onClick={() => setShowItemForm(true)}
                         >
-                          <EditIcon />
-                        </button>
-                        <button
-                          type="button"
-                          className="back-button admin-item__delete icon-only"
-                          onClick={() => handleDeleteItem(item)}
-                          aria-label={`Delete ${item.name}`}
-                          title="Delete item"
-                        >
-                          <TrashIcon />
+                          <PlusIcon />
+                          <span>Add the first item</span>
                         </button>
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+                    ) : (
+                      <ul className="admin-cards">
+                        {sortedItems.map((item) => (
+                          <li
+                            key={item.id}
+                            className={`admin-card-tile ${
+                              item.id === editingItemId ? 'admin-card-tile--editing' : ''
+                            }`}
+                          >
+                            <div
+                              className="admin-card-tile__thumb"
+                              style={{
+                                backgroundImage: `url("${
+                                  item.imageUrl ||
+                                  selectedCategory.imageUrl ||
+                                  GENERIC_FOOD_IMAGE
+                                }")`,
+                              }}
+                              aria-hidden="true"
+                            />
+                            <div className="admin-card-tile__body">
+                              <h4 className="admin-card-tile__title">{item.name}</h4>
+                              <p className="admin-card-tile__meta">
+                                ₹{item.price}
+                                <span className="admin-card-tile__dot">·</span>
+                                {item.imageUrl ? 'custom image' : 'default image'}
+                              </p>
+                              {item.description ? (
+                                <p className="admin-card-tile__desc">{item.description}</p>
+                              ) : null}
+                              <div className="admin-card-tile__actions">
+                                <button
+                                  type="button"
+                                  className="back-button icon-only admin-card-tile__edit"
+                                  onClick={() => {
+                                    setEditingItemId(item.id)
+                                    setShowItemForm(false)
+                                  }}
+                                  aria-label={`Edit ${item.name}`}
+                                  title="Edit"
+                                >
+                                  <EditIcon />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="back-button icon-only admin-card-tile__delete"
+                                  onClick={() => handleDeleteItem(item)}
+                                  aria-label={`Delete ${item.name}`}
+                                  title="Delete"
+                                >
+                                  <TrashIcon />
+                                </button>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </>
+              ) : null}
+            </>
+          )}
         </section>
       ) : null}
 
       <section className="panel admin-footer-actions">
-        <button
-          type="button"
-          className="back-button btn-icon"
-          onClick={() => navigate('/')}
-        >
+        <button type="button" className="back-button btn-icon" onClick={() => navigate('/')}>
           <ChevronLeftIcon />
           <span>Exit Admin</span>
         </button>

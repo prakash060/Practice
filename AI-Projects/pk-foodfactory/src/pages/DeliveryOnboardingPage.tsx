@@ -516,7 +516,7 @@ export default function DeliveryOnboardingPage() {
       <section className="category-hero">
         <div
           className="category-hero__bg"
-          style={{ backgroundImage: `url(${GENERIC_FOOD_IMAGE})` }}
+          style={{ backgroundImage: `url("${GENERIC_FOOD_IMAGE}")` }}
         />
         <div className="category-hero__content">
           <p className="category-hero__kicker">Administration</p>
@@ -592,7 +592,7 @@ export default function DeliveryOnboardingPage() {
                     <div
                       className="admin-item__thumb admin-item__thumb--avatar"
                       style={{
-                        backgroundImage: `url(${agent.photoUrl || GENERIC_AGENT_PHOTO})`,
+                        backgroundImage: `url("${agent.photoUrl || GENERIC_AGENT_PHOTO}")`,
                       }}
                       aria-hidden="true"
                     />

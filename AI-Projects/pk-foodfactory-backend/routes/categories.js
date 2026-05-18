@@ -5,6 +5,7 @@ const { HEX_COLOR_RE } = require('../models/Category');
 const FoodItem = require('../models/FoodItem');
 const { requireAuth } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin');
+const { parseImageUrlField } = require('../utils/imageUrl');
 
 const router = express.Router();
 
@@ -84,11 +85,9 @@ function parseCategoryBody(body, file, { partial = false } = {}) {
   if (file) {
     out.imageUrl = bufferToDataUrl(file);
   } else if (body.imageUrl !== undefined) {
-    const raw = body.imageUrl;
-    if (raw === null || raw === '' || raw === 'null') {
-      out.imageUrl = null;
-    } else if (typeof raw === 'string') {
-      out.imageUrl = raw.trim() || null;
+    const parsed = parseImageUrlField(body.imageUrl, errors, 'Category image URL');
+    if (parsed !== undefined) {
+      out.imageUrl = parsed;
     }
   }
 

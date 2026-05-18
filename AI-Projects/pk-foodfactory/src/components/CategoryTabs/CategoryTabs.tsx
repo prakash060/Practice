@@ -26,7 +26,7 @@ export function CategoryTabs<T extends string>({
             {getCategoryImageUrl?.(category) ? (
               <span
                 className="category-button__thumb"
-                style={{ backgroundImage: `url(${getCategoryImageUrl(category)})` }}
+                style={{ backgroundImage: `url("${getCategoryImageUrl(category)}")` }}
                 aria-hidden="true"
               />
             ) : null}

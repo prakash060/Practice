@@ -4,6 +4,7 @@ const FoodItem = require('../models/FoodItem');
 const Category = require('../models/Category');
 const { requireAuth } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin');
+const { parseImageUrlField } = require('../utils/imageUrl');
 
 const router = express.Router();
 
@@ -85,11 +86,9 @@ function parseItemBody(body, file, { partial = false } = {}) {
   if (file) {
     out.imageUrl = bufferToDataUrl(file);
   } else if (body.imageUrl !== undefined) {
-    const raw = body.imageUrl;
-    if (raw === null || raw === '' || raw === 'null') {
-      out.imageUrl = null;
-    } else if (typeof raw === 'string') {
-      out.imageUrl = raw.trim() || null;
+    const parsed = parseImageUrlField(body.imageUrl, errors, 'Item image URL');
+    if (parsed !== undefined) {
+      out.imageUrl = parsed;
     }
   }
 

@@ -174,7 +174,7 @@ export default function CheckoutPage() {
                     <li key={item.id} className="co-item">
                       <div
                         className="co-item__thumb"
-                        style={{ backgroundImage: `url(${imgSrc})` }}
+                        style={{ backgroundImage: `url("${imgSrc}")` }}
                         aria-hidden="true"
                       >
                         <span className="co-item__emoji">{meta.emoji}</span>

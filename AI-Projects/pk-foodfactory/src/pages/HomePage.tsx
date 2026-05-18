@@ -56,7 +56,7 @@ export default function HomePage() {
       <AppHeaderApp />
 
       <section className="category-hero" style={{ ['--accent' as never]: heroAccent }}>
-        <div className="category-hero__bg" style={{ backgroundImage: `url(${heroImage})` }} />
+        <div className="category-hero__bg" style={{ backgroundImage: `url("${heroImage}")` }} />
         <div className="category-hero__content">
           <p className="category-hero__kicker">Today’s picks</p>
           <h2 className="category-hero__title">
