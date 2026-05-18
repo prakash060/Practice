@@ -669,7 +669,7 @@ export default function AdminPage() {
         </section>
       ) : null}
 
-      {/* Top-level tabs: Categories | Items */}
+      {/* Top-level tabs: Categories | Items (compact pill row) */}
       <section className="panel admin-tabs-panel">
         <div className="admin-tabs" role="tablist">
           <button
@@ -679,7 +679,6 @@ export default function AdminPage() {
             className={`admin-tab ${activeTab === 'categories' ? 'admin-tab--active' : ''}`}
             onClick={() => setActiveTab('categories')}
           >
-            <span className="admin-tab__num">1</span>
             <span className="admin-tab__label">Categories</span>
             <span className="admin-tab__count">{categories.length}</span>
           </button>
@@ -692,7 +691,6 @@ export default function AdminPage() {
             disabled={categories.length === 0}
             title={categories.length === 0 ? 'Create a category first' : ''}
           >
-            <span className="admin-tab__num">2</span>
             <span className="admin-tab__label">Items</span>
             <span className="admin-tab__count">{sortedItems.length}</span>
           </button>

@@ -1,7 +1,7 @@
 .app-shell {
   max-width: 1180px;
   margin: 0 auto;
-  padding: 28px 20px 36px;
+  padding: 20px 20px 32px;
 }
 
 .brand-header {
@@ -164,7 +164,7 @@
 }
 
 .panel {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .category-tabs {
@@ -2233,26 +2233,28 @@
   cursor: not-allowed;
 }
 
+/* Heading + count badge sit together (no full-row space-between), so the badge
+   reads as part of the title rather than a floating value at the far edge. */
 .admin-list__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  gap: 12px;
+  margin-bottom: 10px;
+  gap: 10px;
 }
 
 .admin-list__count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  height: 28px;
-  padding: 0 10px;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 8px;
   background: #f1eefb;
   color: #5a4dd6;
   border-radius: 999px;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
+  line-height: 1;
 }
 
 .admin-item-list {
@@ -4677,19 +4679,19 @@ a.order-card__rider-chip:hover {
 .admin-header {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 24px;
+  gap: 20px;
   align-items: center;
-  padding: 22px 26px;
-  margin: 18px 0 8px;
-  border-radius: 22px;
+  padding: 18px 22px;
+  margin: 12px 0 8px;
+  border-radius: 18px;
   background: linear-gradient(120deg, #6b5ef7 0%, #8b5cf6 55%, #c084fc 100%);
   color: #fff;
-  box-shadow: 0 14px 40px rgba(60, 47, 145, 0.18);
+  box-shadow: 0 12px 32px rgba(60, 47, 145, 0.16);
 }
 
 .admin-header__kicker {
-  margin: 0 0 4px;
-  font-size: 0.78rem;
+  margin: 0 0 3px;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -4697,15 +4699,15 @@ a.order-card__rider-chip:hover {
 }
 
 .admin-header__title {
-  margin: 0 0 6px;
-  font-size: 1.65rem;
+  margin: 0 0 4px;
+  font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
 .admin-header__subtitle {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   line-height: 1.45;
   opacity: 0.92;
   max-width: 60ch;
@@ -4713,7 +4715,7 @@ a.order-card__rider-chip:hover {
 
 .admin-header__stats {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -4722,24 +4724,24 @@ a.order-card__rider-chip:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 100px;
-  padding: 12px 18px;
+  min-width: 84px;
+  padding: 10px 14px;
   background: rgba(255, 255, 255, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 14px;
+  border-radius: 12px;
   backdrop-filter: blur(6px);
 }
 
 .admin-stat__value {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 800;
   line-height: 1;
   color: #fff;
 }
 
 .admin-stat__label {
-  margin-top: 4px;
-  font-size: 0.72rem;
+  margin-top: 3px;
+  font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -4748,32 +4750,34 @@ a.order-card__rider-chip:hover {
   max-width: 14ch;
 }
 
-/* Top-level tabs (Categories | Items) */
+/* Top-level tabs (Categories | Items) — compact pill row.
+   Width hugs its content so short labels don't leave large empty gaps. */
 .admin-tabs-panel {
-  padding: 12px;
+  padding: 6px;
+  display: inline-flex;
+  align-self: flex-start;
 }
 
 .admin-tabs {
-  display: flex;
-  gap: 8px;
-  padding: 6px;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
   background: #f4f1fb;
-  border-radius: 14px;
+  border-radius: 999px;
   border: 1px solid #eceaf8;
 }
 
 .admin-tab {
-  flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 12px 18px;
-  border-radius: 10px;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
   border: 0;
   background: transparent;
   color: #4a4560;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
@@ -4786,7 +4790,7 @@ a.order-card__rider-chip:hover {
 .admin-tab--active {
   background: #fff;
   color: #3b2f9f;
-  box-shadow: 0 4px 14px rgba(60, 47, 145, 0.12);
+  box-shadow: 0 4px 12px rgba(60, 47, 145, 0.12);
 }
 
 .admin-tab:disabled {
@@ -4794,36 +4798,19 @@ a.order-card__rider-chip:hover {
   cursor: not-allowed;
 }
 
-.admin-tab__num {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(107, 94, 247, 0.18);
-  color: #4c3fb8;
-  font-size: 0.8rem;
-  font-weight: 800;
-}
-
-.admin-tab--active .admin-tab__num {
-  background: #6b5ef7;
-  color: #fff;
-}
-
 .admin-tab__count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 22px;
-  padding: 0 8px;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
   border-radius: 999px;
   background: rgba(60, 47, 145, 0.1);
   color: #4c3fb8;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
+  line-height: 1;
 }
 
 .admin-tab--active .admin-tab__count {
@@ -4835,7 +4822,7 @@ a.order-card__rider-chip:hover {
 .admin-stack {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 /* Toolbar above each list (add button + actions) */
@@ -4843,9 +4830,9 @@ a.order-card__rider-chip:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin: 4px 4px 0;
+  margin: 0 2px;
 }
 
 .admin-toolbar--items {
