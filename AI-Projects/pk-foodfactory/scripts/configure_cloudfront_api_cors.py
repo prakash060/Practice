@@ -70,8 +70,11 @@ def strip_spa_error_pages(custom_errors: dict | None) -> tuple[dict, bool]:
 
 
 def legacy_forwarded_values() -> dict:
+    # QueryStringCacheKeys is required by the CloudFront API whenever QueryString is true,
+    # even when no specific keys are listed (forwards all query strings, caches on all of them).
     return {
         "QueryString": True,
+        "QueryStringCacheKeys": {"Quantity": 0},
         "Cookies": {"Forward": "none"},
         "Headers": {
             "Quantity": len(FORWARD_HEADERS),
