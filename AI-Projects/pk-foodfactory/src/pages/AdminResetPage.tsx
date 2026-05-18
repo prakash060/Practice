@@ -246,37 +246,41 @@ export default function AdminResetPage() {
         />
       </section>
 
-      <section className="panel reset-all">
-        <h3 className="profile-heading">Reset everything</h3>
-        <p className="reset-all__lede">
-          One-shot reset for delivery agents, categories, food items, orders AND user accounts.
-          Your admin login (and the configured <code>ADMIN_EMAIL</code>) is preserved so you don't
-          get locked out. Type <code>RESET</code> below to enable the button.
-        </p>
-        <form className="auth-form reset-all__form" onSubmit={handleAllSubmit} noValidate>
-          <div className="form-group">
-            <label htmlFor="reset-confirm">Confirmation</label>
-            <input
-              id="reset-confirm"
-              type="text"
-              value={confirmAll}
-              onChange={(e) => setConfirmAll(e.target.value)}
-              placeholder="Type RESET to enable"
-              autoComplete="off"
-              disabled={busyScope === 'all'}
-            />
-          </div>
-          <button
-            type="submit"
-            className="proceed-payment-button admin-item__delete reset-all__btn btn-icon"
-            disabled={busyScope === 'all' || confirmAll.trim().toUpperCase() !== 'RESET'}
-          >
-            <AlertIcon />
-            <span>
-              {busyScope === 'all' ? 'Resetting everything…' : 'Reset everything'}
-            </span>
-          </button>
-        </form>
+      <section className="panel">
+        <article className="reset-card reset-card--danger reset-all">
+          <header className="reset-card__head">
+            <h3>Reset everything</h3>
+          </header>
+          <p className="reset-all__lede">
+            One-shot reset for delivery agents, categories, food items, orders AND user accounts.
+            Your admin login (and the configured <code>ADMIN_EMAIL</code>) is preserved so you
+            don't get locked out. Type <code>RESET</code> below to enable the button.
+          </p>
+          <form className="reset-all__form" onSubmit={handleAllSubmit} noValidate>
+            <div className="form-group">
+              <label htmlFor="reset-confirm">Confirmation</label>
+              <input
+                id="reset-confirm"
+                type="text"
+                value={confirmAll}
+                onChange={(e) => setConfirmAll(e.target.value)}
+                placeholder="Type RESET to enable"
+                autoComplete="off"
+                disabled={busyScope === 'all'}
+              />
+            </div>
+            <button
+              type="submit"
+              className="proceed-payment-button admin-item__delete reset-all__btn btn-icon"
+              disabled={busyScope === 'all' || confirmAll.trim().toUpperCase() !== 'RESET'}
+            >
+              <AlertIcon />
+              <span>
+                {busyScope === 'all' ? 'Resetting everything…' : 'Reset everything'}
+              </span>
+            </button>
+          </form>
+        </article>
       </section>
 
       <section className="panel admin-footer-actions">

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { isAxiosError } from 'axios'
+import { BrandMark } from '../components/BrandMark'
 import {
   CheckIcon,
   LogoutIcon,
@@ -228,7 +229,7 @@ export default function DeliveryDashboardPage() {
       <header className="brand-header brand-header--flow">
         <div className="brand-header__left">
           <div className="brand-mark" aria-hidden="true">
-            <span className="brand-mark__dot" />
+            <BrandMark />
           </div>
           <div>
             <p className="eyebrow">Delivery dashboard</p>

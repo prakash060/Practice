@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { BRAND_EYEBROW, BRAND_TITLE } from '../constants/brand'
+import { BrandMark } from './BrandMark'
 import { useAuth } from '../state/AuthContext'
 import {
   AlertIcon,
@@ -33,10 +35,10 @@ export function AppHeaderAuth({ title }: { title: string }) {
     <header className="brand-header brand-header--flow">
       <div className="brand-header__left">
         <div className="brand-mark" aria-hidden="true">
-          <span className="brand-mark__dot" />
+          <BrandMark />
         </div>
         <div>
-          <p className="eyebrow">PK Food Factory</p>
+          <p className="eyebrow">{BRAND_EYEBROW}</p>
           <h1 className="brand-title">{title}</h1>
         </div>
       </div>
@@ -76,11 +78,11 @@ export function AppHeaderApp() {
     <header className="brand-header brand-header--flow">
       <div className="brand-header__left">
         <div className="brand-mark" aria-hidden="true">
-          <span className="brand-mark__dot" />
+          <BrandMark />
         </div>
         <div>
-          <p className="eyebrow">PK Food Factory</p>
-          <h1 className="brand-title">PK Meals</h1>
+          <p className="eyebrow">{BRAND_EYEBROW}</p>
+          <h1 className="brand-title">{BRAND_TITLE}</h1>
         </div>
       </div>
       <div className="brand-header__right brand-header__actions">
