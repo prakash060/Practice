@@ -38,14 +38,53 @@ const isProd = process.env.NODE_ENV === 'production';
 
 app.set('trust proxy', 1);
 
+const defaultCorsOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://d1a7288bn24qfa.cloudfront.net',
+  'https://www.svifoods.com',
+  'https://svifoods.com',
+];
+
+function buildAllowedOrigins() {
+  const fromEnv = (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return [...new Set([...defaultCorsOrigins, ...fromEnv])];
+}
+
+const allowedOrigins = buildAllowedOrigins();
+
 // Swagger UI uses inline scripts/styles; relax CSP so the docs page works.
 // COOP is omitted: on HTTP (common on EB before HTTPS) browsers ignore it and log a console warning.
+// CORP must allow cross-origin reads: frontend (d1a7288…cloudfront.net) and API (d3cvs28…) are different origins.
 app.use(helmet({
   contentSecurityPolicy: false,
-  crossOriginOpenerPolicy: false
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-app.use(cors());
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      if (!isProd) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Auth-Token'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    maxAge: 86400,
+  })
+);
 app.use(morgan('combined'));
 
 const MONGO_OPTIONS = {
