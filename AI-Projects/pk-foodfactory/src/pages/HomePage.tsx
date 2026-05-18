@@ -1,9 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
+import { CartDrawer } from '../components/CartDrawer'
 import { CategoryTabs } from '../components/CategoryTabs/CategoryTabs'
 import { FoodList } from '../components/FoodList/FoodList'
-import { OrderSummary } from '../components/OrderSummary/OrderSummary'
 import { GENERIC_FOOD_IMAGE } from '../constants/categories'
 import { useFood } from '../hooks/useFood'
 import { useAuth } from '../state/AuthContext'
@@ -14,6 +14,7 @@ export default function HomePage() {
   const location = useLocation()
   const { user } = useAuth()
   const isAdmin = Boolean(user?.isAdmin)
+  const [cartOpen, setCartOpen] = useState(false)
   const {
     categories,
     selectedCategory,
@@ -55,7 +56,10 @@ export default function HomePage() {
     <main className="app-shell">
       <AppHeaderApp />
 
-      <section className="category-hero" style={{ ['--accent' as never]: heroAccent }}>
+      <section
+        className="category-hero category-hero--compact"
+        style={{ ['--accent' as never]: heroAccent }}
+      >
         <div className="category-hero__bg" style={{ backgroundImage: `url("${heroImage}")` }} />
         <div className="category-hero__content">
           <p className="category-hero__kicker">Today’s picks</p>
@@ -72,28 +76,49 @@ export default function HomePage() {
         </div>
       </section>
 
-      {hasCategories ? (
-        <section className="panel">
-          <CategoryTabs
-            categories={categoryNames}
-            selectedCategory={selectedCategory ?? categoryNames[0]}
-            onSelectCategory={setSelectedCategory}
-            getCategoryImageUrl={(c) => getCategoryMeta(c).imageUrl || undefined}
-            getCategoryEmoji={(c) => getCategoryMeta(c).emoji}
-          />
-        </section>
-      ) : null}
+      <section className="panel category-bar">
+        <div className="category-bar__tabs">
+          {hasCategories ? (
+            <CategoryTabs
+              categories={categoryNames}
+              selectedCategory={selectedCategory ?? categoryNames[0]}
+              onSelectCategory={setSelectedCategory}
+              getCategoryImageUrl={(c) => getCategoryMeta(c).imageUrl || undefined}
+              getCategoryEmoji={(c) => getCategoryMeta(c).emoji}
+            />
+          ) : (
+            <p className="category-bar__empty-hint">Browse the menu once categories are added.</p>
+          )}
+        </div>
+        <CartDrawer
+          cartItems={cartItems}
+          onRemoveItem={removeFromCart}
+          onClearCart={clearCart}
+          onCheckout={handleCheckout}
+          open={cartOpen}
+          onOpenChange={setCartOpen}
+        />
+      </section>
 
-      <section className="content-grid">
-        <div className="content-grid__main">
+      <section className="menu-layout menu-layout--full">
+        <div className="menu-layout__main">
           {hasCategories && selectedMeta ? (
-            <h2>{selectedMeta.label} menu</h2>
+            <header className="menu-layout__head">
+              <div>
+                <h2 className="menu-layout__title">{selectedMeta.label} menu</h2>
+                {!isLoadingMenu && menuItems.length > 0 ? (
+                  <p className="menu-layout__subtitle">
+                    {menuItems.length} {menuItems.length === 1 ? 'dish' : 'dishes'} available
+                  </p>
+                ) : null}
+              </div>
+            </header>
           ) : null}
 
           {menuError ? <p className="error-message">{menuError}</p> : null}
 
           {isLoadingMenu ? (
-            <p className="empty-state">Loading menu…</p>
+            <p className="empty-state menu-layout__loading">Loading menu…</p>
           ) : !hasCategories ? (
             <p className="empty-state">
               {isAdmin ? (
@@ -109,14 +134,6 @@ export default function HomePage() {
             <FoodList items={menuItems} />
           )}
         </div>
-        <aside className="content-grid__side">
-          <OrderSummary
-            cartItems={cartItems}
-            onRemoveItem={removeFromCart}
-            onClearCart={clearCart}
-            onCheckout={handleCheckout}
-          />
-        </aside>
       </section>
     </main>
   )

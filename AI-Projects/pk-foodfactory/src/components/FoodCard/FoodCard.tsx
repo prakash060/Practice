@@ -1,33 +1,8 @@
 import type { FoodItem } from '../../types/food'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { GENERIC_FOOD_IMAGE } from '../../constants/categories'
 import { useFood } from '../../hooks/useFood'
-
-function IconMinus() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden fill="none">
-      <path
-        d="M5 12h14"
-        stroke="currentColor"
-        strokeWidth="2.25"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function IconPlus() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden fill="none">
-      <path
-        d="M12 5v14M5 12h14"
-        stroke="currentColor"
-        strokeWidth="2.25"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
+import { MinusIcon, PlusIcon } from '../Icons'
 
 interface FoodCardProps {
   item: FoodItem
@@ -42,11 +17,16 @@ export function FoodCard({ item }: FoodCardProps) {
   const initialSrc = item.imageUrl || fallback
   const [imageSrc, setImageSrc] = useState(initialSrc)
 
+  useEffect(() => {
+    setImageSrc(item.imageUrl || fallback)
+  }, [item.imageUrl, fallback])
+
   const quantity = cartItems.find((line) => line.id === item.id)?.quantity ?? 0
+  const description = item.description?.trim()
 
   return (
-    <article className="food-card">
-      <div className="food-card__image">
+    <article className={`food-card ${quantity > 0 ? 'food-card--in-cart' : ''}`}>
+      <div className="food-card__media">
         <img
           src={imageSrc}
           alt={item.name}
@@ -55,43 +35,59 @@ export function FoodCard({ item }: FoodCardProps) {
             if (imageSrc !== fallback) setImageSrc(fallback)
           }}
         />
-        <div className="food-card__image-overlay">
-          <span className="food-card__badge">{item.category}</span>
-        </div>
+        {quantity > 0 ? (
+          <span className="food-card__qty-badge" aria-hidden="true">
+            {quantity} in cart
+          </span>
+        ) : null}
       </div>
-      <div className="food-card__content">
-        <div className="food-card__header">
-          <h3>{item.name}</h3>
+
+      <div className="food-card__body">
+        <div className="food-card__top">
+          <h3 className="food-card__title">{item.name}</h3>
           <span className="food-card__price">₹{item.price}</span>
         </div>
-        <p>{item.description}</p>
-      </div>
-      <div className="food-card__actions">
-        <div
-          className="qty-stepper"
-          role="group"
-          aria-label={`Quantity for ${item.name}`}
-        >
-          <button
-            type="button"
-            className="qty-stepper__btn qty-stepper__btn--minus"
-            onClick={() => removeFromCart(item.id)}
-            disabled={quantity === 0}
-            aria-label="Decrease quantity"
-          >
-            <IconMinus />
-          </button>
-          <span className="qty-stepper__count" aria-live="polite">
-            {quantity}
-          </span>
-          <button
-            type="button"
-            className="qty-stepper__btn qty-stepper__btn--plus"
-            onClick={() => addToCart(item)}
-            aria-label="Increase quantity"
-          >
-            <IconPlus />
-          </button>
+
+        {description ? <p className="food-card__desc">{description}</p> : null}
+
+        <div className="food-card__footer">
+          {quantity === 0 ? (
+            <button
+              type="button"
+              className="food-card__add btn-icon"
+              onClick={() => addToCart(item)}
+              aria-label={`Add ${item.name} to cart`}
+            >
+              <PlusIcon size={16} />
+              <span>Add to cart</span>
+            </button>
+          ) : (
+            <div
+              className="qty-stepper qty-stepper--card"
+              role="group"
+              aria-label={`Quantity for ${item.name}`}
+            >
+              <button
+                type="button"
+                className="qty-stepper__btn qty-stepper__btn--minus"
+                onClick={() => removeFromCart(item.id)}
+                aria-label="Decrease quantity"
+              >
+                <MinusIcon size={14} />
+              </button>
+              <span className="qty-stepper__count" aria-live="polite">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                className="qty-stepper__btn qty-stepper__btn--plus"
+                onClick={() => addToCart(item)}
+                aria-label="Increase quantity"
+              >
+                <PlusIcon size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </article>
