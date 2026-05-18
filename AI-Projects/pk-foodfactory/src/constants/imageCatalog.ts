@@ -61,11 +61,21 @@ function svgCard(
     <text x="300" y="220" text-anchor="middle" font-size="170" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif">${emoji}</text>
     <text x="300" y="340" text-anchor="middle" font-size="32" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-weight="600" fill="rgba(255,255,255,0.95)" letter-spacing="0.5">${safeLabel}</text>
   </svg>`
-  // Percent-encode parens too — otherwise the literal `(` / `)` inside the SVG
-  // gradient references like `url(#g)` and `rgba(...)` collide with CSS
-  // `background-image: url(...)` parsing and break the entire tile.
-  const encoded = encodeURIComponent(svg).replace(/\(/g, '%28').replace(/\)/g, '%29')
-  return `data:image/svg+xml;utf8,${encoded}`
+  // Base64 (NOT URL-encoded). CloudFront / AWS WAF decodes percent-encoding before
+  // pattern matching and flags raw `<svg` in the request body as XSS, returning 403
+  // at the edge (with no CORS headers). Base64 is opaque to the WAF body-XSS rule,
+  // so admin POSTs go through. utoa() handles the multi-byte safe path.
+  return `data:image/svg+xml;base64,${utoa(svg)}`
+}
+
+/** UTF-8 safe base64 encode for browsers (btoa only accepts latin-1 strings). */
+function utoa(value: string): string {
+  const bytes = new TextEncoder().encode(value)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
 }
 
 /* Themed gradient palettes — each food family gets its own warm/cool tones. */
@@ -294,10 +304,29 @@ export function getCatalogForContext(options: {
     .map(({ entry }) => entry)
 }
 
-/** Strip the encoding portion so older saved values still resolve to a catalog entry. */
-function dataUrlBody(url: string): string {
+/**
+ * Decode an SVG data URL to its raw SVG source so values saved under either
+ * `;utf8,<url-encoded>` (legacy) or `;base64,<b64>` (current) resolve to the
+ * same canonical form. Without this, categories saved before the WAF-driven
+ * switch to base64 would no longer match their catalog entry.
+ */
+function decodeSvgDataUrl(url: string): string | null {
+  if (!url.startsWith('data:image/svg')) return null
   const idx = url.indexOf(',')
-  return idx >= 0 ? url.slice(idx + 1) : url
+  if (idx < 0) return null
+  const meta = url.slice(0, idx)
+  const body = url.slice(idx + 1)
+  try {
+    if (/;base64/i.test(meta)) {
+      const binary = atob(body)
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
+      return new TextDecoder().decode(bytes)
+    }
+    return decodeURIComponent(body)
+  } catch {
+    return null
+  }
 }
 
 export function findCatalogEntryByUrl(url: string | null | undefined): ImageCatalogEntry | undefined {
@@ -305,6 +334,7 @@ export function findCatalogEntryByUrl(url: string | null | undefined): ImageCata
   if (!url.startsWith('data:image/svg')) {
     return IMAGE_CATALOG.find((e) => e.url === url)
   }
-  const body = dataUrlBody(url)
-  return IMAGE_CATALOG.find((e) => dataUrlBody(e.url) === body)
+  const target = decodeSvgDataUrl(url)
+  if (!target) return undefined
+  return IMAGE_CATALOG.find((e) => decodeSvgDataUrl(e.url) === target)
 }
