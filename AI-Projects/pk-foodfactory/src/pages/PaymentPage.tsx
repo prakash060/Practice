@@ -14,7 +14,6 @@ import {
   SmartphoneIcon,
   type IconProps,
 } from '../components/Icons'
-import { BRAND_PAYMENT_NAME } from '../constants/brand'
 import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useFood } from '../hooks/useFood'
 import { useAuth } from '../state/AuthContext'
@@ -225,7 +224,7 @@ export default function PaymentPage() {
         amount: response.amount,
         currency: response.currency,
         order_id: response.razorpayOrderId,
-        name: BRAND_PAYMENT_NAME,
+        name: 'PK Food Factory',
         description: 'Food Order Payment',
         notes: {
           razorpayOrderId: response.razorpayOrderId,

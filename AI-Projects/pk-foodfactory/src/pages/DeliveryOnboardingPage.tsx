@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
-import { AgentAvatar } from '../components/AgentAvatar'
 import { AdminNav } from '../components/AdminNav'
 import { AppHeaderApp } from '../components/AppHeader'
 import {
@@ -35,6 +34,17 @@ function axiosErrorMessage(err: unknown, fallback: string): string {
   }
   return fallback
 }
+
+// SVG placeholder for a person silhouette — used when no photo is uploaded.
+const GENERIC_AGENT_PHOTO =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">' +
+      '<rect width="96" height="96" fill="%23f1eefb"/>' +
+      '<circle cx="48" cy="38" r="16" fill="%236b5ef7" opacity="0.55"/>' +
+      '<path d="M16 84c4-16 16-24 32-24s28 8 32 24z" fill="%236b5ef7" opacity="0.55"/>' +
+      '</svg>'
+  )
 
 // ====================================================================
 // Agent form (create + edit)
@@ -172,11 +182,9 @@ function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
     }
   }
 
-  const previewPhotoUrl = photoPreview
-    ? photoPreview
-    : removePhoto
-      ? null
-      : editing?.photoUrl ?? null
+  const currentPhotoSrc =
+    photoPreview ||
+    (removePhoto ? GENERIC_AGENT_PHOTO : editing?.photoUrl || GENERIC_AGENT_PHOTO)
 
   return (
     <form className="auth-form" onSubmit={handleSubmit} noValidate>
@@ -368,10 +376,9 @@ function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
           </label>
         ) : null}
         <div className="admin-preview admin-preview--avatar">
-          <AgentAvatar
-            photoUrl={previewPhotoUrl}
-            name={name.trim() || 'Agent'}
-            size="sm"
+          <img
+            src={currentPhotoSrc}
+            alt={photoPreview ? 'New photo preview' : 'Current photo'}
           />
           <p className="form-hint">
             {photoPreview
@@ -582,10 +589,12 @@ export default function DeliveryOnboardingPage() {
                       agent.id === editingId ? 'admin-item--editing' : ''
                     }`}
                   >
-                    <AgentAvatar
-                      photoUrl={agent.photoUrl}
-                      name={agent.name}
-                      size="md"
+                    <div
+                      className="admin-item__thumb admin-item__thumb--avatar"
+                      style={{
+                        backgroundImage: `url("${agent.photoUrl || GENERIC_AGENT_PHOTO}")`,
+                      }}
+                      aria-hidden="true"
                     />
                     <div className="admin-item__body">
                       <h3>

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AgentAvatar } from '../components/AgentAvatar'
 import { AppHeaderApp } from '../components/AppHeader'
 import {
   AlertIcon,
@@ -276,12 +275,17 @@ export default function MyOrdersPage() {
 
                   {o.deliveryAgent ? (
                     <div className="order-card__rider">
-                      <AgentAvatar
-                        photoUrl={o.deliveryAgent.photoUrl}
-                        name={o.deliveryAgent.name}
-                        size="xs"
+                      <div
                         className="order-card__rider-avatar"
-                      />
+                        style={{
+                          backgroundImage: o.deliveryAgent.photoUrl
+                            ? `url(${o.deliveryAgent.photoUrl})`
+                            : undefined,
+                        }}
+                        aria-hidden="true"
+                      >
+                        {o.deliveryAgent.photoUrl ? null : <UserIcon size={20} />}
+                      </div>
                       <div className="order-card__rider-info">
                         <p className="order-card__rider-name">
                           <strong>{o.deliveryAgent.name}</strong>
