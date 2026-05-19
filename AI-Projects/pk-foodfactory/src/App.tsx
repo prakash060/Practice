@@ -24,6 +24,7 @@ import DeliveryOnboardingPage from './pages/DeliveryOnboardingPage'
 import DeliveryLoginPage from './pages/DeliveryLoginPage'
 import DeliveryDashboardPage from './pages/DeliveryDashboardPage'
 import AdminResetPage from './pages/AdminResetPage'
+import AdminSeedPage from './pages/AdminSeedPage'
 import './App.css'
 
 function App() {
@@ -112,6 +113,14 @@ function App() {
               element={
                 <AdminRoute>
                   <AdminResetPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/seed"
+              element={
+                <AdminRoute>
+                  <AdminSeedPage />
                 </AdminRoute>
               }
             />

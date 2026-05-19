@@ -524,6 +524,24 @@ export const adminResetAPI = {
 };
 
 // =============================================================
+// Admin seed (isolated, removable demo-data generator, admin only)
+// =============================================================
+
+export interface SeedRandomResponse {
+  success: boolean;
+  categoriesCreated: number;
+  itemsCreated: number;
+  categories: { name: string; itemCount: number }[];
+}
+
+export const adminSeedAPI = {
+  random: async (): Promise<SeedRandomResponse> => {
+    const response = await api.post<SeedRandomResponse>('/admin/seed/random');
+    return response.data;
+  },
+};
+
+// =============================================================
 // Delivery agent self-service (separate token, separate axios client)
 // =============================================================
 
