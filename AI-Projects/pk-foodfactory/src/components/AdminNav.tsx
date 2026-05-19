@@ -10,6 +10,7 @@ const items: AdminNavItem[] = [
   { to: '/admin/delivery', label: 'Delivery onboarding' },
   { to: '/admin/reset', label: 'Reset data' },
   { to: '/admin/seed', label: 'Generate demo data' },
+  { to: '/admin/seed-agents', label: 'Generate demo agents' },
 ]
 
 export function AdminNav() {

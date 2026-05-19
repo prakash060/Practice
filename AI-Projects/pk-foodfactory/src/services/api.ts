@@ -534,9 +534,26 @@ export interface SeedRandomResponse {
   categories: { name: string; itemCount: number }[];
 }
 
+export interface SeedAgentsResponse {
+  success: boolean;
+  agentsCreated: number;
+  demoPasscode: string;
+  agents: {
+    id: string;
+    name: string;
+    phone: string;
+    vehicleType: string;
+  }[];
+}
+
 export const adminSeedAPI = {
   random: async (): Promise<SeedRandomResponse> => {
     const response = await api.post<SeedRandomResponse>('/admin/seed/random');
+    return response.data;
+  },
+
+  agents: async (): Promise<SeedAgentsResponse> => {
+    const response = await api.post<SeedAgentsResponse>('/admin/seed/agents');
     return response.data;
   },
 };

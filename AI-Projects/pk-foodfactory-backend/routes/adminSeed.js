@@ -1,9 +1,17 @@
 const express = require('express');
 const Category = require('../models/Category');
 const FoodItem = require('../models/FoodItem');
+const DeliveryAgent = require('../models/DeliveryAgent');
+const Order = require('../models/Order');
+const { hashPasscode } = require('../models/DeliveryAgent');
 const { requireAuth } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin');
 const { CATEGORY_POOL } = require('../data/seedPool');
+const {
+  AGENT_POOL,
+  DEMO_AGENT_PASSCODE,
+  NUM_AGENTS_TO_SEED,
+} = require('../data/agentSeedPool');
 
 const router = express.Router();
 
@@ -93,6 +101,62 @@ router.post('/random', requireAuth, requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Seed random data error:', err);
     return res.status(500).json({ error: 'Failed to generate random demo data' });
+  }
+});
+
+// POST /api/admin/seed/agents
+// Wipes existing delivery agents, unassigns them from orders, then seeds 5 demo
+// riders with a shared login passcode (1234). Admin-only.
+router.post('/agents', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await DeliveryAgent.deleteMany({});
+    await Order.updateMany(
+      { deliveryAgentId: { $ne: null } },
+      {
+        $set: {
+          deliveryAgentId: null,
+          deliveryStatus: 'unassigned',
+          deliveryNotes: '',
+        },
+      }
+    );
+
+    const templates = shuffle(AGENT_POOL).slice(0, NUM_AGENTS_TO_SEED);
+    const passcodeHash = await hashPasscode(DEMO_AGENT_PASSCODE);
+
+    const summary = [];
+    for (const tpl of templates) {
+      const created = await DeliveryAgent.create({
+        name: tpl.name,
+        phone: tpl.phone,
+        email: tpl.email || '',
+        vehicleType: tpl.vehicleType || 'Bike',
+        vehicleNumber: tpl.vehicleNumber || '',
+        licenseNumber: tpl.licenseNumber || '',
+        address: tpl.address || '',
+        photoUrl: null,
+        status: 'active',
+        notes: tpl.notes || '',
+        passcodeHash,
+        createdBy: req.userId,
+      });
+      summary.push({
+        id: created._id.toString(),
+        name: created.name,
+        phone: created.phone,
+        vehicleType: created.vehicleType,
+      });
+    }
+
+    return res.json({
+      success: true,
+      agentsCreated: summary.length,
+      demoPasscode: DEMO_AGENT_PASSCODE,
+      agents: summary,
+    });
+  } catch (err) {
+    console.error('Seed demo agents error:', err);
+    return res.status(500).json({ error: 'Failed to generate demo delivery agents' });
   }
 });
 
