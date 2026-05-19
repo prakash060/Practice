@@ -4,7 +4,6 @@ import { AppHeaderApp } from '../components/AppHeader'
 import { CartDrawer } from '../components/CartDrawer'
 import { CategoryTabs } from '../components/CategoryTabs/CategoryTabs'
 import { FoodList } from '../components/FoodList/FoodList'
-import { GENERIC_FOOD_IMAGE } from '../constants/categories'
 import { useFood } from '../hooks/useFood'
 import { useAuth } from '../state/AuthContext'
 import { useToast } from '../state/ToastContext'
@@ -30,7 +29,7 @@ export default function HomePage() {
 
   const categoryNames = useMemo(() => categories.map((c) => c.name), [categories])
   const selectedMeta = selectedCategory ? getCategoryMeta(selectedCategory) : null
-  const heroImage = selectedMeta?.imageUrl || GENERIC_FOOD_IMAGE
+  const heroImage = selectedMeta?.imageUrl ?? null
   const heroAccent = selectedMeta?.accent || '#6b5ef7'
 
   const { showToast } = useToast()
@@ -60,7 +59,12 @@ export default function HomePage() {
         className="category-hero category-hero--compact"
         style={{ ['--accent' as never]: heroAccent }}
       >
-        <div className="category-hero__bg" style={{ backgroundImage: `url("${heroImage}")` }} />
+        {heroImage ? (
+          <div
+            className="category-hero__bg"
+            style={{ backgroundImage: `url("${heroImage}")` }}
+          />
+        ) : null}
         <div className="category-hero__content">
           <p className="category-hero__kicker">Today’s picks</p>
           <h2 className="category-hero__title">

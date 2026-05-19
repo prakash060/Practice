@@ -15,7 +15,6 @@ import {
   TruckIcon,
   ZapIcon,
 } from '../components/Icons'
-import { GENERIC_FOOD_IMAGE } from '../constants/categories'
 import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useAuth } from '../state/AuthContext'
 import { useFood } from '../hooks/useFood'
@@ -167,14 +166,15 @@ export default function CheckoutPage() {
               <ul className="co-item-list">
                 {cartItems.map((item) => {
                   const meta = getCategoryMeta(item.category)
-                  const imgSrc =
-                    item.imageUrl || meta.imageUrl || GENERIC_FOOD_IMAGE
+                  const imgSrc = item.imageUrl || meta.imageUrl || null
                   const lineTotal = item.price * item.quantity
                   return (
                     <li key={item.id} className="co-item">
                       <div
-                        className="co-item__thumb"
-                        style={{ backgroundImage: `url("${imgSrc}")` }}
+                        className={`co-item__thumb ${imgSrc ? '' : 'co-item__thumb--empty'}`}
+                        style={
+                          imgSrc ? { backgroundImage: `url("${imgSrc}")` } : undefined
+                        }
                         aria-hidden="true"
                       >
                         <span className="co-item__emoji">{meta.emoji}</span>

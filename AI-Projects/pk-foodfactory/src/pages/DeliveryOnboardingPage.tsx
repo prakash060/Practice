@@ -14,7 +14,6 @@ import {
   TrashIcon,
   XIcon,
 } from '../components/Icons'
-import { GENERIC_FOOD_IMAGE } from '../constants/categories'
 import {
   deliveryAgentsAPI,
   type DeliveryAgentDoc,
@@ -506,11 +505,7 @@ export default function DeliveryOnboardingPage() {
     <main className="app-shell">
       <AppHeaderApp />
 
-      <section className="category-hero">
-        <div
-          className="category-hero__bg"
-          style={{ backgroundImage: `url("${GENERIC_FOOD_IMAGE}")` }}
-        />
+      <section className="category-hero category-hero--compact">
         <div className="category-hero__content">
           <p className="category-hero__kicker">Administration</p>
           <h2 className="category-hero__title">🛵 Delivery onboarding</h2>

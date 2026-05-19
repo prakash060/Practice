@@ -3,7 +3,6 @@ import { fetchCategories, fetchFoodItems } from '../services/foodService'
 import {
   DEFAULT_CATEGORY_ACCENT,
   DEFAULT_CATEGORY_EMOJI,
-  GENERIC_FOOD_IMAGE,
 } from '../constants/categories'
 import type { Category, FoodItem } from '../types/food'
 
@@ -149,4 +148,3 @@ export function useFoodContext() {
   return context
 }
 
-export { GENERIC_FOOD_IMAGE }

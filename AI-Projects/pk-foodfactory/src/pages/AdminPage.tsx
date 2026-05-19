@@ -18,7 +18,6 @@ import {
   imagePickerFromExisting,
   type ImagePickerValue,
 } from '../components/ImagePicker'
-import { GENERIC_FOOD_IMAGE } from '../constants/categories'
 import { useFood } from '../hooks/useFood'
 import {
   categoriesAPI,
@@ -71,7 +70,7 @@ function CategoryForm({ editing, onSaved, onCancelEdit }: CategoryFormProps) {
   const [emoji, setEmoji] = useState(editing?.emoji ?? '🍽️')
   const [accent, setAccent] = useState(editing?.accent ?? '#6b5ef7')
   const [imagePicker, setImagePicker] = useState<ImagePickerValue>(() =>
-    imagePickerFromExisting(editing?.imageUrl, GENERIC_FOOD_IMAGE)
+    imagePickerFromExisting(editing?.imageUrl)
   )
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [removeImage, setRemoveImage] = useState(false)
@@ -83,7 +82,7 @@ function CategoryForm({ editing, onSaved, onCancelEdit }: CategoryFormProps) {
     setLabel('')
     setEmoji('🍽️')
     setAccent('#6b5ef7')
-    setImagePicker({ source: 'none', previewUrl: null, galleryId: null })
+    setImagePicker({ source: 'none', previewUrl: null })
     setImageFile(null)
     setRemoveImage(false)
     setError(null)
@@ -199,14 +198,11 @@ function CategoryForm({ editing, onSaved, onCancelEdit }: CategoryFormProps) {
       <div className="form-group admin-form__image">
         <label className="admin-form__image-label">Category image</label>
         <p className="form-hint admin-form__image-hint">
-          Pick a relevant picture from the gallery, upload your own, or leave it
-          for the default placeholder. The picture shows on the home hero and
-          category tabs.
+          Upload an image for the home hero and category tabs. Leave empty if
+          you do not want a picture on this category.
         </p>
         <ImagePicker
           idPrefix="cat"
-          mode="category"
-          relevanceHint={`${name} ${label}`}
           value={imagePicker}
           onChange={setImagePicker}
           disabled={isSubmitting}
@@ -215,7 +211,6 @@ function CategoryForm({ editing, onSaved, onCancelEdit }: CategoryFormProps) {
           onRemoveChange={setRemoveImage}
           onFileSelected={setImageFile}
           onValidationError={(msg) => msg && setError(msg)}
-          fallbackPreviewUrl={GENERIC_FOOD_IMAGE}
         />
       </div>
 
@@ -277,27 +272,20 @@ function ItemForm({
   const [name, setName] = useState(editing?.name ?? '')
   const [description, setDescription] = useState(editing?.description ?? '')
   const [price, setPrice] = useState(editing ? String(editing.price) : '2')
-  const targetCategoryImage =
-    allCategories.find((c) => c.name === (editing?.category ?? category.name))?.imageUrl ||
-    category.imageUrl ||
-    null
   const [imagePicker, setImagePicker] = useState<ImagePickerValue>(() =>
-    imagePickerFromExisting(editing?.imageUrl, targetCategoryImage || GENERIC_FOOD_IMAGE)
+    imagePickerFromExisting(editing?.imageUrl)
   )
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [removeImage, setRemoveImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const itemFallbackPreview =
-    allCategories.find((c) => c.name === categoryName)?.imageUrl || GENERIC_FOOD_IMAGE
-
   const resetCreate = () => {
     setCategoryName(category.name)
     setName('')
     setDescription('')
     setPrice('2')
-    setImagePicker({ source: 'none', previewUrl: null, galleryId: null })
+    setImagePicker({ source: 'none', previewUrl: null })
     setImageFile(null)
     setRemoveImage(false)
     setError(null)
@@ -405,14 +393,11 @@ function ItemForm({
       <div className="form-group admin-form__image">
         <label className="admin-form__image-label">Item image</label>
         <p className="form-hint admin-form__image-hint">
-          Pick a relevant picture from the gallery (matched against the item
-          title) or upload your own. If you don't set one, the category image is
-          used as a fallback.
+          Upload an image for this menu item. Leave empty if you do not want a
+          picture on the card.
         </p>
         <ImagePicker
           idPrefix="item"
-          mode="item"
-          relevanceHint={`${categoryName} ${name}`}
           value={imagePicker}
           onChange={setImagePicker}
           disabled={isSubmitting}
@@ -421,7 +406,6 @@ function ItemForm({
           onRemoveChange={setRemoveImage}
           onFileSelected={setImageFile}
           onValidationError={(msg) => msg && setError(msg)}
-          fallbackPreviewUrl={itemFallbackPreview}
         />
       </div>
 
@@ -641,8 +625,8 @@ export default function AdminPage() {
           <p className="admin-header__kicker">Administration</p>
           <h1 className="admin-header__title">Menu &amp; categories</h1>
           <p className="admin-header__subtitle">
-            Add or edit categories and the items underneath them. Pick a picture
-            from the gallery or upload your own.
+            Add or edit categories and the items underneath them. Upload images
+            when you want pictures on the menu.
           </p>
         </div>
         <div className="admin-header__stats">
@@ -774,12 +758,20 @@ export default function AdminPage() {
                     }`}
                   >
                     <div
-                      className="admin-card-tile__thumb"
-                      style={{
-                        backgroundImage: `url("${cat.imageUrl || GENERIC_FOOD_IMAGE}")`,
-                      }}
+                      className={`admin-card-tile__thumb ${
+                        cat.imageUrl ? '' : 'admin-card-tile__thumb--empty'
+                      }`}
+                      style={
+                        cat.imageUrl
+                          ? { backgroundImage: `url("${cat.imageUrl}")` }
+                          : undefined
+                      }
                       aria-hidden="true"
-                    />
+                    >
+                      {!cat.imageUrl ? (
+                        <span className="admin-card-tile__thumb-emoji">{cat.emoji}</span>
+                      ) : null}
+                    </div>
                     <div className="admin-card-tile__body">
                       <h4 className="admin-card-tile__title">
                         <span className="admin-card-tile__emoji">{cat.emoji}</span>
@@ -933,22 +925,28 @@ export default function AdminPage() {
                             }`}
                           >
                             <div
-                              className="admin-card-tile__thumb"
-                              style={{
-                                backgroundImage: `url("${
-                                  item.imageUrl ||
-                                  selectedCategory.imageUrl ||
-                                  GENERIC_FOOD_IMAGE
-                                }")`,
-                              }}
+                              className={`admin-card-tile__thumb ${
+                                item.imageUrl ? '' : 'admin-card-tile__thumb--empty'
+                              }`}
+                              style={
+                                item.imageUrl
+                                  ? { backgroundImage: `url("${item.imageUrl}")` }
+                                  : undefined
+                              }
                               aria-hidden="true"
-                            />
+                            >
+                              {!item.imageUrl ? (
+                                <span className="admin-card-tile__thumb-emoji">
+                                  {selectedCategory.emoji}
+                                </span>
+                              ) : null}
+                            </div>
                             <div className="admin-card-tile__body">
                               <h4 className="admin-card-tile__title">{item.name}</h4>
                               <p className="admin-card-tile__meta">
                                 ₹{item.price}
                                 <span className="admin-card-tile__dot">·</span>
-                                {item.imageUrl ? 'custom image' : 'default image'}
+                                {item.imageUrl ? 'has image' : 'no image'}
                               </p>
                               {item.description ? (
                                 <p className="admin-card-tile__desc">{item.description}</p>

@@ -471,6 +471,18 @@
   display: block;
 }
 
+.food-card__media--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.food-card__media-emoji {
+  font-size: 3.5rem;
+  line-height: 1;
+  opacity: 0.85;
+}
+
 .food-card__qty-badge {
   position: absolute;
   top: 10px;
@@ -1920,6 +1932,19 @@
   border-radius: 12px;
   background: #f0eafa;
   box-shadow: 0 6px 18px rgba(60, 47, 145, 0.08);
+}
+
+.image-picker__preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  aspect-ratio: 16 / 10;
+  border-radius: 12px;
+  background: #f0eafa;
+  color: #7a738f;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .image-picker__preview-meta {
@@ -4406,6 +4431,10 @@ a.order-card__rider-chip:hover {
   overflow: hidden;
 }
 
+.co-item__thumb--empty {
+  background: #f4f1fb;
+}
+
 .co-item__emoji {
   position: absolute;
   right: -6px;
@@ -5024,6 +5053,17 @@ a.order-card__rider-chip:hover {
   background-position: center;
   background-color: #f4f1fb;
   flex-shrink: 0;
+}
+
+.admin-card-tile__thumb--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-card-tile__thumb-emoji {
+  font-size: 2.5rem;
+  line-height: 1;
 }
 
 .admin-card-tile__body {
