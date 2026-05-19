@@ -27,9 +27,10 @@ export default function AdminSeedPage() {
   const handleGenerate = async () => {
     if (isBusy) return
     const proceed = window.confirm(
-      'Generate 5 random categories with 10–15 items each?\n\n' +
-        'Existing names are auto-suffixed (e.g. "Biryani Bites #2") so this is safe ' +
-        'to run repeatedly. Use "Reset data" first if you want to start clean.'
+      'This will DELETE all existing categories and food items, then create 5 ' +
+        'fresh categories with 10–15 items each (priced ₹1–₹2).\n\n' +
+        'Existing orders are not affected, but the menu will be replaced.\n\n' +
+        'Continue?'
     )
     if (!proceed) return
     setIsBusy(true)
@@ -37,7 +38,7 @@ export default function AdminSeedPage() {
       const res = await adminSeedAPI.random()
       setResult(res)
       showToast(
-        `Generated ${res.categoriesCreated} categories with ${res.itemsCreated} items`,
+        `Replaced menu with ${res.categoriesCreated} categories (${res.itemsCreated} items, ₹1–₹2 each)`,
         'success'
       )
       try {
@@ -59,15 +60,18 @@ export default function AdminSeedPage() {
     <main className="app-shell">
       <AppHeaderApp />
 
-      <section className="category-hero category-hero--compact">
+      <section className="category-hero category-hero--compact category-hero--danger">
         <div className="category-hero__content">
           <p className="category-hero__kicker">Administration</p>
           <h2 className="category-hero__title">⚡ Generate demo data</h2>
           <p className="category-hero__subtitle">
-            One-click seed of 5 random food categories with 10–15 relevant items
-            each. Useful for demos, screenshots, and exploring the app without
-            hand-entering data. Names that already exist are auto-suffixed
-            (<code>#2</code>, <code>#3</code>…).
+            One-click seed of <strong>5 random food categories</strong> with
+            10–15 relevant items each. Every item is priced between
+            <strong> ₹1 and ₹2</strong>. Useful for demos and screenshots.
+            <br />
+            <strong>Heads up:</strong> running this will first <em>delete every
+            existing category and food item</em> so the menu always starts
+            clean. Orders are not affected.
           </p>
         </div>
       </section>
@@ -85,9 +89,10 @@ export default function AdminSeedPage() {
             </span>
           </header>
           <p className="reset-all__lede">
-            Click the button below to populate the menu with a fresh random set.
-            The new entries appear under <strong>Categories &amp; items</strong> just
-            like ones you create manually.
+            Click the button below to wipe the current menu and repopulate it
+            with a fresh random set. The new entries appear under{' '}
+            <strong>Categories &amp; items</strong> just like ones you create
+            manually, with each item priced between <strong>₹1 and ₹2</strong>.
           </p>
           <div className="reset-all__form">
             <button

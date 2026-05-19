@@ -10,6 +10,8 @@ const router = express.Router();
 const NUM_CATEGORIES = 5;
 const MIN_ITEMS_PER_CATEGORY = 10;
 const MAX_ITEMS_PER_CATEGORY = 15;
+const MIN_ITEM_PRICE = 1;
+const MAX_ITEM_PRICE = 2;
 
 function shuffle(arr) {
   // Fisher–Yates; mutates a copy, leaves the source pool untouched.
@@ -25,40 +27,34 @@ function randomIntInclusive(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-/**
- * Find the next free name by appending " #2", " #3"… until the predicate
- * reports no collision. Used so we never fail on existing names (per the
- * "auto-suffix" duplicate policy).
- */
-async function uniqueName(base, isTaken) {
-  if (!(await isTaken(base))) return base;
-  let n = 2;
-  while (n < 1000) {
-    const candidate = `${base} #${n}`;
-    if (!(await isTaken(candidate))) return candidate;
-    n += 1;
-  }
-  return `${base} #${Date.now()}`;
+/** Random price in [MIN_ITEM_PRICE, MAX_ITEM_PRICE] rounded to 2 decimals. */
+function randomPrice() {
+  const raw = MIN_ITEM_PRICE + Math.random() * (MAX_ITEM_PRICE - MIN_ITEM_PRICE);
+  return Math.round(raw * 100) / 100;
 }
 
 // POST /api/admin/seed/random
-// Creates 5 random categories with 10–15 items each. Admin-only.
+// Wipes existing categories + food items (admin owns the menu data either way)
+// and reseeds with 5 random categories of 10–15 items each. Items are priced
+// in [1, 2] (₹) with 2-decimal precision. Admin-only.
 router.post('/random', requireAuth, requireAdmin, async (req, res) => {
   try {
+    // Step 1: wipe existing menu data so we always start from a clean slate.
+    // Items must be removed before/with categories so the UI never tries to
+    // render orphaned items.
+    await FoodItem.deleteMany({});
+    await Category.deleteMany({});
+
+    // Step 2: pick 5 random category templates.
     const templates = shuffle(CATEGORY_POOL).slice(0, NUM_CATEGORIES);
 
     const summary = [];
     let totalItemsCreated = 0;
 
     for (const tpl of templates) {
-      const finalCategoryName = await uniqueName(
-        tpl.name,
-        async (candidate) => Boolean(await Category.findOne({ name: candidate }).lean())
-      );
-
       const createdCategory = await Category.create({
-        name: finalCategoryName,
-        label: tpl.label || finalCategoryName,
+        name: tpl.name,
+        label: tpl.label || tpl.name,
         emoji: tpl.emoji || '🍽️',
         accent: tpl.accent || '#6b5ef7',
         imageUrl: null,
@@ -71,25 +67,14 @@ router.post('/random', requireAuth, requireAdmin, async (req, res) => {
       );
       const pickedItems = shuffle(tpl.items).slice(0, desiredItemCount);
 
-      const itemsToInsert = [];
-      for (const it of pickedItems) {
-        const finalItemName = await uniqueName(it.name, async (candidate) =>
-          Boolean(
-            await FoodItem.findOne({
-              category: createdCategory.name,
-              name: candidate,
-            }).lean()
-          )
-        );
-        itemsToInsert.push({
-          category: createdCategory.name,
-          name: finalItemName,
-          description: it.description || '',
-          price: typeof it.price === 'number' ? it.price : 2,
-          imageUrl: null,
-          createdBy: req.userId,
-        });
-      }
+      const itemsToInsert = pickedItems.map((it) => ({
+        category: createdCategory.name,
+        name: it.name,
+        description: it.description || '',
+        price: randomPrice(),
+        imageUrl: null,
+        createdBy: req.userId,
+      }));
 
       if (itemsToInsert.length) {
         await FoodItem.insertMany(itemsToInsert);
