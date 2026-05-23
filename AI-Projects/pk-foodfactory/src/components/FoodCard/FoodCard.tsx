@@ -1,4 +1,5 @@
 import type { FoodItem } from '../../types/food'
+import { useEffect, useMemo, useState } from 'react'
 import { useFood } from '../../hooks/useFood'
 import { MinusIcon, PlusIcon } from '../Icons'
 
@@ -8,19 +9,41 @@ interface FoodCardProps {
 
 export function FoodCard({ item }: FoodCardProps) {
   const { cartItems, addToCart, removeFromCart, getCategoryMeta } = useFood()
-  const categoryMeta = getCategoryMeta(item.category)
+  const categoryMeta = useMemo(
+    () => getCategoryMeta(item.category),
+    [getCategoryMeta, item.category]
+  )
+  const primarySrc = item.imageUrl || categoryMeta.imageUrl
+  const [imageSrc, setImageSrc] = useState<string | null>(primarySrc)
+  const [imageFailed, setImageFailed] = useState(false)
+
+  useEffect(() => {
+    setImageSrc(item.imageUrl || categoryMeta.imageUrl)
+    setImageFailed(false)
+  }, [item.imageUrl, categoryMeta.imageUrl])
+
   const quantity = cartItems.find((line) => line.id === item.id)?.quantity ?? 0
   const description = item.description?.trim()
+  const showImage = Boolean(imageSrc) && !imageFailed
 
   return (
     <article className={`food-card ${quantity > 0 ? 'food-card--in-cart' : ''}`}>
       <div
-        className={`food-card__media ${
-          item.imageUrl ? '' : 'food-card__media--empty'
-        }`}
+        className={`food-card__media ${showImage ? '' : 'food-card__media--empty'}`}
       >
-        {item.imageUrl ? (
-          <img src={item.imageUrl} alt={item.name} loading="lazy" />
+        {showImage ? (
+          <img
+            src={imageSrc!}
+            alt={item.name}
+            loading="lazy"
+            onError={() => {
+              if (imageSrc === item.imageUrl && categoryMeta.imageUrl) {
+                setImageSrc(categoryMeta.imageUrl)
+                return
+              }
+              setImageFailed(true)
+            }}
+          />
         ) : (
           <span className="food-card__media-emoji" aria-hidden="true">
             {categoryMeta.emoji}

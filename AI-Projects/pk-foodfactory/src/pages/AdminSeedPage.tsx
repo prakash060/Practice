@@ -93,6 +93,7 @@ export default function AdminSeedPage() {
             with a fresh random set. The new entries appear under{' '}
             <strong>Categories &amp; items</strong> just like ones you create
             manually, with each item priced between <strong>₹1 and ₹2</strong>.
+            Matching professional photos are added to every category and item.
           </p>
           <div className="reset-all__form">
             <button

@@ -924,29 +924,39 @@ export default function AdminPage() {
                               item.id === editingItemId ? 'admin-card-tile--editing' : ''
                             }`}
                           >
-                            <div
-                              className={`admin-card-tile__thumb ${
-                                item.imageUrl ? '' : 'admin-card-tile__thumb--empty'
-                              }`}
-                              style={
-                                item.imageUrl
-                                  ? { backgroundImage: `url("${item.imageUrl}")` }
-                                  : undefined
-                              }
-                              aria-hidden="true"
-                            >
-                              {!item.imageUrl ? (
-                                <span className="admin-card-tile__thumb-emoji">
-                                  {selectedCategory.emoji}
-                                </span>
-                              ) : null}
-                            </div>
+                            {(() => {
+                              const thumbUrl =
+                                item.imageUrl || selectedCategory.imageUrl || null
+                              return (
+                                <div
+                                  className={`admin-card-tile__thumb ${
+                                    thumbUrl ? '' : 'admin-card-tile__thumb--empty'
+                                  }`}
+                                  style={
+                                    thumbUrl
+                                      ? { backgroundImage: `url("${thumbUrl}")` }
+                                      : undefined
+                                  }
+                                  aria-hidden="true"
+                                >
+                                  {!thumbUrl ? (
+                                    <span className="admin-card-tile__thumb-emoji">
+                                      {selectedCategory.emoji}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              )
+                            })()}
                             <div className="admin-card-tile__body">
                               <h4 className="admin-card-tile__title">{item.name}</h4>
                               <p className="admin-card-tile__meta">
                                 ₹{item.price}
                                 <span className="admin-card-tile__dot">·</span>
-                                {item.imageUrl ? 'has image' : 'no image'}
+                                {item.imageUrl
+                                  ? 'item image'
+                                  : selectedCategory.imageUrl
+                                    ? 'category image'
+                                    : 'no image'}
                               </p>
                               {item.description ? (
                                 <p className="admin-card-tile__desc">{item.description}</p>

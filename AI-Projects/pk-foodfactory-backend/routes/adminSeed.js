@@ -12,6 +12,11 @@ const {
   DEMO_AGENT_PASSCODE,
   NUM_AGENTS_TO_SEED,
 } = require('../data/agentSeedPool');
+const {
+  getCategoryImageUrl,
+  getItemImageUrl,
+  getAgentPhotoUrl,
+} = require('../data/seedImages');
 
 const router = express.Router();
 
@@ -60,12 +65,13 @@ router.post('/random', requireAuth, requireAdmin, async (req, res) => {
     let totalItemsCreated = 0;
 
     for (const tpl of templates) {
+      const categoryImageUrl = getCategoryImageUrl(tpl);
       const createdCategory = await Category.create({
         name: tpl.name,
         label: tpl.label || tpl.name,
         emoji: tpl.emoji || '🍽️',
         accent: tpl.accent || '#6b5ef7',
-        imageUrl: null,
+        imageUrl: categoryImageUrl,
         createdBy: req.userId,
       });
 
@@ -80,7 +86,7 @@ router.post('/random', requireAuth, requireAdmin, async (req, res) => {
         name: it.name,
         description: it.description || '',
         price: randomPrice(),
-        imageUrl: null,
+        imageUrl: getItemImageUrl(it.name, tpl, categoryImageUrl),
         createdBy: req.userId,
       }));
 
@@ -125,7 +131,8 @@ router.post('/agents', requireAuth, requireAdmin, async (req, res) => {
     const passcodeHash = await hashPasscode(DEMO_AGENT_PASSCODE);
 
     const summary = [];
-    for (const tpl of templates) {
+    for (let i = 0; i < templates.length; i += 1) {
+      const tpl = templates[i];
       const created = await DeliveryAgent.create({
         name: tpl.name,
         phone: tpl.phone,
@@ -134,7 +141,7 @@ router.post('/agents', requireAuth, requireAdmin, async (req, res) => {
         vehicleNumber: tpl.vehicleNumber || '',
         licenseNumber: tpl.licenseNumber || '',
         address: tpl.address || '',
-        photoUrl: null,
+        photoUrl: getAgentPhotoUrl(i),
         status: 'active',
         notes: tpl.notes || '',
         passcodeHash,
