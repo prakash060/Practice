@@ -12,11 +12,7 @@ const {
   DEMO_AGENT_PASSCODE,
   NUM_AGENTS_TO_SEED,
 } = require('../data/agentSeedPool');
-const {
-  getCategoryImageUrl,
-  getItemImageUrl,
-  getAgentPhotoUrl,
-} = require('../data/seedImages');
+const { createSeedImageAllocator, getAgentPhotoUrl } = require('../data/seedImages');
 
 const router = express.Router();
 
@@ -61,11 +57,12 @@ router.post('/random', requireAuth, requireAdmin, async (req, res) => {
     // Step 2: pick 5 random category templates.
     const templates = shuffle(CATEGORY_POOL).slice(0, NUM_CATEGORIES);
 
+    const imageAllocator = createSeedImageAllocator();
     const summary = [];
     let totalItemsCreated = 0;
 
     for (const tpl of templates) {
-      const categoryImageUrl = getCategoryImageUrl(tpl);
+      const categoryImageUrl = imageAllocator.assignCategoryImage(tpl);
       const createdCategory = await Category.create({
         name: tpl.name,
         label: tpl.label || tpl.name,
@@ -86,7 +83,7 @@ router.post('/random', requireAuth, requireAdmin, async (req, res) => {
         name: it.name,
         description: it.description || '',
         price: randomPrice(),
-        imageUrl: getItemImageUrl(it.name, tpl, categoryImageUrl),
+        imageUrl: imageAllocator.assignItemImage(it.name, tpl),
         createdBy: req.userId,
       }));
 
