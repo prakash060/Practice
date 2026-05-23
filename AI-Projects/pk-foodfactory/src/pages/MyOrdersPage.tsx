@@ -4,7 +4,6 @@ import { AgentAvatar } from '../components/AgentAvatar'
 import { AppHeaderApp } from '../components/AppHeader'
 import {
   AlertIcon,
-  CheckIcon,
   ChevronLeftIcon,
   ClockIcon,
   HashIcon,
@@ -13,71 +12,14 @@ import {
   ReceiptIcon,
   ShoppingBagIcon,
   TruckIcon,
-  UserIcon,
-  XIcon,
-  type IconProps,
 } from '../components/Icons'
-import { ordersAPI, type DeliveryStatus, type OrderDoc } from '../services/api'
-
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString(undefined, {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function deliveryLabel(s?: DeliveryStatus): string {
-  switch (s) {
-    case 'assigned':
-      return 'Rider assigned'
-    case 'out_for_delivery':
-      return 'Out for delivery'
-    case 'delivered':
-      return 'Delivered'
-    case 'not_delivered':
-      return 'Not delivered'
-    case 'unassigned':
-    default:
-      return 'Waiting for rider'
-  }
-}
-
-function deliveryStatusIcon(s?: DeliveryStatus) {
-  const iconProps: IconProps = { size: 14 }
-  switch (s) {
-    case 'assigned':
-      return <UserIcon {...iconProps} />
-    case 'out_for_delivery':
-      return <TruckIcon {...iconProps} />
-    case 'delivered':
-      return <CheckIcon {...iconProps} />
-    case 'not_delivered':
-      return <XIcon {...iconProps} />
-    case 'unassigned':
-    default:
-      return <ClockIcon {...iconProps} />
-  }
-}
-
-function paymentStatusIcon(status: OrderDoc['paymentStatus']) {
-  const iconProps: IconProps = { size: 14 }
-  switch (status) {
-    case 'paid':
-      return <CheckIcon {...iconProps} />
-    case 'pending':
-      return <ClockIcon {...iconProps} />
-    case 'failed':
-    case 'refunded':
-      return <AlertIcon {...iconProps} />
-    default:
-      return <ClockIcon {...iconProps} />
-  }
-}
+import {
+  deliveryLabel,
+  deliveryStatusIcon,
+  formatOrderDate,
+  paymentStatusIcon,
+} from '../lib/orderDisplay'
+import { ordersAPI, type OrderDoc } from '../services/api'
 
 function OrderCardSkeleton() {
   return (
@@ -112,22 +54,36 @@ export default function MyOrdersPage() {
 
   useEffect(() => {
     let cancelled = false
-    async function load() {
+
+    async function load(quiet = false) {
       try {
-        setIsLoading(true)
-        setError('')
+        if (!quiet) {
+          setIsLoading(true)
+          setError('')
+        }
         const res = await ordersAPI.getMyOrders()
         if (!cancelled) setOrders(res)
-      } catch (e: any) {
-        const msg = e?.response?.data?.error || 'Failed to load orders'
-        if (!cancelled) setError(String(msg))
+      } catch (e: unknown) {
+        const msg =
+          (e as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+          'Failed to load orders'
+        if (!cancelled && !quiet) setError(String(msg))
       } finally {
-        if (!cancelled) setIsLoading(false)
+        if (!cancelled && !quiet) setIsLoading(false)
       }
     }
+
     void load()
+    const interval = window.setInterval(() => void load(true), 25000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void load(true)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
     return () => {
       cancelled = true
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [])
 
@@ -137,7 +93,7 @@ export default function MyOrdersPage() {
     if (isLoading) return 'Fetching your recent activity…'
     if (error) return 'We had trouble loading your orders.'
     if (!hasOrders) return "You haven't placed any orders yet."
-    return `You have ${orders.length} order${orders.length === 1 ? '' : 's'}.`
+    return `You have ${orders.length} order${orders.length === 1 ? '' : 's'}. Status refreshes automatically.`
   }, [isLoading, error, hasOrders, orders.length])
 
   return (
@@ -224,7 +180,7 @@ export default function MyOrdersPage() {
                       </h3>
                       <p className="order-card__date">
                         <ClockIcon size={14} />
-                        <span>{formatDate(o.createdAt)}</span>
+                        <span>{formatOrderDate(o.createdAt)}</span>
                       </p>
                     </div>
                     <div className="order-card__total">

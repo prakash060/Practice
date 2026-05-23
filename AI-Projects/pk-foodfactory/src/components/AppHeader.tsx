@@ -138,6 +138,17 @@ export function AppHeaderApp() {
                     Administration
                   </Link>
                   <Link
+                    to="/admin/orders"
+                    className="header-user-dropdown__item"
+                    role="menuitem"
+                    onClick={close}
+                  >
+                    <span className="header-user-dropdown__item-icon">
+                      <ReceiptIcon />
+                    </span>
+                    Orders & delivery
+                  </Link>
+                  <Link
                     to="/admin/reset"
                     className="header-user-dropdown__item header-user-dropdown__item--danger"
                     role="menuitem"

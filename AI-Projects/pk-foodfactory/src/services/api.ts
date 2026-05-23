@@ -223,11 +223,6 @@ export const ordersAPI = {
     return response.data;
   },
 
-  getAllOrders: async () => {
-    const response = await api.get('/orders');
-    return response.data;
-  },
-
   getMyOrders: async (): Promise<OrderDoc[]> => {
     const response = await api.get<OrderDoc[]>('/orders/my');
     return response.data;
@@ -459,6 +454,33 @@ export const deliveryAgentsAPI = {
 
   remove: async (id: string): Promise<{ success: boolean; id: string }> => {
     const response = await api.delete<{ success: boolean; id: string }>(`/delivery-agents/${id}`);
+    return response.data;
+  },
+};
+
+// =============================================================
+// Admin orders (list + delivery / payment updates)
+// =============================================================
+
+export interface AdminOrderDeliveryUpdate {
+  deliveryStatus?: DeliveryStatus;
+  deliveryAgentId?: string | null;
+  deliveryNotes?: string;
+  paymentStatus?: OrderDoc['paymentStatus'];
+  autoAssign?: boolean;
+}
+
+export const adminOrdersAPI = {
+  list: async (): Promise<OrderDoc[]> => {
+    const response = await api.get<OrderDoc[]>('/admin/orders');
+    return response.data;
+  },
+
+  updateDelivery: async (
+    orderId: string,
+    body: AdminOrderDeliveryUpdate
+  ): Promise<OrderDoc> => {
+    const response = await api.patch<OrderDoc>(`/admin/orders/${orderId}/delivery`, body);
     return response.data;
   },
 };

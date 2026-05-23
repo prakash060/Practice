@@ -2645,6 +2645,61 @@
   font-size: 0.95rem;
 }
 
+.admin-order__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-order {
+  padding: 16px;
+  border: 1px solid #ece6ff;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-order__id {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-order__customer {
+  margin: 8px 0 12px;
+}
+
+.admin-order__controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.admin-order__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.admin-order__rider-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  font-size: 0.92rem;
+}
+
 /* Customer "My orders" — assigned rider chip */
 .order-row__delivery {
   display: grid;

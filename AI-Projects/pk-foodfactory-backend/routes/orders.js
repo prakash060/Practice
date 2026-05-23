@@ -2,6 +2,8 @@ const express = require('express');
 const Order = require('../models/Order');
 const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
+const { requireAdmin, isAdminEmail } = require('../middleware/admin');
+const { shapeOrder, AGENT_PUBLIC_FIELDS } = require('../utils/orderShape');
 const {
   initiateCheckout,
   normalizeIndianPhone,
@@ -9,31 +11,6 @@ const {
 } = require('../services/checkoutOrder');
 
 const router = express.Router();
-
-const AGENT_PUBLIC_FIELDS = 'name phone photoUrl vehicleType vehicleNumber';
-
-function shapeOrder(doc) {
-  if (!doc) return doc;
-  const obj = typeof doc.toObject === 'function' ? doc.toObject() : doc;
-  const agent = obj.deliveryAgentId;
-  if (agent && typeof agent === 'object' && agent._id) {
-    obj.deliveryAgent = {
-      id: agent._id.toString(),
-      name: agent.name,
-      phone: agent.phone,
-      photoUrl: agent.photoUrl || null,
-      vehicleType: agent.vehicleType || 'Bike',
-      vehicleNumber: agent.vehicleNumber || '',
-    };
-    obj.deliveryAgentId = agent._id.toString();
-  } else if (agent) {
-    obj.deliveryAgentId = String(agent);
-    obj.deliveryAgent = null;
-  } else {
-    obj.deliveryAgent = null;
-  }
-  return obj;
-}
 
 async function createCheckoutOrderForUser(req, res) {
   try {
@@ -112,21 +89,8 @@ router.get('/my', requireAuth, async (req, res) => {
   }
 });
 
-// Get all orders (admin endpoint)
-router.get('/', async (req, res) => {
-  try {
-    const orders = await Order.find()
-      .sort({ createdAt: -1 })
-      .populate({ path: 'deliveryAgentId', select: AGENT_PUBLIC_FIELDS });
-    res.json(orders.map(shapeOrder));
-  } catch (error) {
-    console.error('Get orders error:', error);
-    res.status(500).json({ error: 'Failed to get orders' });
-  }
-});
-
-// Get order by ID
-router.get('/:orderId', async (req, res) => {
+// Get order by ID (owner or admin)
+router.get('/:orderId', requireAuth, async (req, res) => {
   try {
     const order = await Order.findOne({ orderId: req.params.orderId })
       .populate({ path: 'deliveryAgentId', select: AGENT_PUBLIC_FIELDS });
@@ -135,32 +99,47 @@ router.get('/:orderId', async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    res.json(shapeOrder(order));
+    const user = await User.findById(req.userId).select('email');
+    const isOwner =
+      order.userId && String(order.userId) === String(req.userId);
+    const isAdmin = user && isAdminEmail(user.email);
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    return res.json(shapeOrder(order));
   } catch (error) {
     console.error('Get order error:', error);
-    res.status(500).json({ error: 'Failed to get order' });
+    return res.status(500).json({ error: 'Failed to get order' });
   }
 });
 
-// Update order status (admin endpoint)
-router.put('/:orderId/status', async (req, res) => {
+// Update payment status (admin only; prefer PATCH /api/admin/orders/:id/delivery)
+router.put('/:orderId/status', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { status } = req.body;
+    const allowed = ['pending', 'paid', 'failed', 'refunded'];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({
+        error: `status must be one of: ${allowed.join(', ')}`,
+      });
+    }
 
     const order = await Order.findOneAndUpdate(
       { orderId: req.params.orderId },
       { paymentStatus: status, updatedAt: new Date() },
       { new: true }
-    );
+    )
+      .populate({ path: 'deliveryAgentId', select: AGENT_PUBLIC_FIELDS });
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    res.json(order);
+    return res.json(shapeOrder(order));
   } catch (error) {
     console.error('Update order status error:', error);
-    res.status(500).json({ error: 'Failed to update order status' });
+    return res.status(500).json({ error: 'Failed to update order status' });
   }
 });
 

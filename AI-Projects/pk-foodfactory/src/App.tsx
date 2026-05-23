@@ -26,6 +26,7 @@ import DeliveryDashboardPage from './pages/DeliveryDashboardPage'
 import AdminResetPage from './pages/AdminResetPage'
 import AdminSeedPage from './pages/AdminSeedPage'
 import AdminSeedAgentsPage from './pages/AdminSeedAgentsPage'
+import AdminOrdersPage from './pages/AdminOrdersPage'
 import './App.css'
 
 function App() {
@@ -98,6 +99,14 @@ function App() {
               element={
                 <AdminRoute>
                   <AdminPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/orders"
+              element={
+                <AdminRoute>
+                  <AdminOrdersPage />
                 </AdminRoute>
               }
             />

@@ -234,6 +234,7 @@ app.use('/api/food-items', requireMongo, require('./routes/foodItems'));
 app.use('/api/delivery-agents', requireMongo, require('./routes/deliveryAgents'));
 app.use('/api/admin/reset', requireMongo, require('./routes/adminReset'));
 app.use('/api/admin/seed', requireMongo, require('./routes/adminSeed'));
+app.use('/api/admin/orders', requireMongo, require('./routes/adminOrders'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
