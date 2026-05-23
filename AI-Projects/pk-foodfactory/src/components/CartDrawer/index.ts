@@ -1,1 +1,1 @@
-export { CartDrawer, type CartDrawerProps } from './CartDrawer'
+export { CartDrawer, CartTrigger, type CartDrawerProps } from './CartDrawer'

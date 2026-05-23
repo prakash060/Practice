@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AppHeaderApp } from '../components/AppHeader'
 import { CartDrawer } from '../components/CartDrawer'
@@ -13,7 +13,6 @@ export default function HomePage() {
   const location = useLocation()
   const { user } = useAuth()
   const isAdmin = Boolean(user?.isAdmin)
-  const [cartOpen, setCartOpen] = useState(false)
   const {
     categories,
     selectedCategory,
@@ -94,15 +93,14 @@ export default function HomePage() {
             <p className="category-bar__empty-hint">Browse the menu once categories are added.</p>
           )}
         </div>
-        <CartDrawer
-          cartItems={cartItems}
-          onRemoveItem={removeFromCart}
-          onClearCart={clearCart}
-          onCheckout={handleCheckout}
-          open={cartOpen}
-          onOpenChange={setCartOpen}
-        />
       </section>
+
+      <CartDrawer
+        cartItems={cartItems}
+        onRemoveItem={removeFromCart}
+        onClearCart={clearCart}
+        onCheckout={handleCheckout}
+      />
 
       <section className="menu-layout menu-layout--full">
         <div className="menu-layout__main">

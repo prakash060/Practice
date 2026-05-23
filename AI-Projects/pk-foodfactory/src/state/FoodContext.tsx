@@ -20,6 +20,8 @@ interface FoodContextValue {
   addToCart: (item: FoodItem) => void
   removeFromCart: (itemId: string) => void
   clearCart: () => void
+  cartDrawerOpen: boolean
+  setCartDrawerOpen: (open: boolean) => void
   isLoadingMenu: boolean
   menuError: string | null
   reloadMenu: () => Promise<void>
@@ -45,6 +47,7 @@ export function FoodProvider({ children }: { children: React.ReactNode }) {
   const [selectedCategory, setSelectedCategoryState] = useState<string | null>(null)
   const [allItems, setAllItems] = useState<FoodItem[]>([])
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false)
   const [isLoadingMenu, setIsLoadingMenu] = useState(true)
   const [menuError, setMenuError] = useState<string | null>(null)
 
@@ -129,6 +132,8 @@ export function FoodProvider({ children }: { children: React.ReactNode }) {
         addToCart,
         removeFromCart,
         clearCart,
+        cartDrawerOpen,
+        setCartDrawerOpen,
         isLoadingMenu,
         menuError,
         reloadMenu,

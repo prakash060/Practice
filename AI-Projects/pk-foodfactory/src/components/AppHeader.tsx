@@ -1,7 +1,8 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { BRAND_EYEBROW, BRAND_TITLE } from '../constants/brand'
 import { BrandMark } from './BrandMark'
+import { CartTrigger } from './CartDrawer'
 import { useAuth } from '../state/AuthContext'
 import {
   AlertIcon,
@@ -47,8 +48,10 @@ export function AppHeaderAuth({ title }: { title: string }) {
 }
 
 export function AppHeaderApp() {
+  const { pathname } = useLocation()
   const { user, logout } = useAuth()
   const isAdmin = Boolean(user?.isAdmin)
+  const showCart = pathname === '/'
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
@@ -86,6 +89,7 @@ export function AppHeaderApp() {
         </div>
       </div>
       <div className="brand-header__right brand-header__actions">
+        {showCart ? <CartTrigger /> : null}
         <div className="header-user-menu" ref={wrapRef}>
           <button
             type="button"
