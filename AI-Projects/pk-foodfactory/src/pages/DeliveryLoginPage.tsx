@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
+import { SecretField } from '../components/SecretField'
 import { useDeliveryAuth } from '../state/DeliveryAuthContext'
 
 export default function DeliveryLoginPage() {
@@ -63,20 +64,15 @@ export default function DeliveryLoginPage() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="delivery-passcode">Passcode</label>
-            <input
-              id="delivery-passcode"
-              type="password"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              value={passcode}
-              onChange={(ev) => setPasscode(ev.target.value)}
-              disabled={isSubmitting}
-              placeholder="4–8 digit PIN"
-              maxLength={8}
-            />
-          </div>
+          <SecretField
+            id="delivery-passcode"
+            label="Passcode"
+            value={passcode}
+            onChange={setPasscode}
+            variant="passcode"
+            placeholder="4–8 digit PIN"
+            disabled={isSubmitting}
+          />
 
           <button
             type="submit"

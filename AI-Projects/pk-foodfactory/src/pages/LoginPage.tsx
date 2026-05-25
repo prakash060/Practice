@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
 import { OtpInput } from '../components/OtpInput'
+import { SecretField } from '../components/SecretField'
 import { authAPI, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
 import { validateIdentifier, validateLoginForm, validateOtp } from '../utils/userValidators'
@@ -287,30 +288,16 @@ export default function LoginPage() {
                 <p className="field-error">{credentialErrors.identifier}</p>
               ) : null}
             </div>
-            <div className="form-group">
-              <label htmlFor="login-secret">
-                {loginMethod === 'pin' ? 'PIN' : 'Password'}
-              </label>
-              <input
-                id="login-secret"
-                type="password"
-                inputMode={loginMethod === 'pin' ? 'numeric' : undefined}
-                autoComplete={loginMethod === 'pin' ? 'off' : 'current-password'}
-                maxLength={loginMethod === 'pin' ? 6 : undefined}
-                value={secret}
-                onChange={(ev) => {
-                  const v =
-                    loginMethod === 'pin'
-                      ? ev.target.value.replace(/\D/g, '').slice(0, 6)
-                      : ev.target.value
-                  setSecret(v)
-                }}
-                disabled={isSubmitting}
-              />
-              {touched && credentialErrors.secret ? (
-                <p className="field-error">{credentialErrors.secret}</p>
-              ) : null}
-            </div>
+            <SecretField
+              id="login-secret"
+              label={loginMethod === 'pin' ? 'PIN' : 'Password'}
+              value={secret}
+              onChange={setSecret}
+              variant={loginMethod === 'pin' ? 'pin' : 'password'}
+              autoComplete={loginMethod === 'pin' ? 'off' : 'current-password'}
+              disabled={isSubmitting}
+              error={touched ? credentialErrors.secret : undefined}
+            />
             <p className="auth-footer auth-footer--inline">
               <Link to="/forgot-credentials">Forgot password or PIN?</Link>
             </p>

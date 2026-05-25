@@ -1412,6 +1412,41 @@
   color: #999;
 }
 
+.secret-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.secret-input input {
+  width: 100%;
+  padding-right: 4.25rem;
+}
+
+.secret-input__toggle {
+  position: absolute;
+  right: 6px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #6b5ef7;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.secret-input__toggle:hover:not(:disabled) {
+  background: rgba(107, 94, 247, 0.08);
+}
+
+.secret-input__toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .form-hint {
   margin: 0;
   font-size: 0.85rem;

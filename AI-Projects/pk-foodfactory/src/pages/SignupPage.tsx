@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
 import { OtpInput } from '../components/OtpInput'
+import { SecretField } from '../components/SecretField'
 import { authAPI, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
 import {
@@ -313,39 +314,29 @@ export default function SignupPage() {
             </fieldset>
 
             {enablePassword ? (
-              <div className="form-group">
-                <label htmlFor="signup-password">Password</label>
-                <input
-                  id="signup-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(ev) => setPassword(ev.target.value)}
-                  disabled={isSubmitting}
-                />
-                {touched && credentialErrors.password ? (
-                  <p className="field-error">{credentialErrors.password}</p>
-                ) : null}
-              </div>
+              <SecretField
+                id="signup-password"
+                label="Password"
+                value={password}
+                onChange={setPassword}
+                variant="password"
+                autoComplete="new-password"
+                disabled={isSubmitting}
+                error={touched ? credentialErrors.password : undefined}
+              />
             ) : null}
 
             {enablePin ? (
-              <div className="form-group">
-                <label htmlFor="signup-pin">PIN</label>
-                <input
-                  id="signup-pin"
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="new-password"
-                  maxLength={6}
-                  value={pin}
-                  onChange={(ev) => setPin(ev.target.value.replace(/\D/g, '').slice(0, 6))}
-                  disabled={isSubmitting}
-                />
-                {touched && credentialErrors.pin ? (
-                  <p className="field-error">{credentialErrors.pin}</p>
-                ) : null}
-              </div>
+              <SecretField
+                id="signup-pin"
+                label="PIN"
+                value={pin}
+                onChange={setPin}
+                variant="pin"
+                autoComplete="new-password"
+                disabled={isSubmitting}
+                error={touched ? credentialErrors.pin : undefined}
+              />
             ) : null}
 
             <div className="auth-form__row">

@@ -58,8 +58,23 @@ userSchema.pre('save', async function hashCredentials() {
 
 userSchema.methods.verifyPassword = async function verifyPassword(plain) {
   if (!this.password || !plain) return false;
-  return bcrypt.compare(String(plain), this.password);
+  const stored = String(this.password);
+  if (stored.startsWith('$2a$') || stored.startsWith('$2b$') || stored.startsWith('$2y$')) {
+    return bcrypt.compare(String(plain), stored);
+  }
+  // Legacy plain-text passwords (e.g. set via findByIdAndUpdate before hashing fix)
+  return String(plain) === stored;
 };
+
+userSchema.methods.passwordNeedsRehash = function passwordNeedsRehash() {
+  if (!this.password) return false;
+  const stored = String(this.password);
+  return !stored.startsWith('$2a$') && !stored.startsWith('$2b$') && !stored.startsWith('$2y$');
+};
+
+async function hashPassword(plain) {
+  return bcrypt.hash(String(plain), SALT_ROUNDS);
+}
 
 userSchema.methods.verifyPin = async function verifyPin(pin) {
   if (!this.pinHash || !pin) return false;
@@ -74,3 +89,4 @@ module.exports = mongoose.model('User', userSchema);
 module.exports.AUTH_TYPES = AUTH_TYPES;
 module.exports.PIN_RE = PIN_RE;
 module.exports.hashPin = hashPin;
+module.exports.hashPassword = hashPassword;

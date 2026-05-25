@@ -92,6 +92,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email/phone or credentials' });
     }
 
+    if (mode === 'password' && user.passwordNeedsRehash()) {
+      user.password = loginSecret;
+      await user.save();
+    }
+
     let token;
     try {
       token = signToken(user._id);

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
 import { OtpInput } from '../components/OtpInput'
+import { SecretField } from '../components/SecretField'
 import { authAPI, type AuthType, type DevOtpHint } from '../services/api'
 import {
   validateCredentialForm,
@@ -339,25 +340,14 @@ export default function ForgotCredentialsPage() {
                 ) : null}
               </>
             ) : (
-              <div className="form-group">
-                <label htmlFor="reset-verify-secret">{methodLabel(verifyMethod)}</label>
-                <input
-                  id="reset-verify-secret"
-                  type="password"
-                  inputMode={verifyMethod === 'pin' ? 'numeric' : undefined}
-                  autoComplete="off"
-                  maxLength={verifyMethod === 'pin' ? 6 : undefined}
-                  value={verifySecret}
-                  onChange={(ev) => {
-                    const v =
-                      verifyMethod === 'pin'
-                        ? ev.target.value.replace(/\D/g, '').slice(0, 6)
-                        : ev.target.value
-                    setVerifySecret(v)
-                  }}
-                  disabled={isSubmitting}
-                />
-              </div>
+              <SecretField
+                id="reset-verify-secret"
+                label={methodLabel(verifyMethod)}
+                value={verifySecret}
+                onChange={setVerifySecret}
+                variant={verifyMethod === 'pin' ? 'pin' : 'password'}
+                disabled={isSubmitting}
+              />
             )}
 
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
@@ -390,29 +380,25 @@ export default function ForgotCredentialsPage() {
               </label>
             </fieldset>
             {authType === 'password' ? (
-              <div className="form-group">
-                <label htmlFor="reset-password">New password</label>
-                <input
-                  id="reset-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isSubmitting}
-                />
-              </div>
+              <SecretField
+                id="reset-password"
+                label="New password"
+                value={password}
+                onChange={setPassword}
+                variant="password"
+                autoComplete="new-password"
+                disabled={isSubmitting}
+              />
             ) : (
-              <div className="form-group">
-                <label htmlFor="reset-pin">New PIN</label>
-                <input
-                  id="reset-pin"
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  disabled={isSubmitting}
-                />
-              </div>
+              <SecretField
+                id="reset-pin"
+                label="New PIN"
+                value={pin}
+                onChange={setPin}
+                variant="pin"
+                autoComplete="new-password"
+                disabled={isSubmitting}
+              />
             )}
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
               {isSubmitting ? 'Saving…' : 'Update credentials'}

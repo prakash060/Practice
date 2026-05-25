@@ -2,7 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const { signToken } = require('../middleware/auth');
 const { isAdminEmail } = require('../middleware/admin');
-const { hashPin } = require('../models/User');
+const { hashPin, hashPassword } = require('../models/User');
 const {
   validateName,
   validateEmail,
@@ -569,7 +569,7 @@ router.post('/credentials/reset/complete', async (req, res) => {
       await User.findByIdAndUpdate(user._id, {
         $set: {
           authType: 'password',
-          password: credRes.password,
+          password: await hashPassword(credRes.password),
           emailVerified: true,
           phoneVerified: true,
         },
@@ -760,7 +760,7 @@ router.post('/switch-method/complete', async (req, res) => {
       await User.findByIdAndUpdate(user._id, {
         $set: {
           authType: 'password',
-          password: credRes.password,
+          password: await hashPassword(credRes.password),
         },
       });
     } else {
