@@ -11,6 +11,8 @@ const {
   isPlaceholderKey,
   getRazorpayKeyMode,
 } = require('./services/checkoutOrder');
+const { isEmailConfigured } = require('./services/emailService');
+const { getSmsOtpStatusLabel } = require('./services/smsService');
 require('dotenv').config();
 
 const app = express();
@@ -34,6 +36,15 @@ const isProd = process.env.NODE_ENV === 'production';
     return;
   }
   console.log(`Razorpay: configured with ${mode}-mode key (${String(keyId).trim().slice(0, 12)}…).`);
+})();
+
+(function logOtpDeliveryStatus() {
+  const emailStatus = isEmailConfigured()
+    ? 'configured (SMTP)'
+    : 'dev-only (set EMAIL_USER + EMAIL_PASS — Gmail App Password)';
+  const smsStatus = getSmsOtpStatusLabel();
+  console.log(`Email OTP: ${emailStatus}`);
+  console.log(`SMS OTP: ${smsStatus}`);
 })();
 
 app.set('trust proxy', 1);

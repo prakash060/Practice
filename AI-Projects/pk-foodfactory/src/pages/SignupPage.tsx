@@ -3,15 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
 import { OtpInput } from '../components/OtpInput'
-import { authAPI, type AuthType, type DevOtpHint } from '../services/api'
+import { authAPI, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
-import {
-  validateCredentialForm,
-  validateOtp,
-  validateSignupProfileForm,
-} from '../utils/userValidators'
+import { validateOtp, validateSignupProfileForm } from '../utils/userValidators'
 
-type Step = 'profile' | 'otp' | 'credential'
+type Step = 'profile' | 'otp'
 
 function axiosError(err: unknown, fallback: string): string {
   if (isAxiosError(err)) {
@@ -35,10 +31,6 @@ export default function SignupPage() {
   const [emailOtp, setEmailOtp] = useState('')
   const [phoneOtp, setPhoneOtp] = useState('')
 
-  const [authType, setAuthType] = useState<AuthType>('password')
-  const [password, setPassword] = useState('')
-  const [pin, setPin] = useState('')
-
   const [devOtp, setDevOtp] = useState<DevOtpHint | null>(null)
   const [submitError, setSubmitError] = useState('')
   const [infoMessage, setInfoMessage] = useState('')
@@ -48,11 +40,6 @@ export default function SignupPage() {
   const profileErrors = useMemo(
     () => validateSignupProfileForm({ name, email, phone, address }),
     [name, email, phone, address]
-  )
-
-  const credentialErrors = useMemo(
-    () => validateCredentialForm(authType, password, pin),
-    [authType, password, pin]
   )
 
   const handleProfileSubmit = async (e: FormEvent) => {
@@ -115,33 +102,11 @@ export default function SignupPage() {
     setIsSubmitting(true)
     try {
       await authAPI.signupVerifyOtp(sessionToken, emailOtp.trim(), phoneOtp.trim())
-      setStep('credential')
-      setInfoMessage('Verification successful. Choose how you want to sign in.')
-    } catch (err) {
-      setSubmitError(axiosError(err, 'Verification failed'))
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleCredentialSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setTouched(true)
-    setSubmitError('')
-    if (Object.keys(credentialErrors).length > 0) return
-
-    setIsSubmitting(true)
-    try {
-      const res = await authAPI.signupComplete({
-        sessionToken,
-        authType,
-        password: authType === 'password' ? password : undefined,
-        pin: authType === 'pin' ? pin : undefined,
-      })
+      const res = await authAPI.signupComplete({ sessionToken })
       applyAuthSession(res.user, res.token)
       navigate(defaultLandingPath(res.user), { replace: true })
     } catch (err) {
-      setSubmitError(axiosError(err, 'Could not complete signup'))
+      setSubmitError(axiosError(err, 'Verification failed'))
     } finally {
       setIsSubmitting(false)
     }
@@ -157,7 +122,6 @@ export default function SignupPage() {
         <div className="auth-steps" aria-label="Signup progress">
           <span className={step === 'profile' ? 'auth-steps__item--active' : ''}>1. Profile</span>
           <span className={step === 'otp' ? 'auth-steps__item--active' : ''}>2. Verify</span>
-          <span className={step === 'credential' ? 'auth-steps__item--active' : ''}>3. Login setup</span>
         </div>
 
         {infoMessage ? <p className="auth-info">{infoMessage}</p> : null}
@@ -268,7 +232,7 @@ export default function SignupPage() {
                 Back
               </button>
               <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Verifying…' : 'Verify codes'}
+                {isSubmitting ? 'Creating account…' : 'Verify and create account'}
               </button>
             </div>
             <button
@@ -279,84 +243,6 @@ export default function SignupPage() {
             >
               Resend codes
             </button>
-          </form>
-        ) : null}
-
-        {step === 'credential' ? (
-          <form className="auth-form" onSubmit={handleCredentialSubmit} noValidate>
-            <fieldset className="auth-type-picker">
-              <legend>Sign in with</legend>
-              <label>
-                <input
-                  type="radio"
-                  name="authType"
-                  value="password"
-                  checked={authType === 'password'}
-                  onChange={() => setAuthType('password')}
-                  disabled={isSubmitting}
-                />
-                Password (8+ characters)
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="authType"
-                  value="pin"
-                  checked={authType === 'pin'}
-                  onChange={() => setAuthType('pin')}
-                  disabled={isSubmitting}
-                />
-                PIN (4–6 digits)
-              </label>
-            </fieldset>
-
-            {authType === 'password' ? (
-              <div className="form-group">
-                <label htmlFor="signup-password">Password</label>
-                <input
-                  id="signup-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(ev) => setPassword(ev.target.value)}
-                  disabled={isSubmitting}
-                />
-                {touched && credentialErrors.password ? (
-                  <p className="field-error">{credentialErrors.password}</p>
-                ) : null}
-              </div>
-            ) : (
-              <div className="form-group">
-                <label htmlFor="signup-pin">PIN</label>
-                <input
-                  id="signup-pin"
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="new-password"
-                  maxLength={6}
-                  value={pin}
-                  onChange={(ev) => setPin(ev.target.value.replace(/\D/g, '').slice(0, 6))}
-                  disabled={isSubmitting}
-                />
-                {touched && credentialErrors.pin ? (
-                  <p className="field-error">{credentialErrors.pin}</p>
-                ) : null}
-              </div>
-            )}
-
-            <div className="auth-form__row">
-              <button
-                type="button"
-                className="back-button"
-                onClick={() => setStep('otp')}
-                disabled={isSubmitting}
-              >
-                Back
-              </button>
-              <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Creating account…' : 'Create account'}
-              </button>
-            </div>
           </form>
         ) : null}
 

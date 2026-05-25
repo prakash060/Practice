@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 
 const SALT_ROUNDS = 10;
 const PIN_SALT_ROUNDS = 8;
-const AUTH_TYPES = ['password', 'pin'];
+const AUTH_TYPES = ['password', 'pin', 'otp'];
 const PIN_RE = /^\d{4,6}$/;
 
 const userSchema = new mongoose.Schema(
@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema(
     authType: {
       type: String,
       enum: AUTH_TYPES,
-      default: 'password',
+      default: 'otp',
     },
     emailVerified: { type: Boolean, default: false },
     phoneVerified: { type: Boolean, default: false },

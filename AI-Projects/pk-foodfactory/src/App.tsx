@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { FoodProvider } from './state/FoodContext'
 import { AuthProvider } from './state/AuthContext'
 import { DeliveryAuthProvider } from './state/DeliveryAuthContext'
@@ -17,7 +17,6 @@ import CheckoutPage from './pages/CheckoutPage'
 import PaymentPage from './pages/PaymentPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
-import ForgotCredentialsPage from './pages/ForgotCredentialsPage'
 import ProfilePage from './pages/ProfilePage'
 import MyOrdersPage from './pages/MyOrdersPage'
 import AdminPage from './pages/AdminPage'
@@ -55,14 +54,7 @@ function App() {
                 </GuestRoute>
               }
             />
-            <Route
-              path="/forgot-credentials"
-              element={
-                <GuestRoute>
-                  <ForgotCredentialsPage />
-                </GuestRoute>
-              }
-            />
+            <Route path="/forgot-credentials" element={<Navigate to="/login" replace />} />
             <Route
               path="/"
               element={

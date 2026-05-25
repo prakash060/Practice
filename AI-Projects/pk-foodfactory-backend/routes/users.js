@@ -1,14 +1,12 @@
 const express = require('express');
 const User = require('../models/User');
-const { signToken, requireAuth } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
 const { isAdminEmail } = require('../middleware/admin');
 const {
   validateName,
   validateEmail,
-  validatePassword,
   validatePhone,
   validateAddress,
-  validateIdentifier,
 } = require('../utils/userValidation');
 
 const router = express.Router();
@@ -20,7 +18,7 @@ function safeUser(doc) {
     email: doc.email,
     phone: doc.phone,
     address: doc.address,
-    authType: doc.authType || 'password',
+    authType: doc.authType || 'otp',
     emailVerified: Boolean(doc.emailVerified),
     phoneVerified: Boolean(doc.phoneVerified),
     isAdmin: isAdminEmail(doc.email),
@@ -38,51 +36,10 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  try {
-    const { identifier, secret, email, password } = req.body || {};
-    const loginId = identifier ?? email;
-    const loginSecret = secret ?? password;
-
-    const idRes = validateIdentifier(loginId);
-    if (idRes.error || !loginSecret || typeof loginSecret !== 'string') {
-      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
-    }
-
-    const query =
-      idRes.kind === 'email'
-        ? { email: idRes.value }
-        : { phone: idRes.value };
-
-    const user = await User.findOne(query).select('+password +pinHash');
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
-    }
-
-    const authType = user.authType || 'password';
-    let ok = false;
-    if (authType === 'pin') {
-      ok = await user.verifyPin(loginSecret);
-    } else {
-      ok = await user.verifyPassword(loginSecret);
-    }
-
-    if (!ok) {
-      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
-    }
-
-    let token;
-    try {
-      token = signToken(user._id);
-    } catch (e) {
-      console.error(e);
-      return res.status(500).json({ error: e.message || 'Token signing failed' });
-    }
-
-    return res.json({ user: safeUser(user), token });
-  } catch (err) {
-    console.error('Login error:', err);
-    return res.status(500).json({ error: 'Failed to log in' });
-  }
+  return res.status(410).json({
+    error:
+      'Password login is disabled. Sign in with a verification code sent to your email or mobile number.',
+  });
 });
 
 router.get('/me', requireAuth, async (req, res) => {

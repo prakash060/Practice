@@ -19,6 +19,17 @@ function buildDevOtpPayload(emailCode, phoneCode) {
   return { email: emailCode, phone: phoneCode };
 }
 
+function buildDevOtpLoginPayload(channel, code) {
+  if (!isDevOtpExposureEnabled()) return undefined;
+  return { channel, code };
+}
+
+function purposeLabel(purpose) {
+  if (purpose === 'signup') return 'signup';
+  if (purpose === 'login') return 'sign in';
+  return 'password reset';
+}
+
 function generateOtpCode() {
   return String(crypto.randomInt(100000, 1000000));
 }
@@ -94,19 +105,40 @@ async function createChallengeAndSendOtps({
     completed: false,
   });
 
-  const purposeLabel = purpose === 'signup' ? 'signup' : 'password reset';
+  const purposeLabelText = purposeLabel(purpose);
 
-  await Promise.all([
-    sendOtpEmail(email, emailCode, purposeLabel),
-    sendOtpSms(phone, phoneCode, purposeLabel),
-  ]);
+  const delivery = await deliverOtps(email, emailCode, phone, phoneCode, purposeLabelText);
 
   markSendCooldown(email, phone, purpose);
 
   return {
     challenge,
     sessionToken,
-    devOtp: buildDevOtpPayload(emailCode, phoneCode),
+    devOtp:
+      delivery.emailDevLog || delivery.smsDevLog
+        ? buildDevOtpPayload(emailCode, phoneCode)
+        : undefined,
+    delivery,
+  };
+}
+
+async function deliverOtps(email, emailCode, phone, phoneCode, purposeLabel) {
+  const [emailResult, smsResult] = await Promise.allSettled([
+    sendOtpEmail(email, emailCode, purposeLabel),
+    sendOtpSms(phone, phoneCode, purposeLabel),
+  ]);
+
+  if (emailResult.status === 'rejected') throw emailResult.reason;
+  if (smsResult.status === 'rejected') throw smsResult.reason;
+
+  const emailDevLog = Boolean(emailResult.value?.devLog);
+  const smsDevLog = Boolean(smsResult.value?.devLog);
+
+  return {
+    emailSent: Boolean(emailResult.value?.sent),
+    smsSent: Boolean(smsResult.value?.sent),
+    emailDevLog,
+    smsDevLog,
   };
 }
 
@@ -176,24 +208,198 @@ async function resendOtps(sessionToken, purpose) {
   challenge.expiresAt = new Date(Date.now() + OTP_TTL_MS);
   await challenge.save();
 
-  const purposeLabel = purpose === 'signup' ? 'signup' : 'password reset';
-  await Promise.all([
-    sendOtpEmail(challenge.email, emailCode, purposeLabel),
-    sendOtpSms(challenge.phone, phoneCode, purposeLabel),
-  ]);
+  const purposeLabelText = purposeLabel(purpose);
+  const delivery = await deliverOtps(
+    challenge.email,
+    emailCode,
+    challenge.phone,
+    phoneCode,
+    purposeLabelText
+  );
 
   markSendCooldown(challenge.email, challenge.phone, purpose);
   return {
     challenge,
-    devOtp: buildDevOtpPayload(emailCode, phoneCode),
+    devOtp:
+      delivery.emailDevLog || delivery.smsDevLog
+        ? buildDevOtpPayload(emailCode, phoneCode)
+        : undefined,
+    delivery,
   };
+}
+
+async function createLoginChallengeAndSendOtp({ user, channel }) {
+  const email = user.email;
+  const phone = user.phone;
+  checkSendCooldown(email, phone, 'login');
+
+  const code = generateOtpCode();
+  const sessionToken = newSessionToken();
+
+  await invalidatePriorChallenges(email, phone, 'login');
+
+  const challengeData = {
+    purpose: 'login',
+    sessionToken,
+    email,
+    phone,
+    loginChannel: channel,
+    userId: user._id,
+    expiresAt: new Date(Date.now() + OTP_TTL_MS),
+    emailVerified: false,
+    phoneVerified: false,
+    completed: false,
+    emailCodeHash: null,
+    phoneCodeHash: null,
+  };
+
+  if (channel === 'email') {
+    challengeData.emailCodeHash = await hashOtp(code);
+  } else {
+    challengeData.phoneCodeHash = await hashOtp(code);
+  }
+
+  const challenge = await OtpChallenge.create(challengeData);
+
+  let delivery;
+  if (channel === 'email') {
+    const emailResult = await sendOtpEmail(email, code, purposeLabel('login'));
+    delivery = {
+      emailSent: Boolean(emailResult?.sent),
+      smsSent: false,
+      emailDevLog: Boolean(emailResult?.devLog),
+      smsDevLog: false,
+    };
+  } else {
+    const smsResult = await sendOtpSms(phone, code, purposeLabel('login'));
+    delivery = {
+      emailSent: false,
+      smsSent: Boolean(smsResult?.sent),
+      emailDevLog: false,
+      smsDevLog: Boolean(smsResult?.devLog),
+    };
+  }
+
+  markSendCooldown(email, phone, 'login');
+
+  return {
+    challenge,
+    sessionToken,
+    channel,
+    devOtp:
+      delivery.emailDevLog || delivery.smsDevLog
+        ? buildDevOtpLoginPayload(channel, code)
+        : undefined,
+    delivery,
+  };
+}
+
+async function resendLoginOtp(sessionToken) {
+  const challenge = await findActiveChallenge(sessionToken, 'login');
+  const channel = challenge.loginChannel;
+  if (!channel) {
+    const err = new Error('Invalid login session');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  checkSendCooldown(challenge.email, challenge.phone, 'login');
+
+  const code = generateOtpCode();
+  challenge.emailCodeHash = null;
+  challenge.phoneCodeHash = null;
+  if (channel === 'email') {
+    challenge.emailCodeHash = await hashOtp(code);
+  } else {
+    challenge.phoneCodeHash = await hashOtp(code);
+  }
+  challenge.emailVerified = false;
+  challenge.phoneVerified = false;
+  challenge.attempts = 0;
+  challenge.expiresAt = new Date(Date.now() + OTP_TTL_MS);
+  await challenge.save();
+
+  let delivery;
+  if (channel === 'email') {
+    const emailResult = await sendOtpEmail(challenge.email, code, purposeLabel('login'));
+    delivery = {
+      emailSent: Boolean(emailResult?.sent),
+      smsSent: false,
+      emailDevLog: Boolean(emailResult?.devLog),
+      smsDevLog: false,
+    };
+  } else {
+    const smsResult = await sendOtpSms(challenge.phone, code, purposeLabel('login'));
+    delivery = {
+      emailSent: false,
+      smsSent: Boolean(smsResult?.sent),
+      emailDevLog: false,
+      smsDevLog: Boolean(smsResult?.devLog),
+    };
+  }
+
+  markSendCooldown(challenge.email, challenge.phone, 'login');
+
+  return {
+    challenge,
+    channel,
+    devOtp:
+      delivery.emailDevLog || delivery.smsDevLog
+        ? buildDevOtpLoginPayload(channel, code)
+        : undefined,
+    delivery,
+  };
+}
+
+async function verifyLoginOtp(sessionToken, otp) {
+  const challenge = await findActiveChallenge(sessionToken, 'login');
+  const channel = challenge.loginChannel;
+
+  if (!channel) {
+    const err = new Error('Invalid login session');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (challenge.attempts >= challenge.maxAttempts) {
+    const err = new Error('Too many failed attempts. Please start again.');
+    err.statusCode = 429;
+    throw err;
+  }
+
+  const hash = channel === 'email' ? challenge.emailCodeHash : challenge.phoneCodeHash;
+  const ok = await verifyOtpHash(otp, hash);
+
+  if (!ok) {
+    challenge.attempts += 1;
+    await challenge.save();
+    const err = new Error(
+      channel === 'email'
+        ? 'Email verification code is incorrect.'
+        : 'SMS verification code is incorrect.'
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (channel === 'email') {
+    challenge.emailVerified = true;
+  } else {
+    challenge.phoneVerified = true;
+  }
+  await challenge.save();
+
+  return challenge;
 }
 
 module.exports = {
   OTP_TTL_MS,
   isDevOtpExposureEnabled,
   createChallengeAndSendOtps,
+  createLoginChallengeAndSendOtp,
   findActiveChallenge,
   verifyChallengeOtps,
+  verifyLoginOtp,
   resendOtps,
+  resendLoginOtp,
 };

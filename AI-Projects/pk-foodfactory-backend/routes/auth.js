@@ -2,26 +2,90 @@ const express = require('express');
 const User = require('../models/User');
 const { signToken } = require('../middleware/auth');
 const { isAdminEmail } = require('../middleware/admin');
-const { hashPin } = require('../models/User');
 const {
   validateName,
   validateEmail,
   validatePhone,
   validateAddress,
-  validateAuthCredential,
   validateOtpCode,
+  validateIdentifier,
 } = require('../utils/userValidation');
 const {
   createChallengeAndSendOtps,
+  createLoginChallengeAndSendOtp,
   findActiveChallenge,
   verifyChallengeOtps,
+  verifyLoginOtp,
   resendOtps,
+  resendLoginOtp,
 } = require('../services/otpService');
 
 const router = express.Router();
 
 const GENERIC_RESET_MSG =
   'If an account exists for this email and phone, verification codes have been sent.';
+
+const GENERIC_LOGIN_MSG =
+  'If an account exists for this email or mobile, a verification code has been sent.';
+
+function loginOtpMessage(channel, devOtp, delivery) {
+  if (devOtp && delivery && (delivery.emailDevLog || delivery.smsDevLog)) {
+    return (
+      'Verification code generated. Delivery failed — use the code shown below. ' +
+      'For Gmail, set EMAIL_PASS to a Google App Password (not your login password).'
+    );
+  }
+  return channel === 'email'
+    ? 'Verification code sent to your email.'
+    : 'Verification code sent to your mobile number.';
+}
+
+function otpSessionMessage(devOtp, delivery, { resent = false } = {}) {
+  const prefix = resent ? 'New verification codes' : 'Verification codes';
+
+  if (delivery?.emailSent && delivery?.smsSent) {
+    return resent
+      ? 'New verification codes sent to your email and mobile number.'
+      : 'Verification codes sent to your email and mobile number.';
+  }
+
+  if (delivery?.smsSent && !delivery?.emailSent) {
+    return (
+      `${prefix} sent to your mobile number. Email could not be sent — ` +
+      'use a Google App Password for EMAIL_PASS (https://myaccount.google.com/apppasswords).'
+    );
+  }
+
+  if (delivery?.emailSent && !delivery?.smsSent) {
+    return (
+      `${prefix} sent to your email. SMS could not be sent — ` +
+      'check MSG91_AUTH_KEY, MSG91_TEMPLATE_ID, and DLT template approval.'
+    );
+  }
+
+  if (devOtp && delivery && (delivery.emailDevLog || delivery.smsDevLog)) {
+    return (
+      `${prefix} generated but delivery failed for email and SMS. ` +
+      'Use the codes shown below, or fix EMAIL_PASS (Gmail App Password) and MSG91 settings.'
+    );
+  }
+
+  return resent
+    ? 'New verification codes sent to your email and mobile number.'
+    : 'Verification codes sent to your email and mobile number.';
+}
+
+function respondOtpDeliveryError(err, res, logLabel) {
+  if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+  if (err.code === 'EAUTH') {
+    return res.status(503).json({
+      error:
+        'Gmail rejected EMAIL_PASS. Create a Google App Password at https://myaccount.google.com/apppasswords and put the 16-character password in EMAIL_PASS.',
+    });
+  }
+  console.error(`${logLabel}:`, err);
+  return res.status(500).json({ error: 'Failed to send verification codes' });
+}
 
 function safeUser(doc) {
   return {
@@ -30,7 +94,7 @@ function safeUser(doc) {
     email: doc.email,
     phone: doc.phone,
     address: doc.address,
-    authType: doc.authType || 'password',
+    authType: doc.authType || 'otp',
     emailVerified: Boolean(doc.emailVerified),
     phoneVerified: Boolean(doc.phoneVerified),
     isAdmin: isAdminEmail(doc.email),
@@ -76,7 +140,7 @@ router.post('/signup/start', async (req, res) => {
       return res.status(409).json({ error: 'An account with this phone number already exists' });
     }
 
-    const { sessionToken, devOtp } = await createChallengeAndSendOtps({
+    const { sessionToken, devOtp, delivery } = await createChallengeAndSendOtps({
       purpose: 'signup',
       email: emailRes.value,
       phone: phoneRes.value,
@@ -88,13 +152,11 @@ router.post('/signup/start', async (req, res) => {
 
     return res.status(201).json({
       sessionToken,
-      message: 'Verification codes sent to your email and mobile number.',
+      message: otpSessionMessage(devOtp, delivery),
       ...(devOtp ? { devOtp } : {}),
     });
   } catch (err) {
-    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    console.error('Signup start error:', err);
-    return res.status(500).json({ error: 'Failed to start signup' });
+    return respondOtpDeliveryError(err, res, 'Signup start error');
   }
 });
 
@@ -104,16 +166,14 @@ router.post('/signup/send-otp', async (req, res) => {
     const { sessionToken } = req.body || {};
     if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
 
-    const { devOtp } = await resendOtps(sessionToken, 'signup');
+    const { devOtp, delivery } = await resendOtps(sessionToken, 'signup');
 
     return res.json({
-      message: 'New verification codes sent to your email and mobile number.',
+      message: otpSessionMessage(devOtp, delivery, { resent: true }),
       ...(devOtp ? { devOtp } : {}),
     });
   } catch (err) {
-    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    console.error('Signup resend OTP error:', err);
-    return res.status(500).json({ error: 'Failed to resend codes' });
+    return respondOtpDeliveryError(err, res, 'Signup resend OTP error');
   }
 });
 
@@ -144,14 +204,11 @@ router.post('/signup/verify-otp', async (req, res) => {
   }
 });
 
-// POST /api/auth/signup/complete
+// POST /api/auth/signup/complete — create account after dual OTP verify (no password/PIN)
 router.post('/signup/complete', async (req, res) => {
   try {
-    const { sessionToken, authType, password, pin } = req.body || {};
+    const { sessionToken } = req.body || {};
     if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
-
-    const credRes = validateAuthCredential(authType, password, pin);
-    if (credRes.error) return res.status(400).json({ error: credRes.error });
 
     const challenge = await findActiveChallenge(sessionToken, 'signup');
     if (!challenge.emailVerified || !challenge.phoneVerified) {
@@ -169,25 +226,15 @@ router.post('/signup/complete', async (req, res) => {
       return res.status(409).json({ error: 'An account with this phone number already exists' });
     }
 
-    const userData = {
+    const user = await User.create({
       name: payload.name,
       email: challenge.email,
       phone: challenge.phone,
       address: payload.address,
-      authType: credRes.authType,
+      authType: 'otp',
       emailVerified: true,
       phoneVerified: true,
-    };
-
-    if (credRes.authType === 'password') {
-      userData.password = credRes.password;
-      userData.pinHash = null;
-    } else {
-      userData.password = undefined;
-      userData.pinHash = await hashPin(credRes.pin);
-    }
-
-    const user = await User.create(userData);
+    });
 
     challenge.completed = true;
     await challenge.save();
@@ -204,148 +251,109 @@ router.post('/signup/complete', async (req, res) => {
   }
 });
 
-// POST /api/auth/credentials/reset/start
-router.post('/credentials/reset/start', async (req, res) => {
+// POST /api/auth/login/start — send OTP to email OR mobile used to sign in
+router.post('/login/start', async (req, res) => {
   try {
-    const { email, phone } = req.body || {};
+    const { identifier } = req.body || {};
+    const idRes = validateIdentifier(identifier);
+    if (idRes.error) return res.status(400).json({ error: idRes.error });
 
-    const emailRes = validateEmail(email);
-    if (emailRes.error) return res.status(400).json({ error: emailRes.error });
+    const query =
+      idRes.kind === 'email' ? { email: idRes.value } : { phone: idRes.value };
+    const user = await User.findOne(query);
 
-    const phoneRes = validatePhone(phone);
-    if (phoneRes.error) return res.status(400).json({ error: phoneRes.error });
-
-    const user = await User.findOne({
-      email: emailRes.value,
-      phone: phoneRes.value,
-    });
-
-    let sessionToken;
-    let devOtp;
-    if (user) {
-      const result = await createChallengeAndSendOtps({
-        purpose: 'reset_credentials',
-        email: emailRes.value,
-        phone: phoneRes.value,
-        userId: user._id,
-      });
-      sessionToken = result.sessionToken;
-      devOtp = result.devOtp;
+    if (!user) {
+      return res.json({ message: GENERIC_LOGIN_MSG });
     }
 
+    const channel = idRes.kind;
+    const { sessionToken, devOtp, delivery } = await createLoginChallengeAndSendOtp({
+      user,
+      channel,
+    });
+
     return res.json({
-      message: GENERIC_RESET_MSG,
-      ...(sessionToken ? { sessionToken } : {}),
+      sessionToken,
+      channel,
+      message: loginOtpMessage(channel, devOtp, delivery),
       ...(devOtp ? { devOtp } : {}),
     });
   } catch (err) {
-    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    console.error('Reset start error:', err);
-    return res.json({ message: GENERIC_RESET_MSG });
+    return respondOtpDeliveryError(err, res, 'Login start error');
   }
 });
 
-// POST /api/auth/credentials/reset/send-otp
-router.post('/credentials/reset/send-otp', async (req, res) => {
+// POST /api/auth/login/send-otp
+router.post('/login/send-otp', async (req, res) => {
   try {
     const { sessionToken } = req.body || {};
     if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
 
-    const { devOtp } = await resendOtps(sessionToken, 'reset_credentials');
+    const { channel, devOtp, delivery } = await resendLoginOtp(sessionToken);
 
     return res.json({
-      message: 'New verification codes sent to your email and mobile number.',
+      channel,
+      message: loginOtpMessage(channel, devOtp, delivery),
       ...(devOtp ? { devOtp } : {}),
     });
   } catch (err) {
-    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    console.error('Reset resend OTP error:', err);
-    return res.status(500).json({ error: 'Failed to resend codes' });
+    return respondOtpDeliveryError(err, res, 'Login resend OTP error');
   }
 });
 
-// POST /api/auth/credentials/reset/verify-otp
-router.post('/credentials/reset/verify-otp', async (req, res) => {
+// POST /api/auth/login/verify-otp
+router.post('/login/verify-otp', async (req, res) => {
   try {
-    const { sessionToken, emailOtp, phoneOtp } = req.body || {};
+    const { sessionToken, otp } = req.body || {};
     if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
 
-    const emailOtpRes = validateOtpCode(emailOtp);
-    if (emailOtpRes.error) return res.status(400).json({ error: emailOtpRes.error });
+    const otpRes = validateOtpCode(otp);
+    if (otpRes.error) return res.status(400).json({ error: otpRes.error });
 
-    const phoneOtpRes = validateOtpCode(phoneOtp);
-    if (phoneOtpRes.error) return res.status(400).json({ error: phoneOtpRes.error });
-
-    await verifyChallengeOtps(
-      sessionToken,
-      'reset_credentials',
-      emailOtpRes.value,
-      phoneOtpRes.value
-    );
-
-    return res.json({ verified: true });
-  } catch (err) {
-    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    console.error('Reset verify OTP error:', err);
-    return res.status(500).json({ error: 'Failed to verify codes' });
-  }
-});
-
-// POST /api/auth/credentials/reset/complete
-router.post('/credentials/reset/complete', async (req, res) => {
-  try {
-    const { sessionToken, authType, password, pin } = req.body || {};
-    if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
-
-    const credRes = validateAuthCredential(authType, password, pin);
-    if (credRes.error) return res.status(400).json({ error: credRes.error });
-
-    const challenge = await findActiveChallenge(sessionToken, 'reset_credentials');
-    if (!challenge.emailVerified || !challenge.phoneVerified) {
-      return res.status(400).json({ error: 'Verify email and SMS codes first' });
-    }
+    const challenge = await verifyLoginOtp(sessionToken, otpRes.value);
 
     const user = await User.findById(challenge.userId);
     if (!user) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    user.authType = credRes.authType;
-    user.emailVerified = true;
-    user.phoneVerified = true;
-
-    if (credRes.authType === 'password') {
-      await User.findByIdAndUpdate(user._id, {
-        $set: {
-          authType: 'password',
-          password: credRes.password,
-          emailVerified: true,
-          phoneVerified: true,
-        },
-        $unset: { pinHash: 1 },
-      });
+    if (challenge.loginChannel === 'email') {
+      user.emailVerified = true;
     } else {
-      const pinHash = await hashPin(credRes.pin);
-      await User.findByIdAndUpdate(user._id, {
-        $set: {
-          authType: 'pin',
-          pinHash,
-          emailVerified: true,
-          phoneVerified: true,
-        },
-        $unset: { password: 1 },
-      });
+      user.phoneVerified = true;
     }
+    user.authType = 'otp';
+    await user.save();
 
     challenge.completed = true;
     await challenge.save();
 
-    return res.json({ message: 'Your login credentials have been updated. You can sign in now.' });
+    const token = signUserToken(user);
+    return res.json({ user: safeUser(user), token });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    console.error('Reset complete error:', err);
-    return res.status(500).json({ error: 'Failed to reset credentials' });
+    console.error('Login verify OTP error:', err);
+    return res.status(500).json({ error: 'Failed to verify code' });
   }
+});
+
+// Deprecated — OTP-only auth (use /api/auth/login/*)
+router.post('/credentials/reset/start', async (req, res) => {
+  return res.status(410).json({
+    error: 'Password reset is no longer used. Sign in with a verification code sent to your email or mobile.',
+  });
+});
+
+router.post('/credentials/reset/send-otp', async (req, res) => {
+  return res.status(410).json({ error: 'Password reset is disabled. Use OTP sign in.' });
+});
+
+router.post('/credentials/reset/verify-otp', async (req, res) => {
+  return res.status(410).json({ error: 'Password reset is disabled. Use OTP sign in.' });
+});
+
+router.post('/credentials/reset/complete', async (req, res) => {
+  return res.status(410).json({ error: 'Password reset is disabled. Use OTP sign in.' });
 });
 
 module.exports = router;

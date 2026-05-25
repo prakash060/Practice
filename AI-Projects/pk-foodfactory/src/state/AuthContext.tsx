@@ -15,9 +15,7 @@ type AuthContextValue = {
   user: UserPublic | null
   token: string | null
   isReady: boolean
-  /** Resolves with the freshly-logged-in user so callers can decide where to route (admin → /admin). */
-  login: (identifier: string, secret: string) => Promise<UserPublic>
-  /** After OTP signup complete — stores session from API response. */
+  /** After OTP signup/login complete — stores session from API response. */
   applyAuthSession: (user: UserPublic, token: string) => void
   logout: () => void
   refreshUser: () => Promise<void>
@@ -84,12 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(user)
   }, [])
 
-  const login = useCallback(async (identifier: string, secret: string) => {
-    const res = await authAPI.login({ identifier, secret })
-    applyAuthSession(res.user, res.token)
-    return res.user
-  }, [applyAuthSession])
-
   const logout = useCallback(() => {
     setStoredToken(null)
     setToken(null)
@@ -112,13 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       token,
       isReady,
-      login,
       applyAuthSession,
       logout,
       refreshUser,
       updateProfile,
     }),
-    [user, token, isReady, login, applyAuthSession, logout, refreshUser, updateProfile]
+    [user, token, isReady, applyAuthSession, logout, refreshUser, updateProfile]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -2,141 +2,197 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
+import { OtpInput } from '../components/OtpInput'
+import { authAPI, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
-import { validateLoginForm } from '../utils/userValidators'
+import { validateIdentifier, validateOtp } from '../utils/userValidators'
+
+type Step = 'identifier' | 'otp'
+
+function axiosError(err: unknown, fallback: string): string {
+  if (isAxiosError(err)) {
+    return (err.response?.data as { error?: string })?.error ?? fallback
+  }
+  return fallback
+}
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login } = useAuth()
+  const { applyAuthSession } = useAuth()
+
+  const [step, setStep] = useState<Step>('identifier')
   const [identifier, setIdentifier] = useState('')
-  const [secret, setSecret] = useState('')
-  const [loginMode, setLoginMode] = useState<'password' | 'pin'>('password')
+  const [sessionToken, setSessionToken] = useState('')
+  const [channel, setChannel] = useState<'email' | 'phone'>('email')
+  const [otp, setOtp] = useState('')
+  const [devOtp, setDevOtp] = useState<DevOtpHint | null>(null)
+
   const [submitError, setSubmitError] = useState('')
+  const [infoMessage, setInfoMessage] = useState('')
   const [touched, setTouched] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const requestedFrom =
     (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? null
 
-  const fieldErrors = useMemo(
-    () => validateLoginForm(identifier, secret),
-    [identifier, secret]
-  )
+  const identifierError = useMemo(() => validateIdentifier(identifier), [identifier])
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleIdentifierSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setSubmitError('')
+    setInfoMessage('')
     setTouched(true)
-    if (Object.keys(fieldErrors).length > 0) return
+    if (identifierError) return
 
     setIsSubmitting(true)
     try {
-      const user = await login(identifier.trim(), secret)
-      const target =
-        requestedFrom && requestedFrom !== '/' ? requestedFrom : defaultLandingPath(user)
-      navigate(target, { replace: true })
-    } catch (err) {
-      if (isAxiosError(err)) {
-        const msg = (err.response?.data as { error?: string })?.error
-        setSubmitError(msg ?? 'Invalid email/phone or credentials')
-      } else {
-        setSubmitError('Something went wrong. Please try again.')
+      const res = await authAPI.loginStart(identifier.trim())
+      setInfoMessage(res.message)
+      if (res.sessionToken && res.channel) {
+        setSessionToken(res.sessionToken)
+        setChannel(res.channel)
+        setDevOtp(res.devOtp ?? null)
+        setOtp('')
+        setStep('otp')
       }
+    } catch (err) {
+      setSubmitError(axiosError(err, 'Could not send verification code'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  const handleResendOtp = async () => {
+    if (!sessionToken) return
+    setSubmitError('')
+    setIsSubmitting(true)
+    try {
+      const res = await authAPI.loginSendOtp(sessionToken)
+      setDevOtp(res.devOtp ?? null)
+      setOtp('')
+      setInfoMessage(res.message)
+    } catch (err) {
+      setSubmitError(axiosError(err, 'Could not resend code'))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleOtpSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setSubmitError('')
+    const otpErr = validateOtp(otp)
+    if (otpErr) {
+      setSubmitError(otpErr)
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const res = await authAPI.loginVerifyOtp(sessionToken, otp.trim())
+      applyAuthSession(res.user, res.token)
+      const target =
+        requestedFrom && requestedFrom !== '/' ? requestedFrom : defaultLandingPath(res.user)
+      navigate(target, { replace: true })
+    } catch (err) {
+      setSubmitError(axiosError(err, 'Verification failed'))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const channelLabel = channel === 'email' ? 'email' : 'mobile number'
+
   return (
-    <main className="auth-shell">
+    <main className="auth-shell auth-shell--wide">
       <AppHeaderAuth title="Sign in" />
-      <div className="auth-card">
-        <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          {submitError ? <p className="error-message">{submitError}</p> : null}
+      <div className="auth-card auth-card--wide">
+        <div className="auth-steps" aria-label="Sign in progress">
+          <span className={step === 'identifier' ? 'auth-steps__item--active' : ''}>
+            1. Email or mobile
+          </span>
+          <span className={step === 'otp' ? 'auth-steps__item--active' : ''}>2. Verify</span>
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="login-identifier">Email or mobile</label>
-            <input
-              id="login-identifier"
-              type="text"
-              autoComplete="username"
-              value={identifier}
-              onChange={(ev) => {
-                setIdentifier(ev.target.value)
-              }}
-              disabled={isSubmitting}
-            />
-            {touched && fieldErrors.identifier ? (
-              <p className="field-error">{fieldErrors.identifier}</p>
-            ) : null}
-          </div>
+        {infoMessage ? <p className="auth-info">{infoMessage}</p> : null}
+        {submitError ? <p className="error-message">{submitError}</p> : null}
 
-          <fieldset className="auth-type-picker auth-type-picker--inline">
-            <legend className="visually-hidden">Credential type</legend>
-            <label>
+        {step === 'identifier' ? (
+          <form className="auth-form" onSubmit={handleIdentifierSubmit} noValidate>
+            <p className="item-description">
+              Enter your email or mobile number. We will send a one-time verification code.
+            </p>
+            <div className="form-group">
+              <label htmlFor="login-identifier">Email or mobile</label>
               <input
-                type="radio"
-                name="loginMode"
-                checked={loginMode === 'password'}
-                onChange={() => {
-                  setLoginMode('password')
-                  setSecret('')
-                }}
+                id="login-identifier"
+                type="text"
+                autoComplete="username"
+                value={identifier}
+                onChange={(ev) => setIdentifier(ev.target.value)}
+                disabled={isSubmitting}
               />
-              Password
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="loginMode"
-                checked={loginMode === 'pin'}
-                onChange={() => {
-                  setLoginMode('pin')
-                  setSecret('')
-                }}
-              />
-              PIN
-            </label>
-          </fieldset>
+              {touched && identifierError ? (
+                <p className="field-error">{identifierError}</p>
+              ) : null}
+            </div>
+            <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Sending code…' : 'Send verification code'}
+            </button>
+          </form>
+        ) : null}
 
-          <div className="form-group">
-            <label htmlFor="login-secret">
-              {loginMode === 'pin' ? 'PIN' : 'Password'}
-            </label>
-            <input
-              id="login-secret"
-              type="password"
-              inputMode={loginMode === 'pin' ? 'numeric' : undefined}
-              autoComplete={loginMode === 'pin' ? 'off' : 'current-password'}
-              maxLength={loginMode === 'pin' ? 6 : undefined}
-              value={secret}
-              onChange={(ev) => {
-                const v =
-                  loginMode === 'pin'
-                    ? ev.target.value.replace(/\D/g, '').slice(0, 6)
-                    : ev.target.value
-                setSecret(v)
-              }}
-              disabled={isSubmitting}
-            />
-            {touched && fieldErrors.secret ? (
-              <p className="field-error">{fieldErrors.secret}</p>
+        {step === 'otp' ? (
+          <form className="auth-form" onSubmit={handleOtpSubmit} noValidate>
+            {devOtp?.code ? (
+              <div className="dev-otp-banner" role="status">
+                <p>
+                  <strong>Local development — verification code</strong>
+                </p>
+                <p>
+                  Use <strong>{devOtp.code}</strong> ({devOtp.channel === 'email' ? 'email' : 'SMS'}{' '}
+                  channel).
+                </p>
+              </div>
             ) : null}
-          </div>
-
-          <p className="auth-footer auth-footer--inline">
-            <Link to="/forgot-credentials">Forgot password or PIN?</Link>
-          </p>
-
-          <button
-            type="submit"
-            className="proceed-payment-button auth-submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
+            <p className="item-description">
+              Enter the 6-digit code sent to your <strong>{channelLabel}</strong>.
+            </p>
+            <OtpInput
+              id="login-otp"
+              label={`${channel === 'email' ? 'Email' : 'SMS'} verification code`}
+              value={otp}
+              onChange={setOtp}
+              disabled={isSubmitting}
+              hint={channel === 'phone' ? 'Check your text messages' : 'Check your inbox'}
+            />
+            <div className="auth-form__row">
+              <button
+                type="button"
+                className="back-button"
+                onClick={() => {
+                  setStep('identifier')
+                  setSubmitError('')
+                }}
+                disabled={isSubmitting}
+              >
+                Back
+              </button>
+              <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Verifying…' : 'Verify and sign in'}
+              </button>
+            </div>
+            <button
+              type="button"
+              className="back-button auth-link-btn"
+              onClick={() => void handleResendOtp()}
+              disabled={isSubmitting}
+            >
+              Resend code
+            </button>
+          </form>
+        ) : null}
 
         <p className="auth-footer">
           No account? <Link to="/signup">Create one</Link>

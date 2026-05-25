@@ -4,6 +4,55 @@ function getSmsProvider() {
   return (process.env.SMS_PROVIDER || 'none').trim().toLowerCase();
 }
 
+const SMS_PLACEHOLDER_MARKERS = ['your_msg91', 'your_twilio', 'change_me'];
+
+function looksLikePlaceholder(value) {
+  const v = String(value).trim().toLowerCase();
+  if (!v) return true;
+  return SMS_PLACEHOLDER_MARKERS.some((marker) => v.includes(marker));
+}
+
+function isMsg91Configured() {
+  const authKey = process.env.MSG91_AUTH_KEY;
+  const templateId = process.env.MSG91_TEMPLATE_ID;
+  if (!authKey || !templateId) return false;
+  if (looksLikePlaceholder(authKey) || looksLikePlaceholder(templateId)) return false;
+  return true;
+}
+
+function isTwilioConfigured() {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_FROM;
+  if (!accountSid || !authToken || !from) return false;
+  if (
+    looksLikePlaceholder(accountSid) ||
+    looksLikePlaceholder(authToken) ||
+    looksLikePlaceholder(from)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function getSmsOtpStatusLabel() {
+  const provider = getSmsProvider();
+  if (provider === 'msg91') {
+    return isMsg91Configured()
+      ? 'configured (MSG91)'
+      : 'MSG91 selected but MSG91_AUTH_KEY / MSG91_TEMPLATE_ID missing or placeholder';
+  }
+  if (provider === 'twilio') {
+    return isTwilioConfigured()
+      ? 'configured (Twilio)'
+      : 'Twilio selected but TWILIO_* vars missing or placeholder';
+  }
+  if (provider !== 'none') {
+    return `unknown SMS_PROVIDER "${provider}" — use msg91, twilio, or leave unset for dev-only`;
+  }
+  return 'dev-only (set SMS_PROVIDER=msg91 and MSG91_* keys)';
+}
+
 function devLogSms(phone, code, purposeLabel) {
   if (process.env.NODE_ENV !== 'production' || process.env.OTP_DEV_LOG === 'true') {
     console.warn(`[OTP SMS → ${phone}] ${code} (${purposeLabel})`);
@@ -42,7 +91,12 @@ function sendMsg91(phone, code) {
         });
         res.on('end', () => {
           if (res.statusCode >= 200 && res.statusCode < 300) resolve(data);
-          else reject(new Error(`MSG91 failed: ${data}`));
+          else {
+            console.error(
+              `MSG91 failed (HTTP ${res.statusCode}): ${data || '(empty body)'}`
+            );
+            reject(new Error(`MSG91 failed (HTTP ${res.statusCode})`));
+          }
         });
       }
     );
@@ -101,6 +155,13 @@ async function sendOtpSms(phone, code, purposeLabel = 'verification') {
   const provider = getSmsProvider();
 
   if (provider === 'msg91') {
+    if (!isMsg91Configured()) {
+      console.error(
+        'MSG91: SMS_PROVIDER=msg91 but MSG91_AUTH_KEY or MSG91_TEMPLATE_ID is missing or placeholder'
+      );
+      if (devLogSms(phone, code, purposeLabel)) return { sent: false, devLog: true };
+      throw new Error('MSG91 is not configured on the server');
+    }
     try {
       await sendMsg91(phone, code);
       return { sent: true };
@@ -112,6 +173,11 @@ async function sendOtpSms(phone, code, purposeLabel = 'verification') {
   }
 
   if (provider === 'twilio') {
+    if (!isTwilioConfigured()) {
+      console.error('Twilio: SMS_PROVIDER=twilio but TWILIO_* vars are missing or placeholder');
+      if (devLogSms(phone, code, purposeLabel)) return { sent: false, devLog: true };
+      throw new Error('Twilio is not configured on the server');
+    }
     try {
       await sendTwilio(phone, code, purposeLabel);
       return { sent: true };
@@ -133,4 +199,10 @@ async function sendOtpSms(phone, code, purposeLabel = 'verification') {
   return { sent: false, devLog: true };
 }
 
-module.exports = { sendOtpSms, getSmsProvider };
+module.exports = {
+  sendOtpSms,
+  getSmsProvider,
+  getSmsOtpStatusLabel,
+  isMsg91Configured,
+  isTwilioConfigured,
+};

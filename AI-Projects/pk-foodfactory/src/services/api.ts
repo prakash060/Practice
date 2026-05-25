@@ -48,7 +48,7 @@ api.interceptors.response.use(
   }
 );
 
-export type AuthType = 'password' | 'pin';
+export type AuthType = 'password' | 'pin' | 'otp';
 
 export interface UserPublic {
   id: string;
@@ -245,18 +245,29 @@ export const ordersAPI = {
 };
 
 export interface DevOtpHint {
-  email: string;
-  phone: string;
+  email?: string;
+  phone?: string;
+  channel?: 'email' | 'phone';
+  code?: string;
 }
 
 export interface OtpSessionResponse {
   sessionToken: string;
   message: string;
+  channel?: 'email' | 'phone';
+  devOtp?: DevOtpHint;
+}
+
+export interface LoginStartResponse {
+  message: string;
+  sessionToken?: string;
+  channel?: 'email' | 'phone';
   devOtp?: DevOtpHint;
 }
 
 export interface OtpResendResponse {
   message: string;
+  channel?: 'email' | 'phone';
   devOtp?: DevOtpHint;
 }
 
@@ -291,13 +302,26 @@ export const authAPI = {
     return response.data;
   },
 
-  signupComplete: async (body: {
-    sessionToken: string;
-    authType: AuthType;
-    password?: string;
-    pin?: string;
-  }): Promise<LoginResponse> => {
+  signupComplete: async (body: { sessionToken: string }): Promise<LoginResponse> => {
     const response = await api.post<LoginResponse>('/auth/signup/complete', body);
+    return response.data;
+  },
+
+  loginStart: async (identifier: string): Promise<LoginStartResponse> => {
+    const response = await api.post<LoginStartResponse>('/auth/login/start', { identifier });
+    return response.data;
+  },
+
+  loginSendOtp: async (sessionToken: string): Promise<OtpResendResponse> => {
+    const response = await api.post<OtpResendResponse>('/auth/login/send-otp', { sessionToken });
+    return response.data;
+  },
+
+  loginVerifyOtp: async (sessionToken: string, otp: string): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>('/auth/login/verify-otp', {
+      sessionToken,
+      otp,
+    });
     return response.data;
   },
 
@@ -338,9 +362,8 @@ export const authAPI = {
     return response.data;
   },
 
-  login: async (body: { identifier: string; secret: string }): Promise<LoginResponse> => {
-    const response = await api.post<LoginResponse>('/users/login', body);
-    return response.data;
+  login: async (_body: { identifier: string; secret: string }): Promise<LoginResponse> => {
+    throw new Error('Password login is disabled. Use OTP sign in.');
   },
 
   getMe: async (): Promise<UserPublic> => {
