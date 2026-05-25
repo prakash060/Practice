@@ -182,6 +182,10 @@ export default function LoginPage() {
             PIN
           </label>
         </fieldset>
+        <p className="item-description auth-method-hint">
+          Use any sign-in method configured on your account. OTP always works; password and PIN work
+          when set.
+        </p>
 
         {infoMessage ? <p className="auth-info">{infoMessage}</p> : null}
         {submitError ? <p className="error-message">{submitError}</p> : null}

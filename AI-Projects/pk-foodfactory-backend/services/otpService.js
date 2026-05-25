@@ -392,6 +392,120 @@ async function verifyLoginOtp(sessionToken, otp) {
   return challenge;
 }
 
+async function createResetSession({ email, phone, userId }) {
+  await invalidatePriorChallenges(email, phone, 'reset_credentials');
+  const sessionToken = newSessionToken();
+  const challenge = await OtpChallenge.create({
+    purpose: 'reset_credentials',
+    sessionToken,
+    email,
+    phone,
+    userId: userId || null,
+    expiresAt: new Date(Date.now() + OTP_TTL_MS),
+    emailVerified: false,
+    phoneVerified: false,
+    identityVerified: false,
+    completed: false,
+    loginChannel: null,
+    emailCodeHash: null,
+    phoneCodeHash: null,
+  });
+  return { challenge, sessionToken };
+}
+
+async function sendResetSingleOtp(sessionToken, channel) {
+  const challenge = await findActiveChallenge(sessionToken, 'reset_credentials');
+  checkSendCooldown(challenge.email, challenge.phone, 'reset_credentials');
+
+  const code = generateOtpCode();
+  challenge.loginChannel = channel;
+  challenge.emailCodeHash = null;
+  challenge.phoneCodeHash = null;
+  challenge.identityVerified = false;
+  challenge.attempts = 0;
+  challenge.expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+  if (channel === 'email') {
+    challenge.emailCodeHash = await hashOtp(code);
+  } else {
+    challenge.phoneCodeHash = await hashOtp(code);
+  }
+  await challenge.save();
+
+  let delivery;
+  if (channel === 'email') {
+    const emailResult = await sendOtpEmail(challenge.email, code, purposeLabel('reset_credentials'));
+    delivery = {
+      emailSent: Boolean(emailResult?.sent),
+      smsSent: false,
+      emailDevLog: Boolean(emailResult?.devLog),
+      smsDevLog: false,
+    };
+  } else {
+    const smsResult = await sendOtpSms(challenge.phone, code, purposeLabel('reset_credentials'));
+    delivery = {
+      emailSent: false,
+      smsSent: Boolean(smsResult?.sent),
+      emailDevLog: false,
+      smsDevLog: Boolean(smsResult?.devLog),
+    };
+  }
+
+  markSendCooldown(challenge.email, challenge.phone, 'reset_credentials');
+
+  return {
+    challenge,
+    channel,
+    devOtp:
+      delivery.emailDevLog || delivery.smsDevLog
+        ? buildDevOtpLoginPayload(channel, code)
+        : undefined,
+    delivery,
+  };
+}
+
+async function resendResetSingleOtp(sessionToken) {
+  const challenge = await findActiveChallenge(sessionToken, 'reset_credentials');
+  const channel = challenge.loginChannel;
+  if (!channel) {
+    const err = new Error('Choose email or SMS before requesting a code');
+    err.statusCode = 400;
+    throw err;
+  }
+  return sendResetSingleOtp(sessionToken, channel);
+}
+
+async function verifyResetSingleOtp(sessionToken, otp) {
+  const challenge = await findActiveChallenge(sessionToken, 'reset_credentials');
+  const channel = challenge.loginChannel;
+  if (!channel) {
+    const err = new Error('Request a verification code first');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (challenge.attempts >= challenge.maxAttempts) {
+    const err = new Error('Too many failed attempts. Please start again.');
+    err.statusCode = 429;
+    throw err;
+  }
+
+  const hash = channel === 'email' ? challenge.emailCodeHash : challenge.phoneCodeHash;
+  const ok = await verifyOtpHash(otp, hash);
+
+  if (!ok) {
+    challenge.attempts += 1;
+    await challenge.save();
+    const err = new Error('Verification code is incorrect.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  challenge.identityVerified = true;
+  await challenge.save();
+  return challenge;
+}
+
 async function invalidateSwitchChallenges(userId) {
   await OtpChallenge.deleteMany({
     purpose: 'switch_auth_method',
@@ -557,12 +671,16 @@ module.exports = {
   isDevOtpExposureEnabled,
   createChallengeAndSendOtps,
   createLoginChallengeAndSendOtp,
+  createResetSession,
   createSwitchAuthChallenge,
   findActiveChallenge,
   verifyChallengeOtps,
   verifyLoginOtp,
+  verifyResetSingleOtp,
   verifySwitchAuthOtp,
   resendOtps,
   resendLoginOtp,
+  resendResetSingleOtp,
+  sendResetSingleOtp,
   resendSwitchAuthOtp,
 };

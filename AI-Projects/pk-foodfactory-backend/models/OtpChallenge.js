@@ -13,6 +13,7 @@ const otpChallengeSchema = new mongoose.Schema(
     loginChannel: { type: String, enum: LOGIN_CHANNELS, default: null },
     targetAuthType: { type: String, enum: TARGET_AUTH_TYPES, default: null },
     oldAuthVerified: { type: Boolean, default: false },
+    identityVerified: { type: Boolean, default: false },
     emailCodeHash: { type: String, default: null, select: false },
     phoneCodeHash: { type: String, default: null, select: false },
     emailVerified: { type: Boolean, default: false },

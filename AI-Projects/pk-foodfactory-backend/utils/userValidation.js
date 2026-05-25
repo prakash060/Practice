@@ -97,6 +97,27 @@ function validateAuthCredential(authType, password, pin) {
   return { authType, password: null, pin: pinRes.value };
 }
 
+function validateOptionalSignupCredentials(password, pin) {
+  const hasPassword = password !== undefined && password !== null && String(password).length > 0;
+  const hasPin = pin !== undefined && pin !== null && String(pin).trim().length > 0;
+
+  const result = { password: null, pin: null };
+
+  if (hasPassword) {
+    const passRes = validatePassword(password, { required: true });
+    if (passRes.error) return passRes;
+    result.password = passRes.value;
+  }
+
+  if (hasPin) {
+    const pinRes = validatePin(pin, { required: true });
+    if (pinRes.error) return pinRes;
+    result.pin = pinRes.value;
+  }
+
+  return result;
+}
+
 function validateIdentifier(identifier) {
   if (!identifier || typeof identifier !== 'string' || !identifier.trim()) {
     return { error: 'Email or mobile number is required' };
@@ -170,6 +191,7 @@ module.exports = {
   validatePassword,
   validatePin,
   validateAuthCredential,
+  validateOptionalSignupCredentials,
   validateIdentifier,
   validateOtpCode,
   validatePhone,

@@ -11,13 +11,19 @@ import {
   validatePhone,
 } from '../utils/userValidators'
 
-type Step = 'identify' | 'otp' | 'credential'
+type Step = 'identify' | 'verify' | 'credential'
 
 function axiosError(err: unknown, fallback: string): string {
   if (isAxiosError(err)) {
     return (err.response?.data as { error?: string })?.error ?? fallback
   }
   return fallback
+}
+
+function methodLabel(method: AuthType): string {
+  if (method === 'password') return 'Password'
+  if (method === 'pin') return 'PIN'
+  return 'OTP'
 }
 
 export default function ForgotCredentialsPage() {
@@ -28,14 +34,21 @@ export default function ForgotCredentialsPage() {
 
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [emailOtp, setEmailOtp] = useState('')
-  const [phoneOtp, setPhoneOtp] = useState('')
+
+  const [availableMethods, setAvailableMethods] = useState<AuthType[]>(['otp'])
+  const [verifyMethod, setVerifyMethod] = useState<AuthType>('otp')
+  const [lastLoginMethod, setLastLoginMethod] = useState<AuthType | null>(null)
+
+  const [verifySecret, setVerifySecret] = useState('')
+  const [otpChannel, setOtpChannel] = useState<'email' | 'phone'>('email')
+  const [otpSent, setOtpSent] = useState(false)
+  const [verifyOtp, setVerifyOtp] = useState('')
+  const [devOtp, setDevOtp] = useState<DevOtpHint | null>(null)
 
   const [authType, setAuthType] = useState<AuthType>('password')
   const [password, setPassword] = useState('')
   const [pin, setPin] = useState('')
 
-  const [devOtp, setDevOtp] = useState<DevOtpHint | null>(null)
   const [submitError, setSubmitError] = useState('')
   const [infoMessage, setInfoMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -73,12 +86,19 @@ export default function ForgotCredentialsPage() {
       setInfoMessage(res.message)
       if (res.sessionToken) {
         setSessionToken(res.sessionToken)
-        setDevOtp(res.devOtp ?? null)
-        setEmailOtp('')
-        setPhoneOtp('')
-        setStep('otp')
-      } else {
-        setStep('identify')
+        const methods = res.availableMethods?.length ? res.availableMethods : ['otp']
+        setAvailableMethods(methods)
+        const suggested =
+          res.suggestedMethod && methods.includes(res.suggestedMethod)
+            ? res.suggestedMethod
+            : methods[0]
+        setVerifyMethod(suggested)
+        setLastLoginMethod(res.lastLoginMethod ?? null)
+        setVerifySecret('')
+        setVerifyOtp('')
+        setOtpSent(false)
+        setDevOtp(null)
+        setStep('verify')
       }
     } catch (err) {
       setSubmitError(axiosError(err, 'Could not start reset'))
@@ -87,37 +107,52 @@ export default function ForgotCredentialsPage() {
     }
   }
 
-  const handleResendOtp = async () => {
+  const handleSendVerifyOtp = async () => {
     if (!sessionToken) return
+    setSubmitError('')
     setIsSubmitting(true)
     try {
-      const res = await authAPI.resetSendOtp(sessionToken)
+      const res = await authAPI.resetSendOtp(sessionToken, otpChannel)
       setDevOtp(res.devOtp ?? null)
-      setEmailOtp('')
-      setPhoneOtp('')
+      setVerifyOtp('')
+      setOtpSent(true)
       setInfoMessage(res.message)
     } catch (err) {
-      setSubmitError(axiosError(err, 'Could not resend codes'))
+      setSubmitError(axiosError(err, 'Could not send code'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleOtpSubmit = async (e: FormEvent) => {
+  const handleVerifySubmit = async (e: FormEvent) => {
     e.preventDefault()
     setSubmitError('')
-    const eEmail = validateOtp(emailOtp)
-    const ePhone = validateOtp(phoneOtp)
-    if (eEmail || ePhone) {
-      setSubmitError(eEmail || ePhone || 'Invalid codes')
+
+    if (verifyMethod === 'otp') {
+      if (!otpSent) {
+        setSubmitError('Send a verification code first')
+        return
+      }
+      const otpErr = validateOtp(verifyOtp)
+      if (otpErr) {
+        setSubmitError(otpErr)
+        return
+      }
+    } else if (!verifySecret) {
+      setSubmitError(`${methodLabel(verifyMethod)} is required`)
       return
     }
 
     setIsSubmitting(true)
     try {
-      await authAPI.resetVerifyOtp(sessionToken, emailOtp.trim(), phoneOtp.trim())
+      await authAPI.resetVerify({
+        sessionToken,
+        verifyMethod,
+        secret: verifyMethod !== 'otp' ? verifySecret : undefined,
+        otp: verifyMethod === 'otp' ? verifyOtp.trim() : undefined,
+      })
       setStep('credential')
-      setInfoMessage('Verified. Set your new password or PIN.')
+      setInfoMessage('Verified. Add or update a password or PIN (existing methods stay active).')
     } catch (err) {
       setSubmitError(axiosError(err, 'Verification failed'))
     } finally {
@@ -169,7 +204,8 @@ export default function ForgotCredentialsPage() {
       <AppHeaderAuth title="Reset password or PIN" />
       <div className="auth-card auth-card--wide">
         <p className="item-description">
-          We will send verification codes to the email and mobile on your account.
+          Verify your identity using any sign-in method on your account. Your last used method is
+          suggested first.
         </p>
 
         {infoMessage ? <p className="auth-info">{infoMessage}</p> : null}
@@ -198,53 +234,126 @@ export default function ForgotCredentialsPage() {
               />
             </div>
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Sending…' : 'Send verification codes'}
+              {isSubmitting ? 'Continuing…' : 'Continue'}
             </button>
           </form>
         ) : null}
 
-        {step === 'otp' && sessionToken ? (
-          <form className="auth-form" onSubmit={handleOtpSubmit} noValidate>
-            {devOtp ? (
-              <div className="dev-otp-banner" role="status">
-                <p>
-                  <strong>Local development — verification codes</strong>
-                </p>
-                {devOtp.email === devOtp.phone ? (
-                  <p>
-                    Use <strong>{devOtp.email}</strong> in both fields below.
-                  </p>
-                ) : (
-                  <p>
-                    Email: <strong>{devOtp.email}</strong> · SMS: <strong>{devOtp.phone}</strong>
-                  </p>
-                )}
-              </div>
+        {step === 'verify' && sessionToken ? (
+          <form className="auth-form" onSubmit={handleVerifySubmit} noValidate>
+            {lastLoginMethod ? (
+              <p className="item-description">
+                Last sign-in method: <strong>{methodLabel(lastLoginMethod)}</strong>
+              </p>
             ) : null}
-            <OtpInput
-              id="reset-email-otp"
-              label="Email verification code"
-              value={emailOtp}
-              onChange={setEmailOtp}
-              disabled={isSubmitting}
-            />
-            <OtpInput
-              id="reset-phone-otp"
-              label="SMS verification code"
-              value={phoneOtp}
-              onChange={setPhoneOtp}
-              disabled={isSubmitting}
-            />
+
+            <fieldset className="auth-type-picker auth-type-picker--inline auth-method-tabs">
+              <legend className="visually-hidden">Verify with</legend>
+              {availableMethods.map((method) => (
+                <label key={method}>
+                  <input
+                    type="radio"
+                    name="verifyMethod"
+                    checked={verifyMethod === method}
+                    onChange={() => {
+                      setVerifyMethod(method)
+                      setVerifySecret('')
+                      setVerifyOtp('')
+                      setOtpSent(false)
+                      setSubmitError('')
+                    }}
+                    disabled={isSubmitting}
+                  />
+                  {methodLabel(method)}
+                </label>
+              ))}
+            </fieldset>
+
+            {verifyMethod === 'otp' ? (
+              <>
+                <fieldset className="auth-type-picker auth-type-picker--inline">
+                  <legend className="visually-hidden">OTP channel</legend>
+                  <label>
+                    <input
+                      type="radio"
+                      name="otpChannel"
+                      checked={otpChannel === 'email'}
+                      onChange={() => {
+                        setOtpChannel('email')
+                        setOtpSent(false)
+                        setVerifyOtp('')
+                      }}
+                      disabled={isSubmitting}
+                    />
+                    Email
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="otpChannel"
+                      checked={otpChannel === 'phone'}
+                      onChange={() => {
+                        setOtpChannel('phone')
+                        setOtpSent(false)
+                        setVerifyOtp('')
+                      }}
+                      disabled={isSubmitting}
+                    />
+                    SMS
+                  </label>
+                </fieldset>
+                <button
+                  type="button"
+                  className="back-button auth-link-btn"
+                  onClick={() => void handleSendVerifyOtp()}
+                  disabled={isSubmitting}
+                >
+                  {otpSent ? 'Resend code' : 'Send verification code'}
+                </button>
+                {devOtp?.code ? (
+                  <div className="dev-otp-banner" role="status">
+                    <p>
+                      <strong>Local development — verification code</strong>
+                    </p>
+                    <p>
+                      Use <strong>{devOtp.code}</strong>
+                    </p>
+                  </div>
+                ) : null}
+                {otpSent ? (
+                  <OtpInput
+                    id="reset-verify-otp"
+                    label={`${otpChannel === 'email' ? 'Email' : 'SMS'} verification code`}
+                    value={verifyOtp}
+                    onChange={setVerifyOtp}
+                    disabled={isSubmitting}
+                  />
+                ) : null}
+              </>
+            ) : (
+              <div className="form-group">
+                <label htmlFor="reset-verify-secret">{methodLabel(verifyMethod)}</label>
+                <input
+                  id="reset-verify-secret"
+                  type="password"
+                  inputMode={verifyMethod === 'pin' ? 'numeric' : undefined}
+                  autoComplete="off"
+                  maxLength={verifyMethod === 'pin' ? 6 : undefined}
+                  value={verifySecret}
+                  onChange={(ev) => {
+                    const v =
+                      verifyMethod === 'pin'
+                        ? ev.target.value.replace(/\D/g, '').slice(0, 6)
+                        : ev.target.value
+                    setVerifySecret(v)
+                  }}
+                  disabled={isSubmitting}
+                />
+              </div>
+            )}
+
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Verifying…' : 'Verify codes'}
-            </button>
-            <button
-              type="button"
-              className="back-button auth-link-btn"
-              onClick={() => void handleResendOtp()}
-              disabled={isSubmitting}
-            >
-              Resend codes
+              {isSubmitting ? 'Verifying…' : 'Verify identity'}
             </button>
           </form>
         ) : null}
@@ -252,7 +361,7 @@ export default function ForgotCredentialsPage() {
         {step === 'credential' ? (
           <form className="auth-form" onSubmit={handleCredentialSubmit} noValidate>
             <fieldset className="auth-type-picker">
-              <legend>New sign-in method</legend>
+              <legend>Add or update</legend>
               <label>
                 <input
                   type="radio"

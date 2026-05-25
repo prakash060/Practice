@@ -6,7 +6,7 @@ import { OtpInput } from '../components/OtpInput'
 import { authAPI, type AuthType, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
 import {
-  validateCredentialForm,
+  validateOptionalSignupCredentials,
   validateOtp,
   validateSignupProfileForm,
 } from '../utils/userValidators'
@@ -35,7 +35,8 @@ export default function SignupPage() {
   const [emailOtp, setEmailOtp] = useState('')
   const [phoneOtp, setPhoneOtp] = useState('')
 
-  const [authType, setAuthType] = useState<AuthType>('otp')
+  const [enablePassword, setEnablePassword] = useState(false)
+  const [enablePin, setEnablePin] = useState(false)
   const [password, setPassword] = useState('')
   const [pin, setPin] = useState('')
 
@@ -51,8 +52,8 @@ export default function SignupPage() {
   )
 
   const credentialErrors = useMemo(
-    () => validateCredentialForm(authType, password, pin),
-    [authType, password, pin]
+    () => validateOptionalSignupCredentials(enablePassword, password, enablePin, pin),
+    [enablePassword, password, enablePin, pin]
   )
 
   const handleProfileSubmit = async (e: FormEvent) => {
@@ -116,7 +117,9 @@ export default function SignupPage() {
     try {
       await authAPI.signupVerifyOtp(sessionToken, emailOtp.trim(), phoneOtp.trim())
       setStep('credential')
-      setInfoMessage('Verification successful. Choose how you want to sign in.')
+      setInfoMessage(
+        'Verification successful. OTP sign-in is always enabled. Optionally add a password and/or PIN.'
+      )
     } catch (err) {
       setSubmitError(axiosError(err, 'Verification failed'))
     } finally {
@@ -134,21 +137,17 @@ export default function SignupPage() {
     try {
       const res = await authAPI.signupComplete({
         sessionToken,
-        authType,
-        password: authType === 'password' ? password : undefined,
-        pin: authType === 'pin' ? pin : undefined,
+        password: enablePassword ? password : undefined,
+        pin: enablePin ? pin : undefined,
       })
       applyAuthSession(res.user, res.token)
       navigate(defaultLandingPath(res.user), { replace: true })
     } catch (err) {
-      setSubmitError(axiosError(err, 'Could not complete signup'))
+      setSubmitError(axiosError(err, 'Could not create account'))
     } finally {
       setIsSubmitting(false)
     }
   }
-
-  const showProfileErr = (key: keyof typeof profileErrors) =>
-    (touched || isSubmitting) && profileErrors[key]
 
   return (
     <main className="auth-shell auth-shell--wide">
@@ -166,57 +165,59 @@ export default function SignupPage() {
         {step === 'profile' ? (
           <form className="auth-form" onSubmit={handleProfileSubmit} noValidate>
             <div className="form-group">
-              <label htmlFor="signup-name">Name</label>
+              <label htmlFor="signup-name">Full name</label>
               <input
                 id="signup-name"
                 type="text"
-                autoComplete="name"
                 value={name}
                 onChange={(ev) => setName(ev.target.value)}
                 disabled={isSubmitting}
               />
-              {showProfileErr('name') ? <p className="field-error">{profileErrors.name}</p> : null}
+              {touched && profileErrors.name ? (
+                <p className="field-error">{profileErrors.name}</p>
+              ) : null}
             </div>
             <div className="form-group">
               <label htmlFor="signup-email">Email</label>
               <input
                 id="signup-email"
                 type="email"
-                autoComplete="email"
                 value={email}
                 onChange={(ev) => setEmail(ev.target.value)}
                 disabled={isSubmitting}
               />
-              {showProfileErr('email') ? <p className="field-error">{profileErrors.email}</p> : null}
+              {touched && profileErrors.email ? (
+                <p className="field-error">{profileErrors.email}</p>
+              ) : null}
             </div>
             <div className="form-group">
               <label htmlFor="signup-phone">Mobile number</label>
               <input
                 id="signup-phone"
                 type="tel"
-                autoComplete="tel"
                 value={phone}
                 onChange={(ev) => setPhone(ev.target.value)}
                 disabled={isSubmitting}
               />
-              {showProfileErr('phone') ? <p className="field-error">{profileErrors.phone}</p> : null}
+              {touched && profileErrors.phone ? (
+                <p className="field-error">{profileErrors.phone}</p>
+              ) : null}
             </div>
             <div className="form-group">
-              <label htmlFor="signup-address">Address</label>
+              <label htmlFor="signup-address">Delivery address</label>
               <textarea
                 id="signup-address"
-                autoComplete="street-address"
-                rows={4}
+                rows={3}
                 value={address}
                 onChange={(ev) => setAddress(ev.target.value)}
                 disabled={isSubmitting}
               />
-              {showProfileErr('address') ? (
+              {touched && profileErrors.address ? (
                 <p className="field-error">{profileErrors.address}</p>
               ) : null}
             </div>
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Sending codes…' : 'Send verification codes'}
+              {isSubmitting ? 'Sending codes…' : 'Continue'}
             </button>
           </form>
         ) : null}
@@ -230,8 +231,7 @@ export default function SignupPage() {
                 </p>
                 {devOtp.email === devOtp.phone ? (
                   <p>
-                    Use <strong>{devOtp.email}</strong> in both fields below (email/SMS are not
-                    configured on the server).
+                    Use <strong>{devOtp.email}</strong> in both fields below.
                   </p>
                 ) : (
                   <p>
@@ -240,9 +240,6 @@ export default function SignupPage() {
                 )}
               </div>
             ) : null}
-            <p className="item-description">
-              Enter the 6-digit codes sent to <strong>{email}</strong> and <strong>{phone}</strong>.
-            </p>
             <OtpInput
               id="signup-email-otp"
               label="Email verification code"
@@ -256,7 +253,6 @@ export default function SignupPage() {
               value={phoneOtp}
               onChange={setPhoneOtp}
               disabled={isSubmitting}
-              hint="Check your text messages"
             />
             <div className="auth-form__row">
               <button
@@ -268,7 +264,7 @@ export default function SignupPage() {
                 Back
               </button>
               <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Verifying…' : 'Verify codes'}
+                {isSubmitting ? 'Verifying…' : 'Verify'}
               </button>
             </div>
             <button
@@ -284,44 +280,39 @@ export default function SignupPage() {
 
         {step === 'credential' ? (
           <form className="auth-form" onSubmit={handleCredentialSubmit} noValidate>
+            <p className="item-description">
+              <strong>OTP sign-in</strong> is always available using your email or mobile. You can also
+              add optional sign-in methods below — use any of them whenever you log in.
+            </p>
             <fieldset className="auth-type-picker">
-              <legend>Sign in with</legend>
+              <legend>Optional sign-in methods</legend>
               <label>
                 <input
-                  type="radio"
-                  name="authType"
-                  value="otp"
-                  checked={authType === 'otp'}
-                  onChange={() => setAuthType('otp')}
+                  type="checkbox"
+                  checked={enablePassword}
+                  onChange={(ev) => {
+                    setEnablePassword(ev.target.checked)
+                    if (!ev.target.checked) setPassword('')
+                  }}
                   disabled={isSubmitting}
                 />
-                OTP only (email or mobile code each time)
+                Set a password (8+ characters)
               </label>
               <label>
                 <input
-                  type="radio"
-                  name="authType"
-                  value="password"
-                  checked={authType === 'password'}
-                  onChange={() => setAuthType('password')}
+                  type="checkbox"
+                  checked={enablePin}
+                  onChange={(ev) => {
+                    setEnablePin(ev.target.checked)
+                    if (!ev.target.checked) setPin('')
+                  }}
                   disabled={isSubmitting}
                 />
-                Password (8+ characters)
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="authType"
-                  value="pin"
-                  checked={authType === 'pin'}
-                  onChange={() => setAuthType('pin')}
-                  disabled={isSubmitting}
-                />
-                PIN (4–6 digits)
+                Set a PIN (4–6 digits)
               </label>
             </fieldset>
 
-            {authType === 'password' ? (
+            {enablePassword ? (
               <div className="form-group">
                 <label htmlFor="signup-password">Password</label>
                 <input
@@ -338,7 +329,7 @@ export default function SignupPage() {
               </div>
             ) : null}
 
-            {authType === 'pin' ? (
+            {enablePin ? (
               <div className="form-group">
                 <label htmlFor="signup-pin">PIN</label>
                 <input

@@ -135,6 +135,24 @@ export function validateCredentialForm(authType: AuthType, password: string, pin
   return errors
 }
 
+export function validateOptionalSignupCredentials(
+  enablePassword: boolean,
+  password: string,
+  enablePin: boolean,
+  pin: string
+): FieldErrors {
+  const errors: FieldErrors = {}
+  if (enablePassword) {
+    const ePass = validatePassword(password)
+    if (ePass) errors.password = ePass
+  }
+  if (enablePin) {
+    const ePin = validatePin(pin)
+    if (ePin) errors.pin = ePin
+  }
+  return errors
+}
+
 export function validateLoginForm(identifier: string, secret: string): FieldErrors {
   const errors: FieldErrors = {}
   const eId = validateIdentifier(identifier)

@@ -57,6 +57,7 @@ export interface UserPublic {
   phone: string;
   address: string;
   authType?: AuthType;
+  lastLoginMethod?: AuthType | null;
   emailVerified?: boolean;
   phoneVerified?: boolean;
   isAdmin?: boolean;
@@ -284,7 +285,13 @@ export interface SwitchMethodStartResponse {
   devOtp?: DevOtpHint;
 }
 
-export interface OtpResendResponse {
+export interface ResetStartResponse {
+  message: string;
+  sessionToken?: string;
+  availableMethods?: AuthType[];
+  lastLoginMethod?: AuthType | null;
+  suggestedMethod?: AuthType;
+}
   message: string;
   channel?: 'email' | 'phone';
   devOtp?: DevOtpHint;
@@ -352,15 +359,29 @@ export const authAPI = {
   resetCredentialsStart: async (body: {
     email: string;
     phone: string;
-  }): Promise<OtpSessionResponse> => {
-    const response = await api.post<OtpSessionResponse>('/auth/credentials/reset/start', body);
+  }): Promise<ResetStartResponse> => {
+    const response = await api.post<ResetStartResponse>('/auth/credentials/reset/start', body);
     return response.data;
   },
 
-  resetSendOtp: async (sessionToken: string): Promise<OtpResendResponse> => {
+  resetSendOtp: async (
+    sessionToken: string,
+    channel: 'email' | 'phone'
+  ): Promise<OtpResendResponse> => {
     const response = await api.post<OtpResendResponse>('/auth/credentials/reset/send-otp', {
       sessionToken,
+      channel,
     });
+    return response.data;
+  },
+
+  resetVerify: async (body: {
+    sessionToken: string;
+    verifyMethod: AuthType;
+    secret?: string;
+    otp?: string;
+  }): Promise<{ verified: boolean }> => {
+    const response = await api.post<{ verified: boolean }>('/auth/credentials/reset/verify', body);
     return response.data;
   },
 

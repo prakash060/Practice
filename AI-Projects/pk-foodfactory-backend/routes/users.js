@@ -11,6 +11,8 @@ const {
   phoneLookupRegex,
 } = require('../utils/userValidation');
 
+const { recordSuccessfulLogin } = require('../utils/authMethods');
+
 const router = express.Router();
 
 function safeUser(doc) {
@@ -21,6 +23,7 @@ function safeUser(doc) {
     phone: doc.phone,
     address: doc.address,
     authType: doc.authType || 'otp',
+    lastLoginMethod: doc.lastLoginMethod || null,
     emailVerified: Boolean(doc.emailVerified),
     phoneVerified: Boolean(doc.phoneVerified),
     isAdmin: isAdminEmail(doc.email),
@@ -96,6 +99,8 @@ router.post('/login', async (req, res) => {
       console.error(e);
       return res.status(500).json({ error: e.message || 'Token signing failed' });
     }
+
+    await recordSuccessfulLogin(user._id, mode);
 
     return res.json({ user: safeUser(user), token });
   } catch (err) {

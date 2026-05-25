@@ -32,6 +32,11 @@ const userSchema = new mongoose.Schema(
       enum: AUTH_TYPES,
       default: 'otp',
     },
+    lastLoginMethod: {
+      type: String,
+      enum: AUTH_TYPES,
+      default: null,
+    },
     emailVerified: { type: Boolean, default: false },
     phoneVerified: { type: Boolean, default: false },
     phone: { type: String, required: true, trim: true },

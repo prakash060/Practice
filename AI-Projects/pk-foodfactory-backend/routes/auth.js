@@ -11,19 +11,25 @@ const {
   validateOtpCode,
   validateIdentifier,
   validateAuthCredential,
+  validateOptionalSignupCredentials,
   phoneLookupRegex,
   getPhoneLast10,
 } = require('../utils/userValidation');
+const { buildLoginMethodsResponse, recordSuccessfulLogin, LOGIN_METHODS } = require('../utils/authMethods');
 const {
   createChallengeAndSendOtps,
   createLoginChallengeAndSendOtp,
+  createResetSession,
   createSwitchAuthChallenge,
   findActiveChallenge,
   verifyChallengeOtps,
   verifyLoginOtp,
+  verifyResetSingleOtp,
   verifySwitchAuthOtp,
   resendOtps,
   resendLoginOtp,
+  resendResetSingleOtp,
+  sendResetSingleOtp,
   resendSwitchAuthOtp,
 } = require('../services/otpService');
 
@@ -102,6 +108,7 @@ function safeUser(doc) {
     phone: doc.phone,
     address: doc.address,
     authType: doc.authType || 'otp',
+    lastLoginMethod: doc.lastLoginMethod || null,
     emailVerified: Boolean(doc.emailVerified),
     phoneVerified: Boolean(doc.phoneVerified),
     isAdmin: isAdminEmail(doc.email),
@@ -237,7 +244,7 @@ router.post('/signup/complete', async (req, res) => {
     const { sessionToken, authType, password, pin } = req.body || {};
     if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
 
-    const credRes = validateAuthCredential(authType || 'otp', password, pin);
+    const credRes = validateOptionalSignupCredentials(password, pin);
     if (credRes.error) return res.status(400).json({ error: credRes.error });
 
     const challenge = await findActiveChallenge(sessionToken, 'signup');
@@ -256,19 +263,30 @@ router.post('/signup/complete', async (req, res) => {
       return res.status(409).json({ error: 'An account with this phone number already exists' });
     }
 
+    const initialLoginMethod =
+      authType && LOGIN_METHODS.includes(authType)
+        ? authType
+        : credRes.password
+          ? 'password'
+          : credRes.pin
+            ? 'pin'
+            : 'otp';
+
     const userData = {
       name: payload.name,
       email: challenge.email,
       phone: getPhoneLast10(challenge.phone) || challenge.phone,
       address: payload.address,
-      authType: credRes.authType,
+      authType: initialLoginMethod,
+      lastLoginMethod: initialLoginMethod,
       emailVerified: true,
       phoneVerified: true,
     };
 
-    if (credRes.authType === 'password') {
+    if (credRes.password) {
       userData.password = credRes.password;
-    } else if (credRes.authType === 'pin') {
+    }
+    if (credRes.pin) {
       userData.pinHash = await hashPin(credRes.pin);
     }
 
@@ -363,6 +381,8 @@ router.post('/login/verify-otp', async (req, res) => {
     }
     await user.save();
 
+    await recordSuccessfulLogin(user._id, 'otp');
+
     challenge.completed = true;
     await challenge.save();
 
@@ -389,22 +409,22 @@ router.post('/credentials/reset/start', async (req, res) => {
     const user = await findUserByEmailAndPhone(emailRes.value, phoneRes.value);
 
     let sessionToken;
-    let devOtp;
+    let loginMethods;
     if (user) {
-      const result = await createChallengeAndSendOtps({
-        purpose: 'reset_credentials',
+      const userWithSecrets = await User.findById(user._id).select('+password +pinHash lastLoginMethod');
+      loginMethods = buildLoginMethodsResponse(userWithSecrets);
+      const result = await createResetSession({
         email: emailRes.value,
         phone: user.phone,
         userId: user._id,
       });
       sessionToken = result.sessionToken;
-      devOtp = result.devOtp;
     }
 
     return res.json({
       message: GENERIC_RESET_MSG,
       ...(sessionToken ? { sessionToken } : {}),
-      ...(devOtp ? { devOtp } : {}),
+      ...(loginMethods ? loginMethods : {}),
     });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
@@ -415,17 +435,82 @@ router.post('/credentials/reset/start', async (req, res) => {
 
 router.post('/credentials/reset/send-otp', async (req, res) => {
   try {
-    const { sessionToken } = req.body || {};
+    const { sessionToken, channel } = req.body || {};
     if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
+    if (channel !== 'email' && channel !== 'phone') {
+      return res.status(400).json({ error: 'channel must be email or phone' });
+    }
 
-    const { devOtp, delivery } = await resendOtps(sessionToken, 'reset_credentials');
+    const { devOtp, delivery } = await sendResetSingleOtp(sessionToken, channel);
 
     return res.json({
-      message: otpSessionMessage(devOtp, delivery, { resent: true }),
+      channel,
+      message: loginOtpMessage(channel, devOtp, delivery),
       ...(devOtp ? { devOtp } : {}),
     });
   } catch (err) {
-    return respondOtpDeliveryError(err, res, 'Reset resend OTP error');
+    return respondOtpDeliveryError(err, res, 'Reset send OTP error');
+  }
+});
+
+router.post('/credentials/reset/verify', async (req, res) => {
+  try {
+    const { sessionToken, verifyMethod, secret, otp } = req.body || {};
+    if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
+    if (!LOGIN_METHODS.includes(verifyMethod)) {
+      return res.status(400).json({ error: 'verifyMethod must be otp, password, or pin' });
+    }
+
+    const challenge = await findActiveChallenge(sessionToken, 'reset_credentials');
+    const user = await User.findById(challenge.userId).select('+password +pinHash lastLoginMethod');
+    if (!user) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    const { availableMethods } = buildLoginMethodsResponse(user);
+    if (!availableMethods.includes(verifyMethod)) {
+      return res.status(400).json({
+        error: `This account cannot be verified with ${authTypeLabel(verifyMethod)} sign-in.`,
+      });
+    }
+
+    if (verifyMethod === 'otp') {
+      const otpRes = validateOtpCode(otp);
+      if (otpRes.error) return res.status(400).json({ error: otpRes.error });
+      await verifyResetSingleOtp(sessionToken, otpRes.value);
+    } else if (verifyMethod === 'pin') {
+      if (!secret || typeof secret !== 'string') {
+        return res.status(400).json({ error: 'PIN is required' });
+      }
+      if (!user.pinHash) {
+        return res.status(400).json({ error: 'No PIN is set for this account' });
+      }
+      const ok = await user.verifyPin(secret);
+      if (!ok) {
+        return res.status(401).json({ error: 'PIN is incorrect' });
+      }
+      challenge.identityVerified = true;
+      await challenge.save();
+    } else {
+      if (!secret || typeof secret !== 'string') {
+        return res.status(400).json({ error: 'Password is required' });
+      }
+      if (!user.password) {
+        return res.status(400).json({ error: 'No password is set for this account' });
+      }
+      const ok = await user.verifyPassword(secret);
+      if (!ok) {
+        return res.status(401).json({ error: 'Password is incorrect' });
+      }
+      challenge.identityVerified = true;
+      await challenge.save();
+    }
+
+    return res.json({ verified: true });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('Reset verify error:', err);
+    return res.status(500).json({ error: 'Failed to verify identity' });
   }
 });
 
@@ -447,6 +532,10 @@ router.post('/credentials/reset/verify-otp', async (req, res) => {
       phoneOtpRes.value
     );
 
+    const challenge = await findActiveChallenge(sessionToken, 'reset_credentials');
+    challenge.identityVerified = true;
+    await challenge.save();
+
     return res.json({ verified: true });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
@@ -467,8 +556,8 @@ router.post('/credentials/reset/complete', async (req, res) => {
     }
 
     const challenge = await findActiveChallenge(sessionToken, 'reset_credentials');
-    if (!challenge.emailVerified || !challenge.phoneVerified) {
-      return res.status(400).json({ error: 'Verify email and SMS codes first' });
+    if (!challenge.identityVerified && !(challenge.emailVerified && challenge.phoneVerified)) {
+      return res.status(400).json({ error: 'Verify your identity first' });
     }
 
     const user = await User.findById(challenge.userId);
@@ -591,18 +680,26 @@ router.post('/switch-method/verify-old', async (req, res) => {
     if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
 
     const challenge = await findActiveChallenge(sessionToken, 'switch_auth_method');
-    const user = await User.findById(challenge.userId).select('+password +pinHash');
+    const user = await User.findById(challenge.userId).select('+password +pinHash lastLoginMethod');
     if (!user) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    const currentAuth = user.authType || 'otp';
+    const { verifyMethod } = req.body || {};
+    const method = LOGIN_METHODS.includes(verifyMethod) ? verifyMethod : user.lastLoginMethod || 'otp';
+    const { availableMethods } = buildLoginMethodsResponse(user);
 
-    if (currentAuth === 'otp') {
+    if (!availableMethods.includes(method)) {
+      return res.status(400).json({
+        error: `This account cannot be verified with ${authTypeLabel(method)} sign-in.`,
+      });
+    }
+
+    if (method === 'otp') {
       const otpRes = validateOtpCode(otp);
       if (otpRes.error) return res.status(400).json({ error: otpRes.error });
       await verifySwitchAuthOtp(sessionToken, otpRes.value);
-    } else if (currentAuth === 'pin') {
+    } else if (method === 'pin') {
       if (!secret || typeof secret !== 'string') {
         return res.status(400).json({ error: 'PIN is required' });
       }
