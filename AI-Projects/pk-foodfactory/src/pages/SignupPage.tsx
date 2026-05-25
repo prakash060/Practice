@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
 import { OtpInput } from '../components/OtpInput'
-import { authAPI, type AuthType, type DevOtpHint } from '../services/api'
+import { authAPI, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
 import {
   validateOptionalSignupCredentials,

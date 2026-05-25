@@ -86,12 +86,20 @@ export default function ForgotCredentialsPage() {
       setInfoMessage(res.message)
       if (res.sessionToken) {
         setSessionToken(res.sessionToken)
-        const methods = res.availableMethods?.length ? res.availableMethods : ['otp']
-        setAvailableMethods(methods)
-        const suggested =
-          res.suggestedMethod && methods.includes(res.suggestedMethod)
+        const methods: AuthType[] =
+          res.availableMethods?.filter(
+            (m): m is AuthType => m === 'otp' || m === 'password' || m === 'pin'
+          ) ?? ['otp']
+        const resolvedMethods = methods.length > 0 ? methods : (['otp'] as AuthType[])
+        setAvailableMethods(resolvedMethods)
+        const suggested: AuthType =
+          res.suggestedMethod &&
+          (res.suggestedMethod === 'otp' ||
+            res.suggestedMethod === 'password' ||
+            res.suggestedMethod === 'pin') &&
+          resolvedMethods.includes(res.suggestedMethod)
             ? res.suggestedMethod
-            : methods[0]
+            : resolvedMethods[0]
         setVerifyMethod(suggested)
         setLastLoginMethod(res.lastLoginMethod ?? null)
         setVerifySecret('')

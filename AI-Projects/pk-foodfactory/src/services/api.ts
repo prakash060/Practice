@@ -292,6 +292,8 @@ export interface ResetStartResponse {
   lastLoginMethod?: AuthType | null;
   suggestedMethod?: AuthType;
 }
+
+export interface OtpResendResponse {
   message: string;
   channel?: 'email' | 'phone';
   devOtp?: DevOtpHint;
