@@ -137,8 +137,17 @@ const mongoUri = resolveMongoUri();
 if (mongoUri) {
   mongoose
     .connect(mongoUri, MONGO_OPTIONS)
-    .then(() => {
+    .then(async () => {
       console.log('MongoDB connected');
+      try {
+        const User = require('./models/User');
+        await User.updateMany(
+          { $or: [{ authType: { $exists: false } }, { authType: null }] },
+          { $set: { authType: 'password', emailVerified: true, phoneVerified: true } }
+        );
+      } catch (migrateErr) {
+        console.warn('User auth field migration skipped:', migrateErr.message);
+      }
     })
     .catch((err) => {
       console.error('MongoDB connection error:', err);
@@ -225,9 +234,19 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+const authOtpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
+  message: { error: 'Too many verification requests. Please try again later.' },
+});
+
 // Routes (DB-backed: fail fast with 503 + clear message instead of opaque 500)
 app.use('/api/payment', requireMongo, require('./routes/payment'));
 app.use('/api/orders', requireMongo, require('./routes/orders'));
+app.use('/api/auth', requireMongo, authOtpLimiter, require('./routes/auth'));
 app.use('/api/users', requireMongo, require('./routes/users'));
 app.use('/api/categories', requireMongo, require('./routes/categories'));
 app.use('/api/food-items', requireMongo, require('./routes/foodItems'));

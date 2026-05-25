@@ -1,44 +1,45 @@
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
-import { validateEmail } from '../utils/userValidators'
+import { validateLoginForm } from '../utils/userValidators'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [identifier, setIdentifier] = useState('')
+  const [secret, setSecret] = useState('')
+  const [loginMode, setLoginMode] = useState<'password' | 'pin'>('password')
   const [submitError, setSubmitError] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
+  const [touched, setTouched] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const requestedFrom =
     (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? null
 
+  const fieldErrors = useMemo(
+    () => validateLoginForm(identifier, secret),
+    [identifier, secret]
+  )
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setSubmitError('')
-    const eEmail = validateEmail(email)
-    const nextFields: typeof fieldErrors = {}
-    if (eEmail) nextFields.email = eEmail
-    if (!password) nextFields.password = 'Password is required'
-    setFieldErrors(nextFields)
-    if (Object.keys(nextFields).length > 0) return
+    setTouched(true)
+    if (Object.keys(fieldErrors).length > 0) return
 
     setIsSubmitting(true)
     try {
-      const user = await login(email.trim(), password)
-      // Honor the deep-link the user was originally trying to reach; otherwise
-      // send admins to the admin console and everyone else to the home page.
-      const target = requestedFrom && requestedFrom !== '/' ? requestedFrom : defaultLandingPath(user)
+      const user = await login(identifier.trim(), secret)
+      const target =
+        requestedFrom && requestedFrom !== '/' ? requestedFrom : defaultLandingPath(user)
       navigate(target, { replace: true })
     } catch (err) {
       if (isAxiosError(err)) {
         const msg = (err.response?.data as { error?: string })?.error
-        setSubmitError(msg ?? 'Invalid email or password')
+        setSubmitError(msg ?? 'Invalid email/phone or credentials')
       } else {
         setSubmitError('Something went wrong. Please try again.')
       }
@@ -55,36 +56,78 @@ export default function LoginPage() {
           {submitError ? <p className="error-message">{submitError}</p> : null}
 
           <div className="form-group">
-            <label htmlFor="login-email">Email</label>
+            <label htmlFor="login-identifier">Email or mobile</label>
             <input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              value={email}
+              id="login-identifier"
+              type="text"
+              autoComplete="username"
+              value={identifier}
               onChange={(ev) => {
-                setEmail(ev.target.value)
-                if (fieldErrors.email) setFieldErrors((f) => ({ ...f, email: undefined }))
+                setIdentifier(ev.target.value)
               }}
               disabled={isSubmitting}
             />
-            {fieldErrors.email ? <p className="field-error">{fieldErrors.email}</p> : null}
+            {touched && fieldErrors.identifier ? (
+              <p className="field-error">{fieldErrors.identifier}</p>
+            ) : null}
           </div>
 
+          <fieldset className="auth-type-picker auth-type-picker--inline">
+            <legend className="visually-hidden">Credential type</legend>
+            <label>
+              <input
+                type="radio"
+                name="loginMode"
+                checked={loginMode === 'password'}
+                onChange={() => {
+                  setLoginMode('password')
+                  setSecret('')
+                }}
+              />
+              Password
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="loginMode"
+                checked={loginMode === 'pin'}
+                onChange={() => {
+                  setLoginMode('pin')
+                  setSecret('')
+                }}
+              />
+              PIN
+            </label>
+          </fieldset>
+
           <div className="form-group">
-            <label htmlFor="login-password">Password</label>
+            <label htmlFor="login-secret">
+              {loginMode === 'pin' ? 'PIN' : 'Password'}
+            </label>
             <input
-              id="login-password"
+              id="login-secret"
               type="password"
-              autoComplete="current-password"
-              value={password}
+              inputMode={loginMode === 'pin' ? 'numeric' : undefined}
+              autoComplete={loginMode === 'pin' ? 'off' : 'current-password'}
+              maxLength={loginMode === 'pin' ? 6 : undefined}
+              value={secret}
               onChange={(ev) => {
-                setPassword(ev.target.value)
-                if (fieldErrors.password) setFieldErrors((f) => ({ ...f, password: undefined }))
+                const v =
+                  loginMode === 'pin'
+                    ? ev.target.value.replace(/\D/g, '').slice(0, 6)
+                    : ev.target.value
+                setSecret(v)
               }}
               disabled={isSubmitting}
             />
-            {fieldErrors.password ? <p className="field-error">{fieldErrors.password}</p> : null}
+            {touched && fieldErrors.secret ? (
+              <p className="field-error">{fieldErrors.secret}</p>
+            ) : null}
           </div>
+
+          <p className="auth-footer auth-footer--inline">
+            <Link to="/forgot-credentials">Forgot password or PIN?</Link>
+          </p>
 
           <button
             type="submit"

@@ -17,6 +17,7 @@ import CheckoutPage from './pages/CheckoutPage'
 import PaymentPage from './pages/PaymentPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import ForgotCredentialsPage from './pages/ForgotCredentialsPage'
 import ProfilePage from './pages/ProfilePage'
 import MyOrdersPage from './pages/MyOrdersPage'
 import AdminPage from './pages/AdminPage'
@@ -51,6 +52,14 @@ function App() {
               element={
                 <GuestRoute>
                   <SignupPage />
+                </GuestRoute>
+              }
+            />
+            <Route
+              path="/forgot-credentials"
+              element={
+                <GuestRoute>
+                  <ForgotCredentialsPage />
                 </GuestRoute>
               }
             />

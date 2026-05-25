@@ -11,21 +11,14 @@ import { useNavigate } from 'react-router-dom'
 import { authAPI, type UserPublic } from '../services/api'
 import { getStoredToken, setStoredToken, setUnauthorizedHandler } from '../lib/authSession'
 
-type RegisterBody = {
-  name: string
-  email: string
-  password: string
-  phone: string
-  address: string
-}
-
 type AuthContextValue = {
   user: UserPublic | null
   token: string | null
   isReady: boolean
   /** Resolves with the freshly-logged-in user so callers can decide where to route (admin → /admin). */
-  login: (email: string, password: string) => Promise<UserPublic>
-  register: (body: RegisterBody) => Promise<UserPublic>
+  login: (identifier: string, secret: string) => Promise<UserPublic>
+  /** After OTP signup complete — stores session from API response. */
+  applyAuthSession: (user: UserPublic, token: string) => void
   logout: () => void
   refreshUser: () => Promise<void>
   updateProfile: (body: { name: string; phone: string; address: string }) => Promise<void>
@@ -85,22 +78,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await authAPI.login({ email, password })
-    setStoredToken(res.token)
-    setToken(res.token)
-    setUser(res.user)
-    return res.user
-  }, [])
-
-  const register = useCallback(async (body: RegisterBody) => {
-    const res = await authAPI.register(body)
-    const { token: newToken, ...userPublic } = res
+  const applyAuthSession = useCallback((user: UserPublic, newToken: string) => {
     setStoredToken(newToken)
     setToken(newToken)
-    setUser(userPublic)
-    return userPublic
+    setUser(user)
   }, [])
+
+  const login = useCallback(async (identifier: string, secret: string) => {
+    const res = await authAPI.login({ identifier, secret })
+    applyAuthSession(res.user, res.token)
+    return res.user
+  }, [applyAuthSession])
 
   const logout = useCallback(() => {
     setStoredToken(null)
@@ -125,12 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
       isReady,
       login,
-      register,
+      applyAuthSession,
       logout,
       refreshUser,
       updateProfile,
     }),
-    [user, token, isReady, login, register, logout, refreshUser, updateProfile]
+    [user, token, isReady, login, applyAuthSession, logout, refreshUser, updateProfile]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

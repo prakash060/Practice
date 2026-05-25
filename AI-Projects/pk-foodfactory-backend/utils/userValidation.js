@@ -4,6 +4,8 @@ const NAME_MAX = 120;
 const ADDRESS_MIN = 10;
 const ADDRESS_MAX = 500;
 const PASSWORD_MIN = 8;
+const PIN_RE = /^\d{4,6}$/;
+const AUTH_TYPES = ['password', 'pin'];
 
 function normalizePhoneDigits(value) {
   return String(value).replace(/[\s\-().]/g, '');
@@ -34,14 +36,67 @@ function validateEmail(email) {
   return { value: email.trim().toLowerCase() };
 }
 
-function validatePassword(password) {
-  if (!password || typeof password !== 'string') {
+function validatePassword(password, { required = true } = {}) {
+  if (!password || typeof password !== 'string' || !password.length) {
+    if (!required) return { value: null };
     return { error: 'Password is required' };
   }
   if (password.length < PASSWORD_MIN) {
     return { error: `Password must be at least ${PASSWORD_MIN} characters` };
   }
   return { value: password };
+}
+
+function validatePin(pin, { required = true } = {}) {
+  if (!pin || typeof pin !== 'string' || !pin.trim()) {
+    if (!required) return { value: null };
+    return { error: 'PIN is required' };
+  }
+  const trimmed = pin.trim();
+  if (!PIN_RE.test(trimmed)) {
+    return { error: 'PIN must be 4 to 6 digits' };
+  }
+  return { value: trimmed };
+}
+
+function validateAuthCredential(authType, password, pin) {
+  if (!AUTH_TYPES.includes(authType)) {
+    return { error: 'authType must be password or pin' };
+  }
+  if (authType === 'password') {
+    const passRes = validatePassword(password, { required: true });
+    if (passRes.error) return passRes;
+    return { authType, password: passRes.value, pin: null };
+  }
+  const pinRes = validatePin(pin, { required: true });
+  if (pinRes.error) return pinRes;
+  return { authType, password: null, pin: pinRes.value };
+}
+
+function validateIdentifier(identifier) {
+  if (!identifier || typeof identifier !== 'string' || !identifier.trim()) {
+    return { error: 'Email or mobile number is required' };
+  }
+  const raw = identifier.trim();
+  if (EMAIL_RE.test(raw)) {
+    return { value: raw.toLowerCase(), kind: 'email' };
+  }
+  const phoneNorm = normalizePhoneDigits(raw);
+  if (PHONE_RE.test(phoneNorm)) {
+    return { value: phoneNorm, kind: 'phone' };
+  }
+  return { error: 'Enter a valid email or 10–15 digit mobile number' };
+}
+
+function validateOtpCode(code) {
+  if (!code || typeof code !== 'string') {
+    return { error: 'OTP is required' };
+  }
+  const trimmed = code.trim().replace(/\s/g, '');
+  if (!/^\d{6}$/.test(trimmed)) {
+    return { error: 'OTP must be 6 digits' };
+  }
+  return { value: trimmed };
 }
 
 function validatePhone(phone) {
@@ -76,9 +131,15 @@ module.exports = {
   ADDRESS_MIN,
   ADDRESS_MAX,
   PASSWORD_MIN,
+  PIN_RE,
+  AUTH_TYPES,
   validateName,
   validateEmail,
   validatePassword,
+  validatePin,
+  validateAuthCredential,
+  validateIdentifier,
+  validateOtpCode,
   validatePhone,
   validateAddress,
   normalizePhoneDigits,

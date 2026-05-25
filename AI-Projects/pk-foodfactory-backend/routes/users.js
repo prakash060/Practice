@@ -1,5 +1,4 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { signToken, requireAuth } = require('../middleware/auth');
 const { isAdminEmail } = require('../middleware/admin');
@@ -9,6 +8,7 @@ const {
   validatePassword,
   validatePhone,
   validateAddress,
+  validateIdentifier,
 } = require('../utils/userValidation');
 
 const router = express.Router();
@@ -20,90 +20,54 @@ function safeUser(doc) {
     email: doc.email,
     phone: doc.phone,
     address: doc.address,
+    authType: doc.authType || 'password',
+    emailVerified: Boolean(doc.emailVerified),
+    phoneVerified: Boolean(doc.phoneVerified),
     isAdmin: isAdminEmail(doc.email),
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
 }
 
+// Deprecated — use POST /api/auth/signup/* (OTP-verified signup)
 router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password, phone, address } = req.body;
-
-    const nameRes = validateName(name);
-    if (nameRes.error) return res.status(400).json({ error: nameRes.error });
-
-    const emailRes = validateEmail(email);
-    if (emailRes.error) return res.status(400).json({ error: emailRes.error });
-
-    const passRes = validatePassword(password);
-    if (passRes.error) return res.status(400).json({ error: passRes.error });
-
-    const phoneRes = validatePhone(phone);
-    if (phoneRes.error) return res.status(400).json({ error: phoneRes.error });
-
-    const addrRes = validateAddress(address);
-    if (addrRes.error) return res.status(400).json({ error: addrRes.error });
-
-    const user = await User.create({
-      name: nameRes.value,
-      email: emailRes.value,
-      password: passRes.value,
-      phone: phoneRes.value,
-      address: addrRes.value,
-    });
-
-    let token;
-    try {
-      token = signToken(user._id);
-    } catch (e) {
-      console.error(e);
-      return res.status(500).json({ error: e.message || 'Token signing failed' });
-    }
-
-    return res.status(201).json({ ...safeUser(user), token });
-  } catch (err) {
-    if (err.code === 11000) {
-      return res.status(409).json({ error: 'An account with this email already exists' });
-    }
-    if (err.name === 'ValidationError') {
-      const first = Object.values(err.errors || {})[0];
-      return res.status(400).json({ error: first?.message || 'Validation failed' });
-    }
-    const msg = err.message || '';
-    if (
-      msg.includes('not connected') ||
-      msg.includes('Client must be connected') ||
-      err.name === 'MongoServerSelectionError' ||
-      err.name === 'MongoNotConnectedError'
-    ) {
-      return res.status(503).json({
-        error:
-          'Database is not reachable. Check MONGODB_URI and MongoDB Atlas network access from your host (e.g. Elastic Beanstalk).'
-      });
-    }
-    console.error('Register error:', err);
-    return res.status(500).json({ error: 'Failed to register user' });
-  }
+  return res.status(410).json({
+    error:
+      'Direct registration is disabled. Please sign up via the app using email and mobile OTP verification.',
+  });
 });
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { identifier, secret, email, password } = req.body || {};
+    const loginId = identifier ?? email;
+    const loginSecret = secret ?? password;
 
-    const emailRes = validateEmail(email);
-    if (emailRes.error || !password || typeof password !== 'string') {
-      return res.status(401).json({ error: 'Invalid email or password' });
+    const idRes = validateIdentifier(loginId);
+    if (idRes.error || !loginSecret || typeof loginSecret !== 'string') {
+      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
     }
 
-    const user = await User.findOne({ email: emailRes.value }).select('+password');
+    const query =
+      idRes.kind === 'email'
+        ? { email: idRes.value }
+        : { phone: idRes.value };
+
+    const user = await User.findOne(query).select('+password +pinHash');
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
     }
 
-    const ok = await bcrypt.compare(password, user.password);
+    const authType = user.authType || 'password';
+    let ok = false;
+    if (authType === 'pin') {
+      ok = await user.verifyPin(loginSecret);
+    } else {
+      ok = await user.verifyPassword(loginSecret);
+    }
+
     if (!ok) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
     }
 
     let token;
@@ -114,7 +78,6 @@ router.post('/login', async (req, res) => {
       return res.status(500).json({ error: e.message || 'Token signing failed' });
     }
 
-    user.password = undefined;
     return res.json({ user: safeUser(user), token });
   } catch (err) {
     console.error('Login error:', err);

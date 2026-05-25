@@ -48,12 +48,17 @@ api.interceptors.response.use(
   }
 );
 
+export type AuthType = 'password' | 'pin';
+
 export interface UserPublic {
   id: string;
   name: string;
   email: string;
   phone: string;
   address: string;
+  authType?: AuthType;
+  emailVerified?: boolean;
+  phoneVerified?: boolean;
   isAdmin?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -239,19 +244,101 @@ export const ordersAPI = {
   },
 };
 
+export interface DevOtpHint {
+  email: string;
+  phone: string;
+}
+
+export interface OtpSessionResponse {
+  sessionToken: string;
+  message: string;
+  devOtp?: DevOtpHint;
+}
+
+export interface OtpResendResponse {
+  message: string;
+  devOtp?: DevOtpHint;
+}
+
 export const authAPI = {
-  register: async (body: {
+  signupStart: async (body: {
     name: string;
     email: string;
-    password: string;
     phone: string;
     address: string;
-  }): Promise<RegisterResponse> => {
-    const response = await api.post<RegisterResponse>('/users/register', body);
+  }): Promise<OtpSessionResponse> => {
+    const response = await api.post<OtpSessionResponse>('/auth/signup/start', body);
     return response.data;
   },
 
-  login: async (body: { email: string; password: string }): Promise<LoginResponse> => {
+  signupSendOtp: async (sessionToken: string): Promise<OtpResendResponse> => {
+    const response = await api.post<OtpResendResponse>('/auth/signup/send-otp', {
+      sessionToken,
+    });
+    return response.data;
+  },
+
+  signupVerifyOtp: async (
+    sessionToken: string,
+    emailOtp: string,
+    phoneOtp: string
+  ): Promise<{ verified: boolean }> => {
+    const response = await api.post<{ verified: boolean }>('/auth/signup/verify-otp', {
+      sessionToken,
+      emailOtp,
+      phoneOtp,
+    });
+    return response.data;
+  },
+
+  signupComplete: async (body: {
+    sessionToken: string;
+    authType: AuthType;
+    password?: string;
+    pin?: string;
+  }): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>('/auth/signup/complete', body);
+    return response.data;
+  },
+
+  resetCredentialsStart: async (body: {
+    email: string;
+    phone: string;
+  }): Promise<OtpSessionResponse> => {
+    const response = await api.post<OtpSessionResponse>('/auth/credentials/reset/start', body);
+    return response.data;
+  },
+
+  resetSendOtp: async (sessionToken: string): Promise<OtpResendResponse> => {
+    const response = await api.post<OtpResendResponse>('/auth/credentials/reset/send-otp', {
+      sessionToken,
+    });
+    return response.data;
+  },
+
+  resetVerifyOtp: async (
+    sessionToken: string,
+    emailOtp: string,
+    phoneOtp: string
+  ): Promise<{ verified: boolean }> => {
+    const response = await api.post<{ verified: boolean }>(
+      '/auth/credentials/reset/verify-otp',
+      { sessionToken, emailOtp, phoneOtp }
+    );
+    return response.data;
+  },
+
+  resetComplete: async (body: {
+    sessionToken: string;
+    authType: AuthType;
+    password?: string;
+    pin?: string;
+  }): Promise<{ message: string }> => {
+    const response = await api.post<{ message: string }>('/auth/credentials/reset/complete', body);
+    return response.data;
+  },
+
+  login: async (body: { identifier: string; secret: string }): Promise<LoginResponse> => {
     const response = await api.post<LoginResponse>('/users/login', body);
     return response.data;
   },

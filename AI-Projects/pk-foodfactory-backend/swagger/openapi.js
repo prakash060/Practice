@@ -13,7 +13,8 @@ const openapi = {
   servers: [{ url: '/', description: 'Current server' }],
   tags: [
     { name: 'Health', description: 'Service health' },
-    { name: 'Users', description: 'Registration, login, profile (JWT)' },
+    { name: 'Auth', description: 'OTP signup and credential reset' },
+    { name: 'Users', description: 'Login, profile (JWT)' },
     { name: 'Payment', description: 'Razorpay payment flow' },
     { name: 'Orders', description: 'Orders CRUD' },
     { name: 'Categories', description: 'Food categories (public list; admin-only writes)' },
@@ -63,6 +64,9 @@ const openapi = {
           email: { type: 'string' },
           phone: { type: 'string' },
           address: { type: 'string' },
+          authType: { type: 'string', enum: ['password', 'pin'] },
+          emailVerified: { type: 'boolean' },
+          phoneVerified: { type: 'boolean' },
           isAdmin: {
             type: 'boolean',
             description: 'True when the user email matches the configured ADMIN_EMAIL',
@@ -169,10 +173,29 @@ const openapi = {
       },
       LoginRequest: {
         type: 'object',
-        required: ['email', 'password'],
+        required: ['identifier', 'secret'],
         properties: {
-          email: { type: 'string', format: 'email' },
-          password: { type: 'string', format: 'password' },
+          identifier: { type: 'string', description: 'Email or mobile number' },
+          secret: { type: 'string', description: 'Password (8+ chars) or 4–6 digit PIN' },
+          email: { type: 'string', deprecated: true },
+          password: { type: 'string', deprecated: true },
+        },
+      },
+      OtpSessionResponse: {
+        type: 'object',
+        properties: {
+          sessionToken: { type: 'string' },
+          message: { type: 'string' },
+        },
+      },
+      SignupCompleteRequest: {
+        type: 'object',
+        required: ['sessionToken', 'authType'],
+        properties: {
+          sessionToken: { type: 'string' },
+          authType: { type: 'string', enum: ['password', 'pin'] },
+          password: { type: 'string' },
+          pin: { type: 'string' },
         },
       },
       LoginResponse: {
@@ -264,10 +287,51 @@ const openapi = {
         },
       },
     },
+    '/api/auth/signup/start': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Start OTP signup (sends codes to email and SMS)',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/RegisterUserRequest' } } },
+        },
+        responses: {
+          '201': { description: 'OTP sent', content: { 'application/json': { schema: { $ref: '#/components/schemas/OtpSessionResponse' } } } },
+        },
+      },
+    },
+    '/api/auth/signup/verify-otp': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Verify email and SMS OTPs for signup',
+        responses: { '200': { description: 'Verified' } },
+      },
+    },
+    '/api/auth/signup/complete': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Complete signup with password or PIN',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/SignupCompleteRequest' } } },
+        },
+        responses: {
+          '201': { description: 'Account created', content: { 'application/json': { schema: { $ref: '#/components/schemas/LoginResponse' } } } },
+        },
+      },
+    },
+    '/api/auth/credentials/reset/start': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Start credential reset (email + phone OTP)',
+        responses: { '200': { description: 'Generic success', content: { 'application/json': { schema: { $ref: '#/components/schemas/OtpSessionResponse' } } } } },
+      },
+    },
     '/api/users/register': {
       post: {
         tags: ['Users'],
-        summary: 'Register a new user',
+        summary: 'Register a new user (deprecated — use /api/auth/signup)',
+        deprecated: true,
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { $ref: '#/components/schemas/RegisterUserRequest' } } },
