@@ -1,12 +1,14 @@
 const express = require('express');
 const User = require('../models/User');
-const { requireAuth } = require('../middleware/auth');
+const { signToken, requireAuth } = require('../middleware/auth');
 const { isAdminEmail } = require('../middleware/admin');
 const {
   validateName,
   validateEmail,
   validatePhone,
   validateAddress,
+  validateIdentifier,
+  phoneLookupRegex,
 } = require('../utils/userValidation');
 
 const router = express.Router();
@@ -27,6 +29,12 @@ function safeUser(doc) {
   };
 }
 
+async function findUserByPhoneWithSecrets(phone) {
+  const re = phoneLookupRegex(phone);
+  if (!re) return null;
+  return User.findOne({ phone: re }).select('+password +pinHash');
+}
+
 // Deprecated — use POST /api/auth/signup/* (OTP-verified signup)
 router.post('/register', async (req, res) => {
   return res.status(410).json({
@@ -35,11 +43,63 @@ router.post('/register', async (req, res) => {
   });
 });
 
+// Password or PIN login (use /api/auth/login/* for OTP sign-in)
 router.post('/login', async (req, res) => {
-  return res.status(410).json({
-    error:
-      'Password login is disabled. Sign in with a verification code sent to your email or mobile number.',
-  });
+  try {
+    const { identifier, secret, email, password, loginMode } = req.body || {};
+    const loginId = identifier ?? email;
+    const loginSecret = secret ?? password;
+
+    const idRes = validateIdentifier(loginId);
+    if (idRes.error || !loginSecret || typeof loginSecret !== 'string') {
+      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
+    }
+
+    const mode = loginMode === 'pin' ? 'pin' : 'password';
+
+    const user =
+      idRes.kind === 'email'
+        ? await User.findOne({ email: idRes.value }).select('+password +pinHash')
+        : await findUserByPhoneWithSecrets(idRes.value);
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
+    }
+
+    let ok = false;
+    if (mode === 'pin') {
+      if (!user.pinHash) {
+        return res.status(401).json({
+          error: 'This account does not use a PIN. Try password or OTP sign-in.',
+        });
+      }
+      ok = await user.verifyPin(loginSecret);
+    } else {
+      if (!user.password) {
+        return res.status(401).json({
+          error: 'This account does not use a password. Try PIN or OTP sign-in.',
+        });
+      }
+      ok = await user.verifyPassword(loginSecret);
+    }
+
+    if (!ok) {
+      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
+    }
+
+    let token;
+    try {
+      token = signToken(user._id);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: e.message || 'Token signing failed' });
+    }
+
+    return res.json({ user: safeUser(user), token });
+  } catch (err) {
+    console.error('Login error:', err);
+    return res.status(500).json({ error: 'Failed to log in' });
+  }
 });
 
 router.get('/me', requireAuth, async (req, res) => {

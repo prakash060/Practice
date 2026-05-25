@@ -302,7 +302,12 @@ export const authAPI = {
     return response.data;
   },
 
-  signupComplete: async (body: { sessionToken: string }): Promise<LoginResponse> => {
+  signupComplete: async (body: {
+    sessionToken: string;
+    authType?: AuthType;
+    password?: string;
+    pin?: string;
+  }): Promise<LoginResponse> => {
     const response = await api.post<LoginResponse>('/auth/signup/complete', body);
     return response.data;
   },
@@ -362,8 +367,13 @@ export const authAPI = {
     return response.data;
   },
 
-  login: async (_body: { identifier: string; secret: string }): Promise<LoginResponse> => {
-    throw new Error('Password login is disabled. Use OTP sign in.');
+  login: async (body: {
+    identifier: string;
+    secret: string;
+    loginMode: 'password' | 'pin';
+  }): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>('/users/login', body);
+    return response.data;
   },
 
   getMe: async (): Promise<UserPublic> => {

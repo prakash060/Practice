@@ -15,7 +15,12 @@ type AuthContextValue = {
   user: UserPublic | null
   token: string | null
   isReady: boolean
-  /** After OTP signup/login complete — stores session from API response. */
+  /** Password or PIN sign-in. OTP sign-in uses authAPI.loginVerifyOtp + applyAuthSession. */
+  login: (
+    identifier: string,
+    secret: string,
+    loginMode: 'password' | 'pin'
+  ) => Promise<UserPublic>
   applyAuthSession: (user: UserPublic, token: string) => void
   logout: () => void
   refreshUser: () => Promise<void>
@@ -82,6 +87,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(user)
   }, [])
 
+  const login = useCallback(
+    async (identifier: string, secret: string, loginMode: 'password' | 'pin') => {
+      const res = await authAPI.login({ identifier, secret, loginMode })
+      applyAuthSession(res.user, res.token)
+      return res.user
+    },
+    [applyAuthSession]
+  )
+
   const logout = useCallback(() => {
     setStoredToken(null)
     setToken(null)
@@ -104,12 +118,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       token,
       isReady,
+      login,
       applyAuthSession,
       logout,
       refreshUser,
       updateProfile,
     }),
-    [user, token, isReady, applyAuthSession, logout, refreshUser, updateProfile]
+    [user, token, isReady, login, applyAuthSession, logout, refreshUser, updateProfile]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

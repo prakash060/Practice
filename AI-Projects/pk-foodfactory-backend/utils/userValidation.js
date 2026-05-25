@@ -5,7 +5,7 @@ const ADDRESS_MIN = 10;
 const ADDRESS_MAX = 500;
 const PASSWORD_MIN = 8;
 const PIN_RE = /^\d{4,6}$/;
-const AUTH_TYPES = ['password', 'pin'];
+const AUTH_TYPES = ['password', 'pin', 'otp'];
 
 function normalizePhoneDigits(value) {
   return String(value).replace(/[\s\-().]/g, '');
@@ -82,7 +82,10 @@ function validatePin(pin, { required = true } = {}) {
 
 function validateAuthCredential(authType, password, pin) {
   if (!AUTH_TYPES.includes(authType)) {
-    return { error: 'authType must be password or pin' };
+    return { error: 'authType must be password, pin, or otp' };
+  }
+  if (authType === 'otp') {
+    return { authType: 'otp', password: null, pin: null };
   }
   if (authType === 'password') {
     const passRes = validatePassword(password, { required: true });

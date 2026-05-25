@@ -9,7 +9,7 @@ export const ADDRESS_MIN = 10
 export const ADDRESS_MAX = 500
 export const PASSWORD_MIN = 8
 
-export type AuthType = 'password' | 'pin'
+export type AuthType = 'password' | 'pin' | 'otp'
 
 export function normalizePhoneDigits(value: string): string {
   return value.replace(/[\s\-().]/g, '')
@@ -124,6 +124,7 @@ export function validateSignupProfileForm(fields: {
 
 export function validateCredentialForm(authType: AuthType, password: string, pin: string): FieldErrors {
   const errors: FieldErrors = {}
+  if (authType === 'otp') return errors
   if (authType === 'password') {
     const ePass = validatePassword(password)
     if (ePass) errors.password = ePass

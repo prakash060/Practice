@@ -2,6 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const { signToken } = require('../middleware/auth');
 const { isAdminEmail } = require('../middleware/admin');
+const { hashPin } = require('../models/User');
 const {
   validateName,
   validateEmail,
@@ -9,6 +10,7 @@ const {
   validateAddress,
   validateOtpCode,
   validateIdentifier,
+  validateAuthCredential,
   phoneLookupRegex,
   getPhoneLast10,
 } = require('../utils/userValidation');
@@ -121,6 +123,20 @@ async function findUserByPhone(phone) {
   return User.findOne({ phone: re });
 }
 
+async function findUserByPhoneWithSecrets(phone) {
+  const re = phoneLookupRegex(phone);
+  if (!re) return null;
+  return User.findOne({ phone: re }).select('+password +pinHash');
+}
+
+async function findUserByEmailAndPhone(email, phone) {
+  const byEmail = await User.findOne({ email });
+  if (!byEmail) return null;
+  const byPhone = await findUserByPhone(phone);
+  if (!byPhone || String(byEmail._id) !== String(byPhone._id)) return null;
+  return byEmail;
+}
+
 // POST /api/auth/signup/start
 router.post('/signup/start', async (req, res) => {
   try {
@@ -212,11 +228,14 @@ router.post('/signup/verify-otp', async (req, res) => {
   }
 });
 
-// POST /api/auth/signup/complete — create account after dual OTP verify (no password/PIN)
+// POST /api/auth/signup/complete — create account after dual OTP verify
 router.post('/signup/complete', async (req, res) => {
   try {
-    const { sessionToken } = req.body || {};
+    const { sessionToken, authType, password, pin } = req.body || {};
     if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
+
+    const credRes = validateAuthCredential(authType || 'otp', password, pin);
+    if (credRes.error) return res.status(400).json({ error: credRes.error });
 
     const challenge = await findActiveChallenge(sessionToken, 'signup');
     if (!challenge.emailVerified || !challenge.phoneVerified) {
@@ -234,15 +253,23 @@ router.post('/signup/complete', async (req, res) => {
       return res.status(409).json({ error: 'An account with this phone number already exists' });
     }
 
-    const user = await User.create({
+    const userData = {
       name: payload.name,
       email: challenge.email,
       phone: getPhoneLast10(challenge.phone) || challenge.phone,
       address: payload.address,
-      authType: 'otp',
+      authType: credRes.authType,
       emailVerified: true,
       phoneVerified: true,
-    });
+    };
+
+    if (credRes.authType === 'password') {
+      userData.password = credRes.password;
+    } else if (credRes.authType === 'pin') {
+      userData.pinHash = await hashPin(credRes.pin);
+    }
+
+    const user = await User.create(userData);
 
     challenge.completed = true;
     await challenge.save();
@@ -331,7 +358,6 @@ router.post('/login/verify-otp', async (req, res) => {
     } else {
       user.phoneVerified = true;
     }
-    user.authType = 'otp';
     await user.save();
 
     challenge.completed = true;
@@ -346,23 +372,139 @@ router.post('/login/verify-otp', async (req, res) => {
   }
 });
 
-// Deprecated — OTP-only auth (use /api/auth/login/*)
+// POST /api/auth/credentials/reset/start
 router.post('/credentials/reset/start', async (req, res) => {
-  return res.status(410).json({
-    error: 'Password reset is no longer used. Sign in with a verification code sent to your email or mobile.',
-  });
+  try {
+    const { email, phone } = req.body || {};
+
+    const emailRes = validateEmail(email);
+    if (emailRes.error) return res.status(400).json({ error: emailRes.error });
+
+    const phoneRes = validatePhone(phone);
+    if (phoneRes.error) return res.status(400).json({ error: phoneRes.error });
+
+    const user = await findUserByEmailAndPhone(emailRes.value, phoneRes.value);
+
+    let sessionToken;
+    let devOtp;
+    if (user) {
+      const result = await createChallengeAndSendOtps({
+        purpose: 'reset_credentials',
+        email: emailRes.value,
+        phone: user.phone,
+        userId: user._id,
+      });
+      sessionToken = result.sessionToken;
+      devOtp = result.devOtp;
+    }
+
+    return res.json({
+      message: GENERIC_RESET_MSG,
+      ...(sessionToken ? { sessionToken } : {}),
+      ...(devOtp ? { devOtp } : {}),
+    });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('Reset start error:', err);
+    return res.json({ message: GENERIC_RESET_MSG });
+  }
 });
 
 router.post('/credentials/reset/send-otp', async (req, res) => {
-  return res.status(410).json({ error: 'Password reset is disabled. Use OTP sign in.' });
+  try {
+    const { sessionToken } = req.body || {};
+    if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
+
+    const { devOtp, delivery } = await resendOtps(sessionToken, 'reset_credentials');
+
+    return res.json({
+      message: otpSessionMessage(devOtp, delivery, { resent: true }),
+      ...(devOtp ? { devOtp } : {}),
+    });
+  } catch (err) {
+    return respondOtpDeliveryError(err, res, 'Reset resend OTP error');
+  }
 });
 
 router.post('/credentials/reset/verify-otp', async (req, res) => {
-  return res.status(410).json({ error: 'Password reset is disabled. Use OTP sign in.' });
+  try {
+    const { sessionToken, emailOtp, phoneOtp } = req.body || {};
+    if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
+
+    const emailOtpRes = validateOtpCode(emailOtp);
+    if (emailOtpRes.error) return res.status(400).json({ error: emailOtpRes.error });
+
+    const phoneOtpRes = validateOtpCode(phoneOtp);
+    if (phoneOtpRes.error) return res.status(400).json({ error: phoneOtpRes.error });
+
+    await verifyChallengeOtps(
+      sessionToken,
+      'reset_credentials',
+      emailOtpRes.value,
+      phoneOtpRes.value
+    );
+
+    return res.json({ verified: true });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('Reset verify OTP error:', err);
+    return res.status(500).json({ error: 'Failed to verify codes' });
+  }
 });
 
 router.post('/credentials/reset/complete', async (req, res) => {
-  return res.status(410).json({ error: 'Password reset is disabled. Use OTP sign in.' });
+  try {
+    const { sessionToken, authType, password, pin } = req.body || {};
+    if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
+
+    const credRes = validateAuthCredential(authType, password, pin);
+    if (credRes.error) return res.status(400).json({ error: credRes.error });
+    if (credRes.authType === 'otp') {
+      return res.status(400).json({ error: 'Choose password or PIN for credential reset' });
+    }
+
+    const challenge = await findActiveChallenge(sessionToken, 'reset_credentials');
+    if (!challenge.emailVerified || !challenge.phoneVerified) {
+      return res.status(400).json({ error: 'Verify email and SMS codes first' });
+    }
+
+    const user = await User.findById(challenge.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    if (credRes.authType === 'password') {
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          authType: 'password',
+          password: credRes.password,
+          emailVerified: true,
+          phoneVerified: true,
+        },
+        $unset: { pinHash: 1 },
+      });
+    } else {
+      const pinHash = await hashPin(credRes.pin);
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          authType: 'pin',
+          pinHash,
+          emailVerified: true,
+          phoneVerified: true,
+        },
+        $unset: { password: 1 },
+      });
+    }
+
+    challenge.completed = true;
+    await challenge.save();
+
+    return res.json({ message: 'Your login credentials have been updated. You can sign in now.' });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('Reset complete error:', err);
+    return res.status(500).json({ error: 'Failed to reset credentials' });
+  }
 });
 
 module.exports = router;
