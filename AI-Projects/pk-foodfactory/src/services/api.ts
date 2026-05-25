@@ -265,6 +265,25 @@ export interface LoginStartResponse {
   devOtp?: DevOtpHint;
 }
 
+export interface AuthMismatchPayload {
+  storedAuthType: AuthType;
+  attemptedLoginMode: 'password' | 'pin';
+  verifyWith: AuthType;
+  sessionToken: string;
+  channel?: 'email' | 'phone';
+  devOtp?: DevOtpHint;
+}
+
+export interface SwitchMethodStartResponse {
+  sessionToken: string;
+  verifyWith: AuthType;
+  targetAuthType: 'password' | 'pin';
+  storedAuthType: AuthType;
+  message: string;
+  channel?: 'email' | 'phone';
+  devOtp?: DevOtpHint;
+}
+
 export interface OtpResendResponse {
   message: string;
   channel?: 'email' | 'phone';
@@ -364,6 +383,42 @@ export const authAPI = {
     pin?: string;
   }): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>('/auth/credentials/reset/complete', body);
+    return response.data;
+  },
+
+  switchMethodStart: async (body: {
+    identifier: string;
+    targetAuthType: 'password' | 'pin';
+  }): Promise<SwitchMethodStartResponse> => {
+    const response = await api.post<SwitchMethodStartResponse>('/auth/switch-method/start', body);
+    return response.data;
+  },
+
+  switchMethodSendOtp: async (sessionToken: string): Promise<OtpResendResponse> => {
+    const response = await api.post<OtpResendResponse>('/auth/switch-method/send-otp', {
+      sessionToken,
+    });
+    return response.data;
+  },
+
+  switchMethodVerifyOld: async (body: {
+    sessionToken: string;
+    secret?: string;
+    otp?: string;
+  }): Promise<{ verified: boolean; targetAuthType: 'password' | 'pin' }> => {
+    const response = await api.post<{ verified: boolean; targetAuthType: 'password' | 'pin' }>(
+      '/auth/switch-method/verify-old',
+      body
+    );
+    return response.data;
+  },
+
+  switchMethodComplete: async (body: {
+    sessionToken: string;
+    password?: string;
+    pin?: string;
+  }): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>('/auth/switch-method/complete', body);
     return response.data;
   },
 

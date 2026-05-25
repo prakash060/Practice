@@ -10,8 +10,19 @@ const {
   validateIdentifier,
   phoneLookupRegex,
 } = require('../utils/userValidation');
+const { createSwitchAuthChallenge } = require('../services/otpService');
 
 const router = express.Router();
+
+function authTypeLabel(authType) {
+  if (authType === 'password') return 'password';
+  if (authType === 'pin') return 'PIN';
+  return 'OTP';
+}
+
+function storedAuthMatchesLoginMode(storedAuth, loginMode) {
+  return storedAuth === loginMode;
+}
 
 function safeUser(doc) {
   return {
@@ -64,6 +75,30 @@ router.post('/login', async (req, res) => {
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid email/phone or credentials' });
+    }
+
+    const storedAuth = user.authType || 'otp';
+    if (!storedAuthMatchesLoginMode(storedAuth, mode)) {
+      const channel = idRes.kind === 'email' ? 'email' : 'phone';
+      const { sessionToken, devOtp, channel: otpChannel } = await createSwitchAuthChallenge({
+        user,
+        targetAuthType: mode,
+        channel,
+      });
+      const verifyWith = storedAuth;
+      return res.status(409).json({
+        error:
+          `This account uses ${authTypeLabel(storedAuth)} sign-in. ` +
+          `Verify your ${authTypeLabel(storedAuth)} to set up ${authTypeLabel(mode)} login.`,
+        authMismatch: {
+          storedAuthType: storedAuth,
+          attemptedLoginMode: mode,
+          verifyWith,
+          sessionToken,
+          ...(verifyWith === 'otp' ? { channel: otpChannel || channel } : {}),
+          ...(devOtp ? { devOtp } : {}),
+        },
+      });
     }
 
     let ok = false;

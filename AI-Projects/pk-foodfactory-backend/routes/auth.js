@@ -17,11 +17,14 @@ const {
 const {
   createChallengeAndSendOtps,
   createLoginChallengeAndSendOtp,
+  createSwitchAuthChallenge,
   findActiveChallenge,
   verifyChallengeOtps,
   verifyLoginOtp,
+  verifySwitchAuthOtp,
   resendOtps,
   resendLoginOtp,
+  resendSwitchAuthOtp,
 } = require('../services/otpService');
 
 const router = express.Router();
@@ -504,6 +507,189 @@ router.post('/credentials/reset/complete', async (req, res) => {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
     console.error('Reset complete error:', err);
     return res.status(500).json({ error: 'Failed to reset credentials' });
+  }
+});
+
+function authTypeLabel(authType) {
+  if (authType === 'password') return 'password';
+  if (authType === 'pin') return 'PIN';
+  return 'OTP';
+}
+
+// POST /api/auth/switch-method/start — begin auth-method migration (optional; login 409 also starts a session)
+router.post('/switch-method/start', async (req, res) => {
+  try {
+    const { identifier, targetAuthType } = req.body || {};
+    const idRes = validateIdentifier(identifier);
+    if (idRes.error) return res.status(400).json({ error: idRes.error });
+
+    if (targetAuthType !== 'password' && targetAuthType !== 'pin') {
+      return res.status(400).json({ error: 'targetAuthType must be password or pin' });
+    }
+
+    const user =
+      idRes.kind === 'email'
+        ? await User.findOne({ email: idRes.value })
+        : await findUserByPhone(idRes.value);
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
+    }
+
+    const storedAuth = user.authType || 'otp';
+    if (storedAuth === targetAuthType) {
+      return res.status(400).json({
+        error: `This account already uses ${authTypeLabel(storedAuth)} sign-in.`,
+      });
+    }
+
+    const channel = idRes.kind === 'email' ? 'email' : 'phone';
+    const { sessionToken, devOtp, delivery, channel: otpChannel } = await createSwitchAuthChallenge({
+      user,
+      targetAuthType,
+      channel,
+    });
+
+    const verifyWith = storedAuth;
+    let message =
+      verifyWith === 'otp'
+        ? loginOtpMessage(otpChannel || channel, devOtp, delivery)
+        : `Verify your ${authTypeLabel(verifyWith)} to set up ${authTypeLabel(targetAuthType)} login.`;
+
+    return res.json({
+      sessionToken,
+      verifyWith,
+      targetAuthType,
+      storedAuthType: storedAuth,
+      message,
+      ...(verifyWith === 'otp' ? { channel: otpChannel || channel } : {}),
+      ...(devOtp ? { devOtp } : {}),
+    });
+  } catch (err) {
+    return respondOtpDeliveryError(err, res, 'Switch method start error');
+  }
+});
+
+router.post('/switch-method/send-otp', async (req, res) => {
+  try {
+    const { sessionToken } = req.body || {};
+    if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
+
+    const { channel, devOtp, delivery } = await resendSwitchAuthOtp(sessionToken);
+
+    return res.json({
+      channel,
+      message: loginOtpMessage(channel, devOtp, delivery),
+      ...(devOtp ? { devOtp } : {}),
+    });
+  } catch (err) {
+    return respondOtpDeliveryError(err, res, 'Switch method resend OTP error');
+  }
+});
+
+router.post('/switch-method/verify-old', async (req, res) => {
+  try {
+    const { sessionToken, secret, otp } = req.body || {};
+    if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
+
+    const challenge = await findActiveChallenge(sessionToken, 'switch_auth_method');
+    const user = await User.findById(challenge.userId).select('+password +pinHash');
+    if (!user) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    const currentAuth = user.authType || 'otp';
+
+    if (currentAuth === 'otp') {
+      const otpRes = validateOtpCode(otp);
+      if (otpRes.error) return res.status(400).json({ error: otpRes.error });
+      await verifySwitchAuthOtp(sessionToken, otpRes.value);
+    } else if (currentAuth === 'pin') {
+      if (!secret || typeof secret !== 'string') {
+        return res.status(400).json({ error: 'PIN is required' });
+      }
+      if (!user.pinHash) {
+        return res.status(400).json({ error: 'This account does not have a PIN configured' });
+      }
+      const ok = await user.verifyPin(secret);
+      if (!ok) {
+        return res.status(401).json({ error: 'PIN is incorrect' });
+      }
+      challenge.oldAuthVerified = true;
+      await challenge.save();
+    } else {
+      if (!secret || typeof secret !== 'string') {
+        return res.status(400).json({ error: 'Password is required' });
+      }
+      if (!user.password) {
+        return res.status(400).json({ error: 'This account does not have a password configured' });
+      }
+      const ok = await user.verifyPassword(secret);
+      if (!ok) {
+        return res.status(401).json({ error: 'Password is incorrect' });
+      }
+      challenge.oldAuthVerified = true;
+      await challenge.save();
+    }
+
+    return res.json({
+      verified: true,
+      targetAuthType: challenge.targetAuthType,
+    });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('Switch method verify-old error:', err);
+    return res.status(500).json({ error: 'Failed to verify current sign-in method' });
+  }
+});
+
+router.post('/switch-method/complete', async (req, res) => {
+  try {
+    const { sessionToken, password, pin } = req.body || {};
+    if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
+
+    const challenge = await findActiveChallenge(sessionToken, 'switch_auth_method');
+    if (!challenge.oldAuthVerified) {
+      return res.status(400).json({ error: 'Verify your current sign-in method first' });
+    }
+
+    const credRes = validateAuthCredential(challenge.targetAuthType, password, pin);
+    if (credRes.error) return res.status(400).json({ error: credRes.error });
+
+    const user = await User.findById(challenge.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    if (credRes.authType === 'password') {
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          authType: 'password',
+          password: credRes.password,
+        },
+        $unset: { pinHash: 1 },
+      });
+    } else {
+      const pinHash = await hashPin(credRes.pin);
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          authType: 'pin',
+          pinHash,
+        },
+        $unset: { password: 1 },
+      });
+    }
+
+    challenge.completed = true;
+    await challenge.save();
+
+    const updated = await User.findById(user._id);
+    const token = signUserToken(updated);
+    return res.json({ user: safeUser(updated), token });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('Switch method complete error:', err);
+    return res.status(500).json({ error: 'Failed to update sign-in method' });
   }
 });
 

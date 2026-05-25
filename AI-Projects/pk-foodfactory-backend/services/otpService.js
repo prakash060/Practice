@@ -392,14 +392,177 @@ async function verifyLoginOtp(sessionToken, otp) {
   return challenge;
 }
 
+async function invalidateSwitchChallenges(userId) {
+  await OtpChallenge.deleteMany({
+    purpose: 'switch_auth_method',
+    userId,
+    completed: false,
+  });
+}
+
+async function createSwitchAuthChallenge({ user, targetAuthType, channel }) {
+  await invalidateSwitchChallenges(user._id);
+
+  const currentAuth = user.authType || 'otp';
+  const sessionToken = newSessionToken();
+
+  const challengeData = {
+    purpose: 'switch_auth_method',
+    sessionToken,
+    email: user.email,
+    phone: user.phone,
+    userId: user._id,
+    targetAuthType,
+    oldAuthVerified: false,
+    expiresAt: new Date(Date.now() + OTP_TTL_MS),
+    emailVerified: false,
+    phoneVerified: false,
+    completed: false,
+    emailCodeHash: null,
+    phoneCodeHash: null,
+    loginChannel: null,
+  };
+
+  let devOtp;
+  let delivery = null;
+
+  if (currentAuth === 'otp') {
+    const code = generateOtpCode();
+    challengeData.loginChannel = channel;
+    if (channel === 'email') {
+      challengeData.emailCodeHash = await hashOtp(code);
+    } else {
+      challengeData.phoneCodeHash = await hashOtp(code);
+    }
+
+    if (channel === 'email') {
+      const emailResult = await sendOtpEmail(user.email, code, purposeLabel('login'));
+      delivery = {
+        emailSent: Boolean(emailResult?.sent),
+        smsSent: false,
+        emailDevLog: Boolean(emailResult?.devLog),
+        smsDevLog: false,
+      };
+    } else {
+      const smsResult = await sendOtpSms(user.phone, code, purposeLabel('login'));
+      delivery = {
+        emailSent: false,
+        smsSent: Boolean(smsResult?.sent),
+        emailDevLog: false,
+        smsDevLog: Boolean(smsResult?.devLog),
+      };
+    }
+    devOtp =
+      delivery.emailDevLog || delivery.smsDevLog
+        ? buildDevOtpLoginPayload(channel, code)
+        : undefined;
+  }
+
+  const challenge = await OtpChallenge.create(challengeData);
+
+  return {
+    challenge,
+    sessionToken,
+    channel: currentAuth === 'otp' ? channel : undefined,
+    devOtp,
+    delivery,
+  };
+}
+
+async function resendSwitchAuthOtp(sessionToken) {
+  const challenge = await findActiveChallenge(sessionToken, 'switch_auth_method');
+  if (!challenge.loginChannel) {
+    const err = new Error('This session does not use OTP verification');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const channel = challenge.loginChannel;
+  const code = generateOtpCode();
+  challenge.emailCodeHash = null;
+  challenge.phoneCodeHash = null;
+  if (channel === 'email') {
+    challenge.emailCodeHash = await hashOtp(code);
+  } else {
+    challenge.phoneCodeHash = await hashOtp(code);
+  }
+  challenge.oldAuthVerified = false;
+  challenge.attempts = 0;
+  challenge.expiresAt = new Date(Date.now() + OTP_TTL_MS);
+  await challenge.save();
+
+  let delivery;
+  if (channel === 'email') {
+    const emailResult = await sendOtpEmail(challenge.email, code, purposeLabel('login'));
+    delivery = {
+      emailSent: Boolean(emailResult?.sent),
+      smsSent: false,
+      emailDevLog: Boolean(emailResult?.devLog),
+      smsDevLog: false,
+    };
+  } else {
+    const smsResult = await sendOtpSms(challenge.phone, code, purposeLabel('login'));
+    delivery = {
+      emailSent: false,
+      smsSent: Boolean(smsResult?.sent),
+      emailDevLog: false,
+      smsDevLog: Boolean(smsResult?.devLog),
+    };
+  }
+
+  return {
+    challenge,
+    channel,
+    devOtp:
+      delivery.emailDevLog || delivery.smsDevLog
+        ? buildDevOtpLoginPayload(channel, code)
+        : undefined,
+    delivery,
+  };
+}
+
+async function verifySwitchAuthOtp(sessionToken, otp) {
+  const challenge = await findActiveChallenge(sessionToken, 'switch_auth_method');
+  const channel = challenge.loginChannel;
+  if (!channel) {
+    const err = new Error('Invalid switch session');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (challenge.attempts >= challenge.maxAttempts) {
+    const err = new Error('Too many failed attempts. Please start again.');
+    err.statusCode = 429;
+    throw err;
+  }
+
+  const hash = channel === 'email' ? challenge.emailCodeHash : challenge.phoneCodeHash;
+  const ok = await verifyOtpHash(otp, hash);
+
+  if (!ok) {
+    challenge.attempts += 1;
+    await challenge.save();
+    const err = new Error('Verification code is incorrect.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  challenge.oldAuthVerified = true;
+  await challenge.save();
+  return challenge;
+}
+
 module.exports = {
   OTP_TTL_MS,
   isDevOtpExposureEnabled,
   createChallengeAndSendOtps,
   createLoginChallengeAndSendOtp,
+  createSwitchAuthChallenge,
   findActiveChallenge,
   verifyChallengeOtps,
   verifyLoginOtp,
+  verifySwitchAuthOtp,
   resendOtps,
   resendLoginOtp,
+  resendSwitchAuthOtp,
 };
