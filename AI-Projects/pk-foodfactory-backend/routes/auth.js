@@ -9,6 +9,8 @@ const {
   validateAddress,
   validateOtpCode,
   validateIdentifier,
+  phoneLookupRegex,
+  getPhoneLast10,
 } = require('../utils/userValidation');
 const {
   createChallengeAndSendOtps,
@@ -113,6 +115,12 @@ function signUserToken(user) {
   }
 }
 
+async function findUserByPhone(phone) {
+  const re = phoneLookupRegex(phone);
+  if (!re) return null;
+  return User.findOne({ phone: re });
+}
+
 // POST /api/auth/signup/start
 router.post('/signup/start', async (req, res) => {
   try {
@@ -135,7 +143,7 @@ router.post('/signup/start', async (req, res) => {
       return res.status(409).json({ error: 'An account with this email already exists' });
     }
 
-    const existingPhone = await User.findOne({ phone: phoneRes.value });
+    const existingPhone = await findUserByPhone(phoneRes.value);
     if (existingPhone) {
       return res.status(409).json({ error: 'An account with this phone number already exists' });
     }
@@ -221,7 +229,7 @@ router.post('/signup/complete', async (req, res) => {
       return res.status(409).json({ error: 'An account with this email already exists' });
     }
 
-    const existingPhone = await User.findOne({ phone: challenge.phone });
+    const existingPhone = await findUserByPhone(challenge.phone);
     if (existingPhone) {
       return res.status(409).json({ error: 'An account with this phone number already exists' });
     }
@@ -229,7 +237,7 @@ router.post('/signup/complete', async (req, res) => {
     const user = await User.create({
       name: payload.name,
       email: challenge.email,
-      phone: challenge.phone,
+      phone: getPhoneLast10(challenge.phone) || challenge.phone,
       address: payload.address,
       authType: 'otp',
       emailVerified: true,
@@ -258,9 +266,10 @@ router.post('/login/start', async (req, res) => {
     const idRes = validateIdentifier(identifier);
     if (idRes.error) return res.status(400).json({ error: idRes.error });
 
-    const query =
-      idRes.kind === 'email' ? { email: idRes.value } : { phone: idRes.value };
-    const user = await User.findOne(query);
+    const user =
+      idRes.kind === 'email'
+        ? await User.findOne({ email: idRes.value })
+        : await findUserByPhone(idRes.value);
 
     if (!user) {
       return res.json({ message: GENERIC_LOGIN_MSG });

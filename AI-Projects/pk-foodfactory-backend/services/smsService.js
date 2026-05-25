@@ -1,4 +1,5 @@
 const https = require('https');
+const { formatMsg91Mobile, getPhoneLast10 } = require('../utils/userValidation');
 
 function getSmsProvider() {
   return (process.env.SMS_PROVIDER || 'none').trim().toLowerCase();
@@ -39,7 +40,7 @@ function getSmsOtpStatusLabel() {
   const provider = getSmsProvider();
   if (provider === 'msg91') {
     return isMsg91Configured()
-      ? 'configured (MSG91)'
+      ? 'configured (MSG91 OTP API)'
       : 'MSG91 selected but MSG91_AUTH_KEY / MSG91_TEMPLATE_ID missing or placeholder';
   }
   if (provider === 'twilio') {
@@ -55,33 +56,26 @@ function getSmsOtpStatusLabel() {
 
 function devLogSms(phone, code, purposeLabel) {
   if (process.env.NODE_ENV !== 'production' || process.env.OTP_DEV_LOG === 'true') {
-    console.warn(`[OTP SMS → ${phone}] ${code} (${purposeLabel})`);
+    console.warn(`[OTP SMS → ${getPhoneLast10(phone) || phone}] ${code} (${purposeLabel})`);
     return true;
   }
   return false;
 }
 
-function sendMsg91(phone, code) {
+function msg91Request(path, body) {
   const authKey = process.env.MSG91_AUTH_KEY;
-  const templateId = process.env.MSG91_TEMPLATE_ID;
-  if (!authKey || !templateId) return Promise.reject(new Error('MSG91 not configured'));
-
-  const mobile = phone.replace(/\D/g, '').slice(-10);
-  const body = JSON.stringify({
-    template_id: templateId,
-    short_url: '0',
-    recipients: [{ mobiles: `91${mobile}`, var: code }],
-  });
+  const payload = JSON.stringify(body);
 
   return new Promise((resolve, reject) => {
     const req = https.request(
       {
         hostname: 'control.msg91.com',
-        path: '/api/v5/flow',
+        path,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           authkey: authKey,
+          'Content-Length': Buffer.byteLength(payload),
         },
       },
       (res) => {
@@ -90,20 +84,73 @@ function sendMsg91(phone, code) {
           data += chunk;
         });
         res.on('end', () => {
-          if (res.statusCode >= 200 && res.statusCode < 300) resolve(data);
-          else {
-            console.error(
-              `MSG91 failed (HTTP ${res.statusCode}): ${data || '(empty body)'}`
-            );
-            reject(new Error(`MSG91 failed (HTTP ${res.statusCode})`));
+          let parsed;
+          try {
+            parsed = JSON.parse(data);
+          } catch {
+            parsed = { type: 'error', message: data || 'Invalid MSG91 response' };
           }
+
+          if (res.statusCode >= 200 && res.statusCode < 300 && parsed.type === 'success') {
+            console.log(
+              `MSG91 OK (${path}): request=${parsed.request_id || parsed.message || 'ok'}`
+            );
+            resolve(parsed);
+            return;
+          }
+
+          console.error(
+            `MSG91 failed (${path}, HTTP ${res.statusCode}): ${data || '(empty body)'}`
+          );
+          reject(new Error(parsed.message || `MSG91 failed (HTTP ${res.statusCode})`));
         });
       }
     );
     req.on('error', reject);
-    req.write(body);
+    req.write(payload);
     req.end();
   });
+}
+
+/** Primary: MSG91 OTP API — use with an OTP-type template in the MSG91 dashboard. */
+function sendMsg91OtpApi(phone, code) {
+  const templateId = process.env.MSG91_TEMPLATE_ID;
+  const mobile = formatMsg91Mobile(phone);
+  const body = {
+    template_id: templateId,
+    mobile,
+    otp: String(code),
+    otp_length: '6',
+  };
+  if (process.env.MSG91_SENDER) {
+    body.sender = process.env.MSG91_SENDER.trim();
+  }
+  return msg91Request('/api/v5/otp', body);
+}
+
+/** Fallback: Flow API when template is a Flow (not OTP widget). */
+function sendMsg91Flow(phone, code) {
+  const templateId = process.env.MSG91_TEMPLATE_ID;
+  const varName = (process.env.MSG91_TEMPLATE_VAR || 'VAR1').trim();
+  const recipient = {
+    mobiles: formatMsg91Mobile(phone),
+    [varName]: String(code),
+  };
+  return msg91Request('/api/v5/flow', {
+    template_id: templateId,
+    short_url: '0',
+    recipients: [recipient],
+  });
+}
+
+async function sendMsg91(phone, code) {
+  try {
+    await sendMsg91OtpApi(phone, code);
+    return;
+  } catch (otpErr) {
+    console.warn(`MSG91 OTP API: ${otpErr.message} — retrying via Flow API`);
+    await sendMsg91Flow(phone, code);
+  }
 }
 
 async function sendTwilio(phone, code, purposeLabel) {
@@ -114,8 +161,9 @@ async function sendTwilio(phone, code, purposeLabel) {
     throw new Error('Twilio not configured');
   }
 
+  const last10 = getPhoneLast10(phone);
   const params = new URLSearchParams({
-    To: phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '').slice(-10)}`,
+    To: phone.startsWith('+') ? phone : `+91${last10}`,
     From: from,
     Body: `SVI Foods: Your ${purposeLabel} code is ${code}. Valid 10 minutes.`,
   });

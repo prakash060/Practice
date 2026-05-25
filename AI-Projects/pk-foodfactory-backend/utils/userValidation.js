@@ -11,6 +11,27 @@ function normalizePhoneDigits(value) {
   return String(value).replace(/[\s\-().]/g, '');
 }
 
+/** Last 10 digits — canonical form for Indian mobiles in DB and MSG91. */
+function getPhoneLast10(phone) {
+  const digits = normalizePhoneDigits(phone).replace(/\D/g, '');
+  if (digits.length < 10) return null;
+  return digits.slice(-10);
+}
+
+function formatMsg91Mobile(phone) {
+  const last10 = getPhoneLast10(phone);
+  if (!last10) {
+    throw new Error('Invalid mobile number for SMS');
+  }
+  return `91${last10}`;
+}
+
+function phoneLookupRegex(phone) {
+  const last10 = getPhoneLast10(phone);
+  if (!last10) return null;
+  return new RegExp(`${last10}$`);
+}
+
 const PHONE_RE = /^\+?[0-9]{10,15}$/;
 
 function validateName(name) {
@@ -83,7 +104,11 @@ function validateIdentifier(identifier) {
   }
   const phoneNorm = normalizePhoneDigits(raw);
   if (PHONE_RE.test(phoneNorm)) {
-    return { value: phoneNorm, kind: 'phone' };
+    const last10 = getPhoneLast10(phoneNorm);
+    if (!last10) {
+      return { error: 'Enter a valid 10-digit mobile number' };
+    }
+    return { value: last10, kind: 'phone' };
   }
   return { error: 'Enter a valid email or 10–15 digit mobile number' };
 }
@@ -109,7 +134,11 @@ function validatePhone(phone) {
       error: 'Phone must be 10–15 digits (optional leading +)',
     };
   }
-  return { value: phoneNorm };
+  const last10 = getPhoneLast10(phoneNorm);
+  if (!last10) {
+    return { error: 'Enter a valid 10-digit mobile number' };
+  }
+  return { value: last10 };
 }
 
 function validateAddress(address) {
@@ -143,4 +172,7 @@ module.exports = {
   validatePhone,
   validateAddress,
   normalizePhoneDigits,
+  getPhoneLast10,
+  formatMsg91Mobile,
+  phoneLookupRegex,
 };
