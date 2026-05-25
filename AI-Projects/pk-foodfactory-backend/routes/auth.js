@@ -484,7 +484,6 @@ router.post('/credentials/reset/complete', async (req, res) => {
           emailVerified: true,
           phoneVerified: true,
         },
-        $unset: { pinHash: 1 },
       });
     } else {
       const pinHash = await hashPin(credRes.pin);
@@ -495,7 +494,6 @@ router.post('/credentials/reset/complete', async (req, res) => {
           emailVerified: true,
           phoneVerified: true,
         },
-        $unset: { password: 1 },
       });
     }
 
@@ -667,7 +665,6 @@ router.post('/switch-method/complete', async (req, res) => {
           authType: 'password',
           password: credRes.password,
         },
-        $unset: { pinHash: 1 },
       });
     } else {
       const pinHash = await hashPin(credRes.pin);
@@ -676,7 +673,6 @@ router.post('/switch-method/complete', async (req, res) => {
           authType: 'pin',
           pinHash,
         },
-        $unset: { password: 1 },
       });
     }
 

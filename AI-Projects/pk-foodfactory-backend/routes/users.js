@@ -10,19 +10,8 @@ const {
   validateIdentifier,
   phoneLookupRegex,
 } = require('../utils/userValidation');
-const { createSwitchAuthChallenge } = require('../services/otpService');
 
 const router = express.Router();
-
-function authTypeLabel(authType) {
-  if (authType === 'password') return 'password';
-  if (authType === 'pin') return 'PIN';
-  return 'OTP';
-}
-
-function storedAuthMatchesLoginMode(storedAuth, loginMode) {
-  return storedAuth === loginMode;
-}
 
 function safeUser(doc) {
   return {
@@ -77,42 +66,20 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email/phone or credentials' });
     }
 
-    const storedAuth = user.authType || 'otp';
-    if (!storedAuthMatchesLoginMode(storedAuth, mode)) {
-      const channel = idRes.kind === 'email' ? 'email' : 'phone';
-      const { sessionToken, devOtp, channel: otpChannel } = await createSwitchAuthChallenge({
-        user,
-        targetAuthType: mode,
-        channel,
-      });
-      const verifyWith = storedAuth;
-      return res.status(409).json({
-        error:
-          `This account uses ${authTypeLabel(storedAuth)} sign-in. ` +
-          `Verify your ${authTypeLabel(storedAuth)} to set up ${authTypeLabel(mode)} login.`,
-        authMismatch: {
-          storedAuthType: storedAuth,
-          attemptedLoginMode: mode,
-          verifyWith,
-          sessionToken,
-          ...(verifyWith === 'otp' ? { channel: otpChannel || channel } : {}),
-          ...(devOtp ? { devOtp } : {}),
-        },
-      });
-    }
-
     let ok = false;
     if (mode === 'pin') {
       if (!user.pinHash) {
         return res.status(401).json({
-          error: 'This account does not use a PIN. Try password or OTP sign-in.',
+          error:
+            'No PIN is set for this account. Sign in with password or OTP, or set a PIN via Forgot password or PIN.',
         });
       }
       ok = await user.verifyPin(loginSecret);
     } else {
       if (!user.password) {
         return res.status(401).json({
-          error: 'This account does not use a password. Try PIN or OTP sign-in.',
+          error:
+            'No password is set for this account. Sign in with PIN or OTP, or set a password via Forgot password or PIN.',
         });
       }
       ok = await user.verifyPassword(loginSecret);
