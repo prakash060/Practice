@@ -61,6 +61,9 @@ jobs:
             --version-label "$VERSION_LABEL" \
             --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET_BACKEND }},S3Key="${VERSION_LABEL}.zip"
       # Set these repository/environment secrets to match pk-foodfactory-backend/.env (no .env in the zip).
+      # Required GitHub secrets: PORT, MONGODB_URI, RAZORPAY_*, JWT_SECRET, ADMIN_EMAIL, CORS_ORIGINS,
+      #   EMAIL_USER, EMAIL_PASS, SMS_PROVIDER, MSG91_AUTH_KEY, MSG91_TEMPLATE_ID
+      # Optional: EMAIL_FROM, SMTP_HOST, SMTP_PORT, MSG91_SENDER, MSG91_TEMPLATE_VAR, OTP_DEV_LOG
       - name: Update Elastic Beanstalk environment
         env:
           EB_ENV_NAME: ${{ secrets.AWS_EB_ENVIRONMENT_NAME }}
@@ -72,6 +75,17 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
           CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMS_PROVIDER: ${{ secrets.SMS_PROVIDER }}
+          MSG91_AUTH_KEY: ${{ secrets.MSG91_AUTH_KEY }}
+          MSG91_TEMPLATE_ID: ${{ secrets.MSG91_TEMPLATE_ID }}
+          MSG91_SENDER: ${{ secrets.MSG91_SENDER }}
+          MSG91_TEMPLATE_VAR: ${{ secrets.MSG91_TEMPLATE_VAR }}
+          OTP_DEV_LOG: ${{ secrets.OTP_DEV_LOG }}
         run: |
           set -e
           if [ -z "${MONGODB_URI:-}" ]; then
@@ -91,6 +105,15 @@ jobs:
             --arg CORS_ORIGINS "$CORS_ORIGINS" \
             --arg EMAIL_USER "$EMAIL_USER" \
             --arg EMAIL_PASS "$EMAIL_PASS" \
+            --arg EMAIL_FROM "$EMAIL_FROM" \
+            --arg SMTP_HOST "$SMTP_HOST" \
+            --arg SMTP_PORT "$SMTP_PORT" \
+            --arg SMS_PROVIDER "$SMS_PROVIDER" \
+            --arg MSG91_AUTH_KEY "$MSG91_AUTH_KEY" \
+            --arg MSG91_TEMPLATE_ID "$MSG91_TEMPLATE_ID" \
+            --arg MSG91_SENDER "$MSG91_SENDER" \
+            --arg MSG91_TEMPLATE_VAR "$MSG91_TEMPLATE_VAR" \
+            --arg OTP_DEV_LOG "$OTP_DEV_LOG" \
             '{
               EnvironmentName: $EnvironmentName,
               VersionLabel: $VersionLabel,
@@ -106,7 +129,16 @@ jobs:
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "ADMIN_EMAIL", Value: $ADMIN_EMAIL},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "CORS_ORIGINS", Value: $CORS_ORIGINS},
                   {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "EMAIL_USER", Value: $EMAIL_USER},
-                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "EMAIL_PASS", Value: $EMAIL_PASS}
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "EMAIL_PASS", Value: $EMAIL_PASS},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "EMAIL_FROM", Value: $EMAIL_FROM},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "SMTP_HOST", Value: $SMTP_HOST},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "SMTP_PORT", Value: $SMTP_PORT},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "SMS_PROVIDER", Value: $SMS_PROVIDER},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "MSG91_AUTH_KEY", Value: $MSG91_AUTH_KEY},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "MSG91_TEMPLATE_ID", Value: $MSG91_TEMPLATE_ID},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "MSG91_SENDER", Value: $MSG91_SENDER},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "MSG91_TEMPLATE_VAR", Value: $MSG91_TEMPLATE_VAR},
+                  {Namespace: "aws:elasticbeanstalk:application:environment", OptionName: "OTP_DEV_LOG", Value: $OTP_DEV_LOG}
                 ]
                 | map(select(.Value != ""))
               )
