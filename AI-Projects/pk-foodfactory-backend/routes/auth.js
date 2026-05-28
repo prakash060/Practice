@@ -11,7 +11,7 @@ const {
   validateOtpCode,
   validateIdentifier,
   validateAuthCredential,
-  validateOptionalSignupCredentials,
+  validatePassword,
   phoneLookupRegex,
   getPhoneLast10,
 } = require('../utils/userValidation');
@@ -270,11 +270,11 @@ router.post('/signup/verify-otp', async (req, res) => {
 // POST /api/auth/signup/complete — create account after dual OTP verify
 router.post('/signup/complete', async (req, res) => {
   try {
-    const { sessionToken, authType, password, pin } = req.body || {};
+    const { sessionToken, password } = req.body || {};
     if (!sessionToken) return res.status(400).json({ error: 'sessionToken is required' });
 
-    const credRes = validateOptionalSignupCredentials(password, pin);
-    if (credRes.error) return res.status(400).json({ error: credRes.error });
+    const passRes = validatePassword(password, { required: true });
+    if (passRes.error) return res.status(400).json({ error: passRes.error });
 
     const challenge = await findActiveChallenge(sessionToken, 'signup');
     if (!challenge.emailVerified || !challenge.phoneVerified) {
@@ -292,32 +292,17 @@ router.post('/signup/complete', async (req, res) => {
       return res.status(409).json({ error: 'An account with this phone number already exists' });
     }
 
-    const initialLoginMethod =
-      authType && LOGIN_METHODS.includes(authType)
-        ? authType
-        : credRes.password
-          ? 'password'
-          : credRes.pin
-            ? 'pin'
-            : 'otp';
-
     const userData = {
       name: payload.name,
       email: challenge.email,
       phone: getPhoneLast10(challenge.phone) || challenge.phone,
       address: payload.address,
-      authType: initialLoginMethod,
-      lastLoginMethod: initialLoginMethod,
+      authType: 'password',
+      lastLoginMethod: 'password',
       emailVerified: true,
       phoneVerified: true,
+      password: passRes.value,
     };
-
-    if (credRes.password) {
-      userData.password = credRes.password;
-    }
-    if (credRes.pin) {
-      userData.pinHash = await hashPin(credRes.pin);
-    }
 
     const user = await User.create(userData);
 

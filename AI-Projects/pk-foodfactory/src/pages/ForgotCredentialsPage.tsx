@@ -48,9 +48,9 @@ export default function ForgotCredentialsPage() {
   const [verifyOtp, setVerifyOtp] = useState('')
   const [devOtp, setDevOtp] = useState<DevOtpHint | null>(null)
 
-  const [authType, setAuthType] = useState<AuthType>('password')
+  const authType: AuthType = 'password'
   const [password, setPassword] = useState('')
-  const [pin, setPin] = useState('')
+  const pin = ''
 
   const [submitError, setSubmitError] = useState('')
   const [infoMessage, setInfoMessage] = useState('')
@@ -163,7 +163,7 @@ export default function ForgotCredentialsPage() {
         otp: verifyMethod === 'otp' ? verifyOtp.trim() : undefined,
       })
       setStep('credential')
-      setInfoMessage('Verified. Add or update a password or PIN (existing methods stay active).')
+      setInfoMessage('Verified. Set a new password for your account.')
     } catch (err) {
       setSubmitError(axiosError(err, 'Verification failed'))
     } finally {
@@ -184,8 +184,7 @@ export default function ForgotCredentialsPage() {
       const res = await authAPI.resetComplete({
         sessionToken,
         authType,
-        password: authType === 'password' ? password : undefined,
-        pin: authType === 'pin' ? pin : undefined,
+        password,
       })
       setSuccessMessage(res.message)
       setTimeout(() => navigate('/login', { replace: true }), 1500)
@@ -212,7 +211,7 @@ export default function ForgotCredentialsPage() {
 
   return (
     <main className="auth-shell auth-shell--wide">
-      <AppHeaderAuth title="Reset password or PIN" />
+      <AppHeaderAuth title="Reset password" />
       <div className="auth-card auth-card--wide">
         <p className="item-description">
           Verify your identity using any sign-in method on your account. Your last used method is
@@ -358,50 +357,17 @@ export default function ForgotCredentialsPage() {
 
         {step === 'credential' ? (
           <form className="auth-form" onSubmit={handleCredentialSubmit} noValidate>
-            <fieldset className="auth-type-picker">
-              <legend>Add or update</legend>
-              <label>
-                <input
-                  type="radio"
-                  name="resetAuthType"
-                  checked={authType === 'password'}
-                  onChange={() => setAuthType('password')}
-                />
-                Password
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="resetAuthType"
-                  checked={authType === 'pin'}
-                  onChange={() => setAuthType('pin')}
-                />
-                PIN
-              </label>
-            </fieldset>
-            {authType === 'password' ? (
-              <SecretField
-                id="reset-password"
-                label="New password"
-                value={password}
-                onChange={setPassword}
-                variant="password"
-                autoComplete="new-password"
-                disabled={isSubmitting}
-              />
-            ) : (
-              <SecretField
-                id="reset-pin"
-                label="New PIN"
-                value={pin}
-                onChange={setPin}
-                variant="pin"
-                autoComplete="new-password"
-                disabled={isSubmitting}
-              />
-            )}
+            <SecretField
+              id="reset-password"
+              label="New password"
+              value={password}
+              onChange={setPassword}
+              variant="password"
+              autoComplete="new-password"
+              disabled={isSubmitting}
+            />
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving…' : 'Update credentials'}
+              {isSubmitting ? 'Saving…' : 'Update password'}
             </button>
           </form>
         ) : null}

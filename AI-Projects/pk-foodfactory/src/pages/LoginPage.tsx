@@ -3,14 +3,15 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
 import { IdentifierInput } from '../components/IdentifierInput'
+import { PhoneInput } from '../components/PhoneInput'
 import { OtpInput } from '../components/OtpInput'
 import { SecretField } from '../components/SecretField'
 import { authAPI, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
-import { normalizeIdentifierForApi, shouldShowPhoneCountryPrefix } from '../utils/phoneCountry'
-import { validateIdentifier, validateLoginForm, validateOtp } from '../utils/userValidators'
+import { formatPhoneForApi, normalizeIdentifierForApi } from '../utils/phoneCountry'
+import { validateLoginForm, validateOtp, validatePhone } from '../utils/userValidators'
 
-type LoginMethod = 'otp' | 'password' | 'pin'
+type LoginMethod = 'otp' | 'password'
 type OtpStep = 'identifier' | 'verify'
 
 function axiosError(err: unknown, fallback: string): string {
@@ -28,16 +29,11 @@ export default function LoginPage() {
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('otp')
   const [otpStep, setOtpStep] = useState<OtpStep>('identifier')
 
+  const [phone, setPhone] = useState('')
   const [identifier, setIdentifier] = useState('')
   const [secret, setSecret] = useState('')
   const [sessionToken, setSessionToken] = useState('')
-  const [channel, setChannel] = useState<'email' | 'phone'>('email')
-  // null = follow the text box; a value = user manually overrode the channel
-  const [manualChannel, setManualChannel] = useState<'email' | 'phone' | null>(null)
-  const [availableOtpChannels, setAvailableOtpChannels] = useState<Array<'email' | 'phone'>>([
-    'email',
-    'phone',
-  ])
+  const [channel, setChannel] = useState<'email' | 'phone'>('phone')
   const [otp, setOtp] = useState('')
   const [devOtp, setDevOtp] = useState<DevOtpHint | null>(null)
 
@@ -49,21 +45,11 @@ export default function LoginPage() {
   const requestedFrom =
     (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? null
 
-  const identifierError = useMemo(() => validateIdentifier(identifier), [identifier])
+  const phoneError = useMemo(() => validatePhone(phone), [phone])
   const credentialErrors = useMemo(
     () => validateLoginForm(identifier, secret),
     [identifier, secret]
   )
-
-  // The text box is the single source of truth: a numeric/empty value is treated
-  // as a phone (+91), anything with letters/@ as an email. The OTP channel mirrors
-  // this unless the user explicitly overrides it.
-  const identifierIsPhone = useMemo(
-    () => shouldShowPhoneCountryPrefix(identifier),
-    [identifier]
-  )
-  const otpChannel: 'email' | 'phone' =
-    manualChannel ?? (identifierIsPhone ? 'phone' : 'email')
 
   const switchMethod = (method: LoginMethod) => {
     setLoginMethod(method)
@@ -72,13 +58,7 @@ export default function LoginPage() {
     setOtpStep('identifier')
     setSecret('')
     setOtp('')
-    setManualChannel(null)
-  }
-
-  const handleIdentifierChange = (value: string) => {
-    setIdentifier(value)
-    // Re-sync the channel to the text box whenever it changes.
-    setManualChannel(null)
+    setTouched(false)
   }
 
   const finishLogin = (user: Parameters<typeof applyAuthSession>[0], token: string) => {
@@ -96,16 +76,12 @@ export default function LoginPage() {
 
     setIsSubmitting(true)
     try {
-      const user = await login(
-        normalizeIdentifierForApi(identifier),
-        secret,
-        loginMethod === 'pin' ? 'pin' : 'password'
-      )
+      const user = await login(normalizeIdentifierForApi(identifier), secret, 'password')
       const target =
         requestedFrom && requestedFrom !== '/' ? requestedFrom : defaultLandingPath(user)
       navigate(target, { replace: true })
     } catch (err) {
-      setSubmitError(axiosError(err, 'Invalid email/phone or credentials'))
+      setSubmitError(axiosError(err, 'Invalid email/mobile or password'))
     } finally {
       setIsSubmitting(false)
     }
@@ -116,28 +92,22 @@ export default function LoginPage() {
     setSubmitError('')
     setInfoMessage('')
     setTouched(true)
-    if (identifierError) return
+    if (phoneError) return
 
     setIsSubmitting(true)
     try {
-      const res = await authAPI.loginStart(
-        normalizeIdentifierForApi(identifier),
-        otpChannel
-      )
+      const res = await authAPI.loginStart(formatPhoneForApi(phone), 'phone')
       setInfoMessage(res.message)
-      if (res.sessionToken && res.channel) {
+      if (res.sessionToken) {
         setSessionToken(res.sessionToken)
-        setChannel(res.channel)
-        if (res.availableChannels?.length) {
-          setAvailableOtpChannels(res.availableChannels)
-        }
+        setChannel(res.channel ?? 'phone')
         setDevOtp(res.devOtp ?? null)
         setOtp('')
         setOtpStep('verify')
         setSubmitError('')
       } else {
         setSubmitError(
-          'Could not start OTP sign-in. Check your email or mobile number, or create an account.'
+          'No account found for this mobile number. Check the number or create an account.'
         )
       }
     } catch (err) {
@@ -198,7 +168,7 @@ export default function LoginPage() {
               checked={loginMethod === 'otp'}
               onChange={() => switchMethod('otp')}
             />
-            OTP
+            Mobile number
           </label>
           <label>
             <input
@@ -209,19 +179,9 @@ export default function LoginPage() {
             />
             Password
           </label>
-          <label>
-            <input
-              type="radio"
-              name="loginMethod"
-              checked={loginMethod === 'pin'}
-              onChange={() => switchMethod('pin')}
-            />
-            PIN
-          </label>
         </fieldset>
         <p className="item-description auth-method-hint">
-          Use any sign-in method configured on your account. OTP always works; password and PIN work
-          when set.
+          Sign in with a one-time code sent to your mobile number, or with your account password.
         </p>
 
         {infoMessage ? <p className="auth-info">{infoMessage}</p> : null}
@@ -230,44 +190,17 @@ export default function LoginPage() {
         {loginMethod === 'otp' && otpStep === 'identifier' ? (
           <form className="auth-form" onSubmit={handleOtpStart} noValidate>
             <p className="item-description">
-              Enter your email or mobile. We will send a one-time verification code.
+              Enter your registered mobile number. We will send a one-time code by SMS.
             </p>
-            <IdentifierInput
-              id="login-identifier"
-              label="Email or mobile"
-              value={identifier}
-              onChange={handleIdentifierChange}
+            <PhoneInput
+              id="login-phone"
+              label="Mobile number"
+              value={phone}
+              onChange={setPhone}
               disabled={isSubmitting}
-              hint="Mobile numbers use +91 by default"
-              error={touched ? identifierError ?? undefined : undefined}
+              hint="India (+91) — 10-digit mobile without leading zero"
+              error={touched ? phoneError ?? undefined : undefined}
             />
-            <fieldset className="auth-type-picker auth-type-picker--inline">
-              <legend className="visually-hidden">Send OTP via</legend>
-              {availableOtpChannels.includes('email') ? (
-                <label>
-                  <input
-                    type="radio"
-                    name="otpChannel"
-                    checked={otpChannel === 'email'}
-                    onChange={() => setManualChannel('email')}
-                    disabled={isSubmitting}
-                  />
-                  Email
-                </label>
-              ) : null}
-              {availableOtpChannels.includes('phone') ? (
-                <label>
-                  <input
-                    type="radio"
-                    name="otpChannel"
-                    checked={otpChannel === 'phone'}
-                    onChange={() => setManualChannel('phone')}
-                    disabled={isSubmitting}
-                  />
-                  SMS (+91)
-                </label>
-              ) : null}
-            </fieldset>
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
               {isSubmitting ? 'Sending code…' : 'Send verification code'}
             </button>
@@ -325,34 +258,30 @@ export default function LoginPage() {
           </form>
         ) : null}
 
-        {loginMethod === 'password' || loginMethod === 'pin' ? (
+        {loginMethod === 'password' ? (
           <form className="auth-form" onSubmit={handleCredentialSubmit} noValidate>
-            <p className="item-description">
-              {loginMethod === 'pin'
-                ? 'Sign in with the PIN set on your account. OTP sign-in is always available.'
-                : 'Sign in with your account password. OTP sign-in is always available.'}
-            </p>
+            <p className="item-description">Sign in with your email or mobile and password.</p>
             <IdentifierInput
               id="login-identifier-cred"
               label="Email or mobile"
               value={identifier}
-              onChange={handleIdentifierChange}
+              onChange={setIdentifier}
               disabled={isSubmitting}
               hint="Mobile numbers use +91 by default"
               error={touched ? credentialErrors.identifier : undefined}
             />
             <SecretField
               id="login-secret"
-              label={loginMethod === 'pin' ? 'PIN' : 'Password'}
+              label="Password"
               value={secret}
               onChange={setSecret}
-              variant={loginMethod === 'pin' ? 'pin' : 'password'}
-              autoComplete={loginMethod === 'pin' ? 'off' : 'current-password'}
+              variant="password"
+              autoComplete="current-password"
               disabled={isSubmitting}
               error={touched ? credentialErrors.secret : undefined}
             />
             <p className="auth-footer auth-footer--inline">
-              <Link to="/forgot-credentials">Forgot password or PIN?</Link>
+              <Link to="/forgot-credentials">Forgot password?</Link>
             </p>
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
               {isSubmitting ? 'Signing in…' : 'Sign in'}

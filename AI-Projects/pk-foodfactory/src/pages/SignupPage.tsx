@@ -9,7 +9,7 @@ import { authAPI, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
 import { formatPhoneForApi } from '../utils/phoneCountry'
 import {
-  validateOptionalSignupCredentials,
+  validatePassword,
   validateOtp,
   validateSignupProfileForm,
 } from '../utils/userValidators'
@@ -38,10 +38,7 @@ export default function SignupPage() {
   const [emailOtp, setEmailOtp] = useState('')
   const [phoneOtp, setPhoneOtp] = useState('')
 
-  const [enablePassword, setEnablePassword] = useState(false)
-  const [enablePin, setEnablePin] = useState(false)
   const [password, setPassword] = useState('')
-  const [pin, setPin] = useState('')
 
   const [devOtp, setDevOtp] = useState<DevOtpHint | null>(null)
   const [submitError, setSubmitError] = useState('')
@@ -54,10 +51,7 @@ export default function SignupPage() {
     [name, email, phone, address]
   )
 
-  const credentialErrors = useMemo(
-    () => validateOptionalSignupCredentials(enablePassword, password, enablePin, pin),
-    [enablePassword, password, enablePin, pin]
-  )
+  const passwordError = useMemo(() => validatePassword(password), [password])
 
   const handleProfileSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -120,9 +114,7 @@ export default function SignupPage() {
     try {
       await authAPI.signupVerifyOtp(sessionToken, emailOtp.trim(), phoneOtp.trim())
       setStep('credential')
-      setInfoMessage(
-        'Verification successful. OTP sign-in is always enabled. Optionally add a password and/or PIN.'
-      )
+      setInfoMessage('Verification successful. Set a password to finish creating your account.')
     } catch (err) {
       setSubmitError(axiosError(err, 'Verification failed'))
     } finally {
@@ -134,14 +126,13 @@ export default function SignupPage() {
     e.preventDefault()
     setTouched(true)
     setSubmitError('')
-    if (Object.keys(credentialErrors).length > 0) return
+    if (passwordError) return
 
     setIsSubmitting(true)
     try {
       const res = await authAPI.signupComplete({
         sessionToken,
-        password: enablePassword ? password : undefined,
-        pin: enablePin ? pin : undefined,
+        password,
       })
       applyAuthSession(res.user, res.token)
       navigate(defaultLandingPath(res.user), { replace: true })
@@ -159,7 +150,7 @@ export default function SignupPage() {
         <div className="auth-steps" aria-label="Signup progress">
           <span className={step === 'profile' ? 'auth-steps__item--active' : ''}>1. Profile</span>
           <span className={step === 'otp' ? 'auth-steps__item--active' : ''}>2. Verify</span>
-          <span className={step === 'credential' ? 'auth-steps__item--active' : ''}>3. Login setup</span>
+          <span className={step === 'credential' ? 'auth-steps__item--active' : ''}>3. Set password</span>
         </div>
 
         {infoMessage ? <p className="auth-info">{infoMessage}</p> : null}
@@ -280,62 +271,20 @@ export default function SignupPage() {
         {step === 'credential' ? (
           <form className="auth-form" onSubmit={handleCredentialSubmit} noValidate>
             <p className="item-description">
-              <strong>OTP sign-in</strong> is always available using your email or mobile. You can also
-              add optional sign-in methods below — use any of them whenever you log in.
+              After signup you can log in with your <strong>mobile number</strong> (one-time code) or
+              with this <strong>password</strong>.
             </p>
-            <fieldset className="auth-type-picker">
-              <legend>Optional sign-in methods</legend>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={enablePassword}
-                  onChange={(ev) => {
-                    setEnablePassword(ev.target.checked)
-                    if (!ev.target.checked) setPassword('')
-                  }}
-                  disabled={isSubmitting}
-                />
-                Set a password (8+ characters)
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={enablePin}
-                  onChange={(ev) => {
-                    setEnablePin(ev.target.checked)
-                    if (!ev.target.checked) setPin('')
-                  }}
-                  disabled={isSubmitting}
-                />
-                Set a PIN (4–6 digits)
-              </label>
-            </fieldset>
 
-            {enablePassword ? (
-              <SecretField
-                id="signup-password"
-                label="Password"
-                value={password}
-                onChange={setPassword}
-                variant="password"
-                autoComplete="new-password"
-                disabled={isSubmitting}
-                error={touched ? credentialErrors.password : undefined}
-              />
-            ) : null}
-
-            {enablePin ? (
-              <SecretField
-                id="signup-pin"
-                label="PIN"
-                value={pin}
-                onChange={setPin}
-                variant="pin"
-                autoComplete="new-password"
-                disabled={isSubmitting}
-                error={touched ? credentialErrors.pin : undefined}
-              />
-            ) : null}
+            <SecretField
+              id="signup-password"
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              variant="password"
+              autoComplete="new-password"
+              disabled={isSubmitting}
+              error={touched ? passwordError ?? undefined : undefined}
+            />
 
             <div className="auth-form__row">
               <button

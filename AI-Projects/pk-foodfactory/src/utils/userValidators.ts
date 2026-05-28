@@ -158,7 +158,7 @@ export function validateLoginForm(identifier: string, secret: string): FieldErro
   const errors: FieldErrors = {}
   const eId = validateIdentifier(identifier)
   if (eId) errors.identifier = eId
-  if (!secret) errors.secret = 'Password or PIN is required'
+  if (!secret) errors.secret = 'Password is required'
   return errors
 }
 
