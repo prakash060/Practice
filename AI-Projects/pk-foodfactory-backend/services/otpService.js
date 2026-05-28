@@ -228,6 +228,80 @@ async function resendOtps(sessionToken, purpose) {
   };
 }
 
+async function deliverLoginOtp(user, preferredChannel, code) {
+  const purpose = purposeLabel('login');
+  let activeChannel = preferredChannel;
+  let delivery = {
+    emailSent: false,
+    smsSent: false,
+    emailDevLog: false,
+    smsDevLog: false,
+  };
+
+  async function tryEmail() {
+    if (!user.email) return null;
+    const emailResult = await sendOtpEmail(user.email, code, purpose);
+    return {
+      emailSent: Boolean(emailResult?.sent),
+      smsSent: false,
+      emailDevLog: Boolean(emailResult?.devLog),
+      smsDevLog: false,
+    };
+  }
+
+  async function trySms() {
+    if (!user.phone) return null;
+    const smsResult = await sendOtpSms(user.phone, code, purpose);
+    return {
+      emailSent: false,
+      smsSent: Boolean(smsResult?.sent),
+      emailDevLog: false,
+      smsDevLog: Boolean(smsResult?.devLog),
+    };
+  }
+
+  const primary = preferredChannel === 'email' ? tryEmail : trySms;
+  const secondary = preferredChannel === 'email' ? trySms : tryEmail;
+  const secondaryChannel = preferredChannel === 'email' ? 'phone' : 'email';
+
+  try {
+    const primaryDelivery = await primary();
+    if (primaryDelivery) delivery = primaryDelivery;
+  } catch (primaryErr) {
+    console.warn(`Login OTP ${preferredChannel} delivery failed:`, primaryErr.message);
+  }
+
+  const primaryOk =
+    Boolean(delivery.emailSent || delivery.smsSent) ||
+    Boolean(delivery.emailDevLog || delivery.smsDevLog);
+
+  if (!primaryOk) {
+    try {
+      const alt = await secondary();
+      if (alt) {
+        delivery = alt;
+        activeChannel = secondaryChannel;
+      }
+    } catch (secondaryErr) {
+      console.warn(`Login OTP ${secondaryChannel} fallback failed:`, secondaryErr.message);
+    }
+  }
+
+  const delivered =
+    Boolean(delivery.emailSent || delivery.smsSent) ||
+    Boolean(delivery.emailDevLog || delivery.smsDevLog);
+
+  if (!delivered) {
+    const err = new Error(
+      'Could not send verification code. Check server email/SMS settings or try the other channel.'
+    );
+    err.statusCode = 503;
+    throw err;
+  }
+
+  return { activeChannel, delivery };
+}
+
 async function createLoginChallengeAndSendOtp({ user, channel }) {
   const email = user.email;
   const phone = user.phone;
@@ -238,12 +312,14 @@ async function createLoginChallengeAndSendOtp({ user, channel }) {
 
   await invalidatePriorChallenges(email, phone, 'login');
 
+  const { activeChannel, delivery } = await deliverLoginOtp(user, channel, code);
+
   const challengeData = {
     purpose: 'login',
     sessionToken,
     email,
     phone,
-    loginChannel: channel,
+    loginChannel: activeChannel,
     userId: user._id,
     expiresAt: new Date(Date.now() + OTP_TTL_MS),
     emailVerified: false,
@@ -253,7 +329,7 @@ async function createLoginChallengeAndSendOtp({ user, channel }) {
     phoneCodeHash: null,
   };
 
-  if (channel === 'email') {
+  if (activeChannel === 'email') {
     challengeData.emailCodeHash = await hashOtp(code);
   } else {
     challengeData.phoneCodeHash = await hashOtp(code);
@@ -261,35 +337,19 @@ async function createLoginChallengeAndSendOtp({ user, channel }) {
 
   const challenge = await OtpChallenge.create(challengeData);
 
-  let delivery;
-  if (channel === 'email') {
-    const emailResult = await sendOtpEmail(email, code, purposeLabel('login'));
-    delivery = {
-      emailSent: Boolean(emailResult?.sent),
-      smsSent: false,
-      emailDevLog: Boolean(emailResult?.devLog),
-      smsDevLog: false,
-    };
-  } else {
-    const smsResult = await sendOtpSms(phone, code, purposeLabel('login'));
-    delivery = {
-      emailSent: false,
-      smsSent: Boolean(smsResult?.sent),
-      emailDevLog: false,
-      smsDevLog: Boolean(smsResult?.devLog),
-    };
-  }
-
   markSendCooldown(email, phone, 'login');
+
+  const actuallySent = Boolean(delivery.emailSent || delivery.smsSent);
+  const devOtp =
+    delivery.emailDevLog || delivery.smsDevLog || (isDevOtpExposureEnabled() && !actuallySent)
+      ? buildDevOtpLoginPayload(activeChannel, code)
+      : undefined;
 
   return {
     challenge,
     sessionToken,
-    channel,
-    devOtp:
-      delivery.emailDevLog || delivery.smsDevLog
-        ? buildDevOtpLoginPayload(channel, code)
-        : undefined,
+    channel: activeChannel,
+    devOtp,
     delivery,
   };
 }

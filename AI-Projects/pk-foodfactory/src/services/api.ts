@@ -263,6 +263,7 @@ export interface LoginStartResponse {
   message: string;
   sessionToken?: string;
   channel?: 'email' | 'phone';
+  availableChannels?: Array<'email' | 'phone'>;
   devOtp?: DevOtpHint;
 }
 
@@ -340,8 +341,14 @@ export const authAPI = {
     return response.data;
   },
 
-  loginStart: async (identifier: string): Promise<LoginStartResponse> => {
-    const response = await api.post<LoginStartResponse>('/auth/login/start', { identifier });
+  loginStart: async (
+    identifier: string,
+    channel?: 'email' | 'phone'
+  ): Promise<LoginStartResponse> => {
+    const response = await api.post<LoginStartResponse>('/auth/login/start', {
+      identifier,
+      ...(channel ? { channel } : {}),
+    });
     return response.data;
   },
 

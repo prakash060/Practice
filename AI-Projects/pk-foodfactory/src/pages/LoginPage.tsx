@@ -7,7 +7,7 @@ import { OtpInput } from '../components/OtpInput'
 import { SecretField } from '../components/SecretField'
 import { authAPI, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
-import { normalizeIdentifierForApi } from '../utils/phoneCountry'
+import { normalizeIdentifierForApi, shouldShowPhoneCountryPrefix } from '../utils/phoneCountry'
 import { validateIdentifier, validateLoginForm, validateOtp } from '../utils/userValidators'
 
 type LoginMethod = 'otp' | 'password' | 'pin'
@@ -32,6 +32,11 @@ export default function LoginPage() {
   const [secret, setSecret] = useState('')
   const [sessionToken, setSessionToken] = useState('')
   const [channel, setChannel] = useState<'email' | 'phone'>('email')
+  const [otpChannel, setOtpChannel] = useState<'email' | 'phone'>('email')
+  const [availableOtpChannels, setAvailableOtpChannels] = useState<Array<'email' | 'phone'>>([
+    'email',
+    'phone',
+  ])
   const [otp, setOtp] = useState('')
   const [devOtp, setDevOtp] = useState<DevOtpHint | null>(null)
 
@@ -56,6 +61,18 @@ export default function LoginPage() {
     setOtpStep('identifier')
     setSecret('')
     setOtp('')
+    if (method === 'otp') {
+      setOtpChannel(shouldShowPhoneCountryPrefix(identifier) ? 'phone' : 'email')
+    }
+  }
+
+  const handleIdentifierChange = (value: string) => {
+    setIdentifier(value)
+    if (shouldShowPhoneCountryPrefix(value)) {
+      setOtpChannel('phone')
+    } else if (value.includes('@')) {
+      setOtpChannel('email')
+    }
   }
 
   const finishLogin = (user: Parameters<typeof applyAuthSession>[0], token: string) => {
@@ -97,14 +114,25 @@ export default function LoginPage() {
 
     setIsSubmitting(true)
     try {
-      const res = await authAPI.loginStart(normalizeIdentifierForApi(identifier))
+      const res = await authAPI.loginStart(
+        normalizeIdentifierForApi(identifier),
+        otpChannel
+      )
       setInfoMessage(res.message)
       if (res.sessionToken && res.channel) {
         setSessionToken(res.sessionToken)
         setChannel(res.channel)
+        if (res.availableChannels?.length) {
+          setAvailableOtpChannels(res.availableChannels)
+        }
         setDevOtp(res.devOtp ?? null)
         setOtp('')
         setOtpStep('verify')
+        setSubmitError('')
+      } else {
+        setSubmitError(
+          'Could not start OTP sign-in. Check your email or mobile number, or create an account.'
+        )
       }
     } catch (err) {
       setSubmitError(axiosError(err, 'Could not send verification code'))
@@ -202,11 +230,38 @@ export default function LoginPage() {
               id="login-identifier"
               label="Email or mobile"
               value={identifier}
-              onChange={setIdentifier}
+              onChange={handleIdentifierChange}
               disabled={isSubmitting}
               hint="Mobile numbers use +91 by default"
               error={touched ? identifierError ?? undefined : undefined}
             />
+            <fieldset className="auth-type-picker auth-type-picker--inline">
+              <legend className="visually-hidden">Send OTP via</legend>
+              {availableOtpChannels.includes('email') ? (
+                <label>
+                  <input
+                    type="radio"
+                    name="otpChannel"
+                    checked={otpChannel === 'email'}
+                    onChange={() => setOtpChannel('email')}
+                    disabled={isSubmitting}
+                  />
+                  Email
+                </label>
+              ) : null}
+              {availableOtpChannels.includes('phone') ? (
+                <label>
+                  <input
+                    type="radio"
+                    name="otpChannel"
+                    checked={otpChannel === 'phone'}
+                    onChange={() => setOtpChannel('phone')}
+                    disabled={isSubmitting}
+                  />
+                  SMS (+91)
+                </label>
+              ) : null}
+            </fieldset>
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
               {isSubmitting ? 'Sending code…' : 'Send verification code'}
             </button>
@@ -275,7 +330,7 @@ export default function LoginPage() {
               id="login-identifier-cred"
               label="Email or mobile"
               value={identifier}
-              onChange={setIdentifier}
+              onChange={handleIdentifierChange}
               disabled={isSubmitting}
               hint="Mobile numbers use +91 by default"
               error={touched ? credentialErrors.identifier : undefined}

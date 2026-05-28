@@ -48,9 +48,38 @@ function loginOtpMessage(channel, devOtp, delivery) {
       'For Gmail, set EMAIL_PASS to a Google App Password (not your login password).'
     );
   }
+  if (delivery?.emailSent && channel === 'email') {
+    return 'Verification code sent to your email.';
+  }
+  if (delivery?.smsSent && channel === 'phone') {
+    return 'Verification code sent to your mobile number.';
+  }
+  if (delivery?.emailSent && channel === 'phone') {
+    return 'SMS could not be sent; verification code sent to your email instead.';
+  }
+  if (delivery?.smsSent && channel === 'email') {
+    return 'Email could not be sent; verification code sent via SMS instead.';
+  }
   return channel === 'email'
     ? 'Verification code sent to your email.'
     : 'Verification code sent to your mobile number.';
+}
+
+function getAvailableOtpChannels(user) {
+  const channels = [];
+  if (user?.email) channels.push('email');
+  if (user?.phone) channels.push('phone');
+  return channels.length ? channels : ['email'];
+}
+
+function resolveLoginOtpChannel(user, identifierKind, requestedChannel) {
+  const available = getAvailableOtpChannels(user);
+  if (requestedChannel === 'email' || requestedChannel === 'phone') {
+    if (available.includes(requestedChannel)) return requestedChannel;
+  }
+  if (identifierKind === 'email' && available.includes('email')) return 'email';
+  if (identifierKind === 'phone' && available.includes('phone')) return 'phone';
+  return available[0];
 }
 
 function otpSessionMessage(devOtp, delivery, { resent = false } = {}) {
@@ -310,7 +339,7 @@ router.post('/signup/complete', async (req, res) => {
 // POST /api/auth/login/start — send OTP to email OR mobile used to sign in
 router.post('/login/start', async (req, res) => {
   try {
-    const { identifier } = req.body || {};
+    const { identifier, channel: requestedChannel } = req.body || {};
     const idRes = validateIdentifier(identifier);
     if (idRes.error) return res.status(400).json({ error: idRes.error });
 
@@ -323,16 +352,18 @@ router.post('/login/start', async (req, res) => {
       return res.json({ message: GENERIC_LOGIN_MSG });
     }
 
-    const channel = idRes.kind;
-    const { sessionToken, devOtp, delivery } = await createLoginChallengeAndSendOtp({
-      user,
-      channel,
-    });
+    const channel = resolveLoginOtpChannel(user, idRes.kind, requestedChannel);
+    const { sessionToken, devOtp, delivery, channel: usedChannel } =
+      await createLoginChallengeAndSendOtp({
+        user,
+        channel,
+      });
 
     return res.json({
       sessionToken,
-      channel,
-      message: loginOtpMessage(channel, devOtp, delivery),
+      channel: usedChannel,
+      availableChannels: getAvailableOtpChannels(user),
+      message: loginOtpMessage(usedChannel, devOtp, delivery),
       ...(devOtp ? { devOtp } : {}),
     });
   } catch (err) {
