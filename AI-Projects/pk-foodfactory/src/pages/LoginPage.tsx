@@ -32,7 +32,8 @@ export default function LoginPage() {
   const [secret, setSecret] = useState('')
   const [sessionToken, setSessionToken] = useState('')
   const [channel, setChannel] = useState<'email' | 'phone'>('email')
-  const [otpChannel, setOtpChannel] = useState<'email' | 'phone'>('email')
+  // null = follow the text box; a value = user manually overrode the channel
+  const [manualChannel, setManualChannel] = useState<'email' | 'phone' | null>(null)
   const [availableOtpChannels, setAvailableOtpChannels] = useState<Array<'email' | 'phone'>>([
     'email',
     'phone',
@@ -54,6 +55,16 @@ export default function LoginPage() {
     [identifier, secret]
   )
 
+  // The text box is the single source of truth: a numeric/empty value is treated
+  // as a phone (+91), anything with letters/@ as an email. The OTP channel mirrors
+  // this unless the user explicitly overrides it.
+  const identifierIsPhone = useMemo(
+    () => shouldShowPhoneCountryPrefix(identifier),
+    [identifier]
+  )
+  const otpChannel: 'email' | 'phone' =
+    manualChannel ?? (identifierIsPhone ? 'phone' : 'email')
+
   const switchMethod = (method: LoginMethod) => {
     setLoginMethod(method)
     setSubmitError('')
@@ -61,18 +72,13 @@ export default function LoginPage() {
     setOtpStep('identifier')
     setSecret('')
     setOtp('')
-    if (method === 'otp') {
-      setOtpChannel(shouldShowPhoneCountryPrefix(identifier) ? 'phone' : 'email')
-    }
+    setManualChannel(null)
   }
 
   const handleIdentifierChange = (value: string) => {
     setIdentifier(value)
-    if (shouldShowPhoneCountryPrefix(value)) {
-      setOtpChannel('phone')
-    } else if (value.includes('@')) {
-      setOtpChannel('email')
-    }
+    // Re-sync the channel to the text box whenever it changes.
+    setManualChannel(null)
   }
 
   const finishLogin = (user: Parameters<typeof applyAuthSession>[0], token: string) => {
@@ -243,7 +249,7 @@ export default function LoginPage() {
                     type="radio"
                     name="otpChannel"
                     checked={otpChannel === 'email'}
-                    onChange={() => setOtpChannel('email')}
+                    onChange={() => setManualChannel('email')}
                     disabled={isSubmitting}
                   />
                   Email
@@ -255,7 +261,7 @@ export default function LoginPage() {
                     type="radio"
                     name="otpChannel"
                     checked={otpChannel === 'phone'}
-                    onChange={() => setOtpChannel('phone')}
+                    onChange={() => setManualChannel('phone')}
                     disabled={isSubmitting}
                   />
                   SMS (+91)
