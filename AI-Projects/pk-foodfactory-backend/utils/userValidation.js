@@ -4,8 +4,7 @@ const NAME_MAX = 120;
 const ADDRESS_MIN = 10;
 const ADDRESS_MAX = 500;
 const PASSWORD_MIN = 8;
-const PIN_RE = /^\d{4,6}$/;
-const AUTH_TYPES = ['password', 'pin', 'otp'];
+const AUTH_TYPES = ['password', 'otp'];
 
 function normalizePhoneDigits(value) {
   return String(value).replace(/[\s\-().]/g, '');
@@ -66,56 +65,6 @@ function validatePassword(password, { required = true } = {}) {
     return { error: `Password must be at least ${PASSWORD_MIN} characters` };
   }
   return { value: password };
-}
-
-function validatePin(pin, { required = true } = {}) {
-  if (!pin || typeof pin !== 'string' || !pin.trim()) {
-    if (!required) return { value: null };
-    return { error: 'PIN is required' };
-  }
-  const trimmed = pin.trim();
-  if (!PIN_RE.test(trimmed)) {
-    return { error: 'PIN must be 4 to 6 digits' };
-  }
-  return { value: trimmed };
-}
-
-function validateAuthCredential(authType, password, pin) {
-  if (!AUTH_TYPES.includes(authType)) {
-    return { error: 'authType must be password, pin, or otp' };
-  }
-  if (authType === 'otp') {
-    return { authType: 'otp', password: null, pin: null };
-  }
-  if (authType === 'password') {
-    const passRes = validatePassword(password, { required: true });
-    if (passRes.error) return passRes;
-    return { authType, password: passRes.value, pin: null };
-  }
-  const pinRes = validatePin(pin, { required: true });
-  if (pinRes.error) return pinRes;
-  return { authType, password: null, pin: pinRes.value };
-}
-
-function validateOptionalSignupCredentials(password, pin) {
-  const hasPassword = password !== undefined && password !== null && String(password).length > 0;
-  const hasPin = pin !== undefined && pin !== null && String(pin).trim().length > 0;
-
-  const result = { password: null, pin: null };
-
-  if (hasPassword) {
-    const passRes = validatePassword(password, { required: true });
-    if (passRes.error) return passRes;
-    result.password = passRes.value;
-  }
-
-  if (hasPin) {
-    const pinRes = validatePin(pin, { required: true });
-    if (pinRes.error) return pinRes;
-    result.pin = pinRes.value;
-  }
-
-  return result;
 }
 
 function validateIdentifier(identifier) {
@@ -184,14 +133,10 @@ module.exports = {
   ADDRESS_MIN,
   ADDRESS_MAX,
   PASSWORD_MIN,
-  PIN_RE,
   AUTH_TYPES,
   validateName,
   validateEmail,
   validatePassword,
-  validatePin,
-  validateAuthCredential,
-  validateOptionalSignupCredentials,
   validateIdentifier,
   validateOtpCode,
   validatePhone,

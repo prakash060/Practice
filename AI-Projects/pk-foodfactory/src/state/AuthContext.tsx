@@ -19,7 +19,7 @@ type AuthContextValue = {
   login: (
     identifier: string,
     secret: string,
-    loginMode: 'password' | 'pin'
+    loginMode: 'password'
   ) => Promise<UserPublic>
   applyAuthSession: (user: UserPublic, token: string) => void
   logout: () => void
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(
-    async (identifier: string, secret: string, loginMode: 'password' | 'pin') => {
+    async (identifier: string, secret: string, loginMode: 'password') => {
       const res = await authAPI.login({ identifier, secret, loginMode })
       applyAuthSession(res.user, res.token)
       return res.user

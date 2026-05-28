@@ -5,19 +5,35 @@ function getSmsProvider() {
   return (process.env.SMS_PROVIDER || 'none').trim().toLowerCase();
 }
 
-const SMS_PLACEHOLDER_MARKERS = ['your_msg91', 'your_twilio', 'change_me'];
+const SMS_PLACEHOLDER_MARKERS = [
+  'your_msg91',
+  'your_twilio',
+  'change_me',
+  'changeme',
+  'hello',
+  'dummy',
+  'example',
+  'authkey',
+  'template_id',
+];
 
 function looksLikePlaceholder(value) {
   const v = String(value).trim().toLowerCase();
   if (!v) return true;
+  if (v === 'test') return true;
   return SMS_PLACEHOLDER_MARKERS.some((marker) => v.includes(marker));
 }
 
+// Real MSG91 credentials are long opaque tokens (auth keys ~25 chars, template
+// IDs are 24-char ids). Treat short/placeholder values as "not configured" so we
+// fall back to dev OTP instead of calling MSG91 with junk (which returns the
+// "Template id ... missing/incorrect/archived" error).
 function isMsg91Configured() {
-  const authKey = process.env.MSG91_AUTH_KEY;
-  const templateId = process.env.MSG91_TEMPLATE_ID;
+  const authKey = String(process.env.MSG91_AUTH_KEY || '').trim();
+  const templateId = String(process.env.MSG91_TEMPLATE_ID || '').trim();
   if (!authKey || !templateId) return false;
   if (looksLikePlaceholder(authKey) || looksLikePlaceholder(templateId)) return false;
+  if (authKey.length < 16 || templateId.length < 12) return false;
   return true;
 }
 

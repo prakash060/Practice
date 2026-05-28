@@ -64,7 +64,7 @@ const openapi = {
           email: { type: 'string' },
           phone: { type: 'string' },
           address: { type: 'string' },
-          authType: { type: 'string', enum: ['password', 'pin'] },
+          authType: { type: 'string', enum: ['password', 'otp'] },
           emailVerified: { type: 'boolean' },
           phoneVerified: { type: 'boolean' },
           isAdmin: {
@@ -176,7 +176,7 @@ const openapi = {
         required: ['identifier', 'secret'],
         properties: {
           identifier: { type: 'string', description: 'Email or mobile number' },
-          secret: { type: 'string', description: 'Password (8+ chars) or 4–6 digit PIN' },
+          secret: { type: 'string', description: 'Account password (8+ chars)' },
           email: { type: 'string', deprecated: true },
           password: { type: 'string', deprecated: true },
         },
@@ -190,12 +190,10 @@ const openapi = {
       },
       SignupCompleteRequest: {
         type: 'object',
-        required: ['sessionToken', 'authType'],
+        required: ['sessionToken', 'password'],
         properties: {
           sessionToken: { type: 'string' },
-          authType: { type: 'string', enum: ['password', 'pin'] },
-          password: { type: 'string' },
-          pin: { type: 'string' },
+          password: { type: 'string', description: 'Account password (8+ chars)' },
         },
       },
       LoginResponse: {
@@ -310,7 +308,7 @@ const openapi = {
     '/api/auth/signup/complete': {
       post: {
         tags: ['Auth'],
-        summary: 'Complete signup with password or PIN',
+        summary: 'Complete signup by setting an account password',
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { $ref: '#/components/schemas/SignupCompleteRequest' } } },

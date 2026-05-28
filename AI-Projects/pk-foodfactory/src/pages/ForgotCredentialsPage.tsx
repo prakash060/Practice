@@ -25,7 +25,6 @@ function axiosError(err: unknown, fallback: string): string {
 
 function methodLabel(method: AuthType): string {
   if (method === 'password') return 'Password'
-  if (method === 'pin') return 'PIN'
   return 'OTP'
 }
 
@@ -50,7 +49,6 @@ export default function ForgotCredentialsPage() {
 
   const authType: AuthType = 'password'
   const [password, setPassword] = useState('')
-  const pin = ''
 
   const [submitError, setSubmitError] = useState('')
   const [infoMessage, setInfoMessage] = useState('')
@@ -67,8 +65,8 @@ export default function ForgotCredentialsPage() {
   }, [email, phone])
 
   const credentialErrors = useMemo(
-    () => validateCredentialForm(authType, password, pin),
-    [authType, password, pin]
+    () => validateCredentialForm(authType, password),
+    [authType, password]
   )
 
   const handleIdentifySubmit = async (e: FormEvent) => {
@@ -91,15 +89,13 @@ export default function ForgotCredentialsPage() {
         setSessionToken(res.sessionToken)
         const methods: AuthType[] =
           res.availableMethods?.filter(
-            (m): m is AuthType => m === 'otp' || m === 'password' || m === 'pin'
+            (m): m is AuthType => m === 'otp' || m === 'password'
           ) ?? ['otp']
         const resolvedMethods = methods.length > 0 ? methods : (['otp'] as AuthType[])
         setAvailableMethods(resolvedMethods)
         const suggested: AuthType =
           res.suggestedMethod &&
-          (res.suggestedMethod === 'otp' ||
-            res.suggestedMethod === 'password' ||
-            res.suggestedMethod === 'pin') &&
+          (res.suggestedMethod === 'otp' || res.suggestedMethod === 'password') &&
           resolvedMethods.includes(res.suggestedMethod)
             ? res.suggestedMethod
             : resolvedMethods[0]
@@ -175,7 +171,7 @@ export default function ForgotCredentialsPage() {
     e.preventDefault()
     setSubmitError('')
     if (Object.keys(credentialErrors).length > 0) {
-      setSubmitError(credentialErrors.password || credentialErrors.pin || 'Invalid credential')
+      setSubmitError(credentialErrors.password || 'Invalid password')
       return
     }
 
@@ -183,7 +179,6 @@ export default function ForgotCredentialsPage() {
     try {
       const res = await authAPI.resetComplete({
         sessionToken,
-        authType,
         password,
       })
       setSuccessMessage(res.message)
@@ -344,7 +339,7 @@ export default function ForgotCredentialsPage() {
                 label={methodLabel(verifyMethod)}
                 value={verifySecret}
                 onChange={setVerifySecret}
-                variant={verifyMethod === 'pin' ? 'pin' : 'password'}
+                variant="password"
                 disabled={isSubmitting}
               />
             )}

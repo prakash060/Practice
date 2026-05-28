@@ -6,11 +6,16 @@ const EMAIL_PLACEHOLDER_MARKERS = [
   'your_16_char_app_password',
   'your_email_password',
   'change_me',
+  'changeme',
+  'hello',
+  'dummy',
+  'example',
 ];
 
 function looksLikePlaceholder(value) {
   const v = String(value).trim().toLowerCase();
   if (!v) return true;
+  if (v === 'test') return true;
   return EMAIL_PLACEHOLDER_MARKERS.some((marker) => v.includes(marker));
 }
 

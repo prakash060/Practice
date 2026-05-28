@@ -35,7 +35,7 @@ function safeUser(doc) {
 async function findUserByPhoneWithSecrets(phone) {
   const re = phoneLookupRegex(phone);
   if (!re) return null;
-  return User.findOne({ phone: re }).select('+password +pinHash');
+  return User.findOne({ phone: re }).select('+password');
 }
 
 // Deprecated — use POST /api/auth/signup/* (OTP-verified signup)
@@ -46,53 +46,40 @@ router.post('/register', async (req, res) => {
   });
 });
 
-// Password or PIN login (use /api/auth/login/* for OTP sign-in)
+// Password login (use /api/auth/login/* for OTP sign-in)
 router.post('/login', async (req, res) => {
   try {
-    const { identifier, secret, email, password, loginMode } = req.body || {};
+    const { identifier, secret, email, password } = req.body || {};
     const loginId = identifier ?? email;
     const loginSecret = secret ?? password;
 
     const idRes = validateIdentifier(loginId);
     if (idRes.error || !loginSecret || typeof loginSecret !== 'string') {
-      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
+      return res.status(401).json({ error: 'Invalid email/phone or password' });
     }
-
-    const mode = loginMode === 'pin' ? 'pin' : 'password';
 
     const user =
       idRes.kind === 'email'
-        ? await User.findOne({ email: idRes.value }).select('+password +pinHash')
+        ? await User.findOne({ email: idRes.value }).select('+password')
         : await findUserByPhoneWithSecrets(idRes.value);
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
+      return res.status(401).json({ error: 'Invalid email/phone or password' });
     }
 
-    let ok = false;
-    if (mode === 'pin') {
-      if (!user.pinHash) {
-        return res.status(401).json({
-          error:
-            'No PIN is set for this account. Sign in with password or OTP, or set a PIN via Forgot password or PIN.',
-        });
-      }
-      ok = await user.verifyPin(loginSecret);
-    } else {
-      if (!user.password) {
-        return res.status(401).json({
-          error:
-            'No password is set for this account. Sign in with PIN or OTP, or set a password via Forgot password or PIN.',
-        });
-      }
-      ok = await user.verifyPassword(loginSecret);
+    if (!user.password) {
+      return res.status(401).json({
+        error:
+          'No password is set for this account. Sign in with a mobile OTP, or set a password via Forgot password.',
+      });
     }
 
+    const ok = await user.verifyPassword(loginSecret);
     if (!ok) {
-      return res.status(401).json({ error: 'Invalid email/phone or credentials' });
+      return res.status(401).json({ error: 'Invalid email/phone or password' });
     }
 
-    if (mode === 'password' && user.passwordNeedsRehash()) {
+    if (user.passwordNeedsRehash()) {
       user.password = loginSecret;
       await user.save();
     }
@@ -105,7 +92,7 @@ router.post('/login', async (req, res) => {
       return res.status(500).json({ error: e.message || 'Token signing failed' });
     }
 
-    await recordSuccessfulLogin(user._id, mode);
+    await recordSuccessfulLogin(user._id, 'password');
 
     return res.json({ user: safeUser(user), token });
   } catch (err) {

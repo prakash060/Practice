@@ -6,7 +6,6 @@ import {
 } from './phoneCountry'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PIN_RE = /^\d{4,6}$/
 
 export const NAME_MIN = 2
 export const NAME_MAX = 120
@@ -14,7 +13,7 @@ export const ADDRESS_MIN = 10
 export const ADDRESS_MAX = 500
 export const PASSWORD_MIN = 8
 
-export type AuthType = 'password' | 'pin' | 'otp'
+export type AuthType = 'password' | 'otp'
 
 export { DEFAULT_COUNTRY_CODE, formatPhoneForApi, toLocalPhoneDigits, formatPhoneDisplay } from './phoneCountry'
 
@@ -23,7 +22,6 @@ export type FieldErrors = Partial<
     | 'name'
     | 'email'
     | 'password'
-    | 'pin'
     | 'phone'
     | 'address'
     | 'identifier'
@@ -56,17 +54,6 @@ export function validatePassword(password: string, { required = true } = {}): st
   }
   if (password.length < PASSWORD_MIN) {
     return `Password must be at least ${PASSWORD_MIN} characters`
-  }
-  return null
-}
-
-export function validatePin(pin: string, { required = true } = {}): string | null {
-  if (!pin.trim()) {
-    if (!required) return null
-    return 'PIN is required'
-  }
-  if (!PIN_RE.test(pin.trim())) {
-    return 'PIN must be 4 to 6 digits'
   }
   return null
 }
@@ -123,34 +110,11 @@ export function validateSignupProfileForm(fields: {
   return errors
 }
 
-export function validateCredentialForm(authType: AuthType, password: string, pin: string): FieldErrors {
+export function validateCredentialForm(authType: AuthType, password: string): FieldErrors {
   const errors: FieldErrors = {}
   if (authType === 'otp') return errors
-  if (authType === 'password') {
-    const ePass = validatePassword(password)
-    if (ePass) errors.password = ePass
-  } else {
-    const ePin = validatePin(pin)
-    if (ePin) errors.pin = ePin
-  }
-  return errors
-}
-
-export function validateOptionalSignupCredentials(
-  enablePassword: boolean,
-  password: string,
-  enablePin: boolean,
-  pin: string
-): FieldErrors {
-  const errors: FieldErrors = {}
-  if (enablePassword) {
-    const ePass = validatePassword(password)
-    if (ePass) errors.password = ePass
-  }
-  if (enablePin) {
-    const ePin = validatePin(pin)
-    if (ePin) errors.pin = ePin
-  }
+  const ePass = validatePassword(password)
+  if (ePass) errors.password = ePass
   return errors
 }
 
