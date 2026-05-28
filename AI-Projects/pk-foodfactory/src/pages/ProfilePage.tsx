@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderApp } from '../components/AppHeader'
+import { PhoneInput } from '../components/PhoneInput'
 import { CheckIcon, ChevronLeftIcon } from '../components/Icons'
 import { useAuth } from '../state/AuthContext'
+import { formatPhoneForApi, toLocalPhoneDigits } from '../utils/phoneCountry'
 import { validateProfileForm } from '../utils/userValidators'
 
 export default function ProfilePage() {
@@ -20,7 +22,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       setName(user.name)
-      setPhone(user.phone)
+      setPhone(toLocalPhoneDigits(user.phone))
       setAddress(user.address)
     }
   }, [user])
@@ -48,7 +50,7 @@ export default function ProfilePage() {
     try {
       await updateProfile({
         name: name.trim(),
-        phone: phone.trim(),
+        phone: formatPhoneForApi(phone),
         address: address.trim(),
       })
       setSuccessMessage('Profile saved.')
@@ -99,19 +101,14 @@ export default function ProfilePage() {
             {showErr('name') ? <p className="field-error">{errors.name}</p> : null}
           </div>
 
-          <div className="form-group">
-            <label htmlFor="profile-phone">Phone</label>
-            <input
-              id="profile-phone"
-              type="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(ev) => setPhone(ev.target.value)}
-              onBlur={() => setTouched(true)}
-              disabled={isSubmitting}
-            />
-            {showErr('phone') ? <p className="field-error">{errors.phone}</p> : null}
-          </div>
+          <PhoneInput
+            id="profile-phone"
+            label="Phone"
+            value={phone}
+            onChange={setPhone}
+            disabled={isSubmitting}
+            error={showErr('phone') ? errors.phone : undefined}
+          />
 
           <div className="form-group">
             <label htmlFor="profile-address">Address</label>

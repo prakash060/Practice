@@ -1412,6 +1412,54 @@
   color: #999;
 }
 
+.phone-input {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+.phone-input__prefix {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px;
+  border: 1px solid #eceaf8;
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  background: #f8f7fc;
+  font-weight: 600;
+  color: #1f1f28;
+  font-size: 1rem;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.phone-input input {
+  flex: 1;
+  min-width: 0;
+  border-radius: 0 10px 10px 0;
+  padding-left: 12px;
+}
+
+.identifier-input--full input {
+  border-radius: 10px;
+  width: 100%;
+}
+
+.phone-input--error .phone-input__prefix,
+.phone-input--error input {
+  border-color: #c62828;
+}
+
+.phone-input input:focus {
+  outline: none;
+  border-color: #6b5ef7;
+  box-shadow: 0 0 0 3px rgba(107, 94, 247, 0.1);
+}
+
+.phone-input:focus-within .phone-input__prefix {
+  border-color: #6b5ef7;
+}
+
 .secret-input {
   position: relative;
   display: flex;

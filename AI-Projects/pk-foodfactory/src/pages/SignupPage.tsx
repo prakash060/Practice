@@ -2,10 +2,12 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
+import { PhoneInput } from '../components/PhoneInput'
 import { OtpInput } from '../components/OtpInput'
 import { SecretField } from '../components/SecretField'
 import { authAPI, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
+import { formatPhoneForApi } from '../utils/phoneCountry'
 import {
   validateOptionalSignupCredentials,
   validateOtp,
@@ -68,7 +70,7 @@ export default function SignupPage() {
       const res = await authAPI.signupStart({
         name: name.trim(),
         email: email.trim(),
-        phone: phone.trim(),
+        phone: formatPhoneForApi(phone),
         address: address.trim(),
       })
       setSessionToken(res.sessionToken)
@@ -191,19 +193,15 @@ export default function SignupPage() {
                 <p className="field-error">{profileErrors.email}</p>
               ) : null}
             </div>
-            <div className="form-group">
-              <label htmlFor="signup-phone">Mobile number</label>
-              <input
-                id="signup-phone"
-                type="tel"
-                value={phone}
-                onChange={(ev) => setPhone(ev.target.value)}
-                disabled={isSubmitting}
-              />
-              {touched && profileErrors.phone ? (
-                <p className="field-error">{profileErrors.phone}</p>
-              ) : null}
-            </div>
+            <PhoneInput
+              id="signup-phone"
+              label="Mobile number"
+              value={phone}
+              onChange={setPhone}
+              disabled={isSubmitting}
+              hint="India (+91) — 10-digit mobile without leading zero"
+              error={touched ? profileErrors.phone : undefined}
+            />
             <div className="form-group">
               <label htmlFor="signup-address">Delivery address</label>
               <textarea

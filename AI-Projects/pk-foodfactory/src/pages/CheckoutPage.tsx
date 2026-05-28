@@ -18,6 +18,7 @@ import {
 import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useAuth } from '../state/AuthContext'
 import { useFood } from '../hooks/useFood'
+import { formatPhoneDisplay } from '../utils/phoneCountry'
 
 export default function CheckoutPage() {
   const navigate = useNavigate()
@@ -227,7 +228,7 @@ export default function CheckoutPage() {
                   <p className="co-address__name">
                     <strong>{user?.name ?? 'You'}</strong>
                     {user?.phone ? (
-                      <span className="co-address__phone">{user.phone}</span>
+                      <span className="co-address__phone">{formatPhoneDisplay(user.phone)}</span>
                     ) : null}
                   </p>
                   <p className="co-address__line">

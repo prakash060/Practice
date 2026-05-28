@@ -2,9 +2,11 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
+import { PhoneInput } from '../components/PhoneInput'
 import { OtpInput } from '../components/OtpInput'
 import { SecretField } from '../components/SecretField'
 import { authAPI, type AuthType, type DevOtpHint } from '../services/api'
+import { formatPhoneForApi } from '../utils/phoneCountry'
 import {
   validateCredentialForm,
   validateEmail,
@@ -82,7 +84,7 @@ export default function ForgotCredentialsPage() {
     try {
       const res = await authAPI.resetCredentialsStart({
         email: email.trim(),
-        phone: phone.trim(),
+        phone: formatPhoneForApi(phone),
       })
       setInfoMessage(res.message)
       if (res.sessionToken) {
@@ -232,16 +234,14 @@ export default function ForgotCredentialsPage() {
                 disabled={isSubmitting}
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="reset-phone">Mobile number</label>
-              <input
-                id="reset-phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
+            <PhoneInput
+              id="reset-phone"
+              label="Mobile number"
+              value={phone}
+              onChange={setPhone}
+              disabled={isSubmitting}
+              hint="Must match the mobile on your account (+91)"
+            />
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
               {isSubmitting ? 'Continuing…' : 'Continue'}
             </button>

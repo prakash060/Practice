@@ -130,11 +130,11 @@ function validateIdentifier(identifier) {
   if (PHONE_RE.test(phoneNorm)) {
     const last10 = getPhoneLast10(phoneNorm);
     if (!last10) {
-      return { error: 'Enter a valid 10-digit mobile number' };
+      return { error: 'Enter a valid 10-digit Indian mobile number (+91)' };
     }
     return { value: last10, kind: 'phone' };
   }
-  return { error: 'Enter a valid email or 10–15 digit mobile number' };
+  return { error: 'Enter a valid email or 10-digit mobile (+91)' };
 }
 
 function validateOtpCode(code) {
@@ -155,12 +155,12 @@ function validatePhone(phone) {
   const phoneNorm = normalizePhoneDigits(phone.trim());
   if (!PHONE_RE.test(phoneNorm)) {
     return {
-      error: 'Phone must be 10–15 digits (optional leading +)',
+      error: 'Enter a valid 10-digit mobile number with country code +91',
     };
   }
   const last10 = getPhoneLast10(phoneNorm);
   if (!last10) {
-    return { error: 'Enter a valid 10-digit mobile number' };
+    return { error: 'Enter a valid 10-digit Indian mobile number (+91)' };
   }
   return { value: last10 };
 }

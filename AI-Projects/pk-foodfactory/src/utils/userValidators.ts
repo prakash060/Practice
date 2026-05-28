@@ -1,5 +1,10 @@
 /** Mirrors backend pk-foodfactory-backend/utils/userValidation.js */
 
+import {
+  DEFAULT_COUNTRY_CODE,
+  getPhoneLast10,
+} from './phoneCountry'
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PIN_RE = /^\d{4,6}$/
 
@@ -11,11 +16,7 @@ export const PASSWORD_MIN = 8
 
 export type AuthType = 'password' | 'pin' | 'otp'
 
-export function normalizePhoneDigits(value: string): string {
-  return value.replace(/[\s\-().]/g, '')
-}
-
-const PHONE_RE = /^\+?[0-9]{10,15}$/
+export { DEFAULT_COUNTRY_CODE, formatPhoneForApi, toLocalPhoneDigits, formatPhoneDisplay } from './phoneCountry'
 
 export type FieldErrors = Partial<
   Record<
@@ -72,9 +73,9 @@ export function validatePin(pin: string, { required = true } = {}): string | nul
 
 export function validatePhone(phone: string): string | null {
   if (!phone.trim()) return 'Phone is required'
-  const norm = normalizePhoneDigits(phone.trim())
-  if (!PHONE_RE.test(norm)) {
-    return 'Phone must be 10–15 digits (optional leading +)'
+  const last10 = getPhoneLast10(phone.trim())
+  if (!last10 || last10.length !== 10) {
+    return `Enter a valid 10-digit mobile number (${DEFAULT_COUNTRY_CODE})`
   }
   return null
 }
@@ -92,9 +93,9 @@ export function validateIdentifier(identifier: string): string | null {
   if (!identifier.trim()) return 'Email or mobile number is required'
   const raw = identifier.trim()
   if (EMAIL_RE.test(raw)) return null
-  const norm = normalizePhoneDigits(raw)
-  if (PHONE_RE.test(norm)) return null
-  return 'Enter a valid email or 10–15 digit mobile number'
+  const last10 = getPhoneLast10(raw)
+  if (last10 && last10.length === 10) return null
+  return `Enter a valid email or 10-digit mobile (${DEFAULT_COUNTRY_CODE})`
 }
 
 export function validateOtp(code: string): string | null {

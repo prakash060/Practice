@@ -2,10 +2,12 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
+import { IdentifierInput } from '../components/IdentifierInput'
 import { OtpInput } from '../components/OtpInput'
 import { SecretField } from '../components/SecretField'
 import { authAPI, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
+import { normalizeIdentifierForApi } from '../utils/phoneCountry'
 import { validateIdentifier, validateLoginForm, validateOtp } from '../utils/userValidators'
 
 type LoginMethod = 'otp' | 'password' | 'pin'
@@ -72,7 +74,7 @@ export default function LoginPage() {
     setIsSubmitting(true)
     try {
       const user = await login(
-        identifier.trim(),
+        normalizeIdentifierForApi(identifier),
         secret,
         loginMethod === 'pin' ? 'pin' : 'password'
       )
@@ -95,7 +97,7 @@ export default function LoginPage() {
 
     setIsSubmitting(true)
     try {
-      const res = await authAPI.loginStart(identifier.trim())
+      const res = await authAPI.loginStart(normalizeIdentifierForApi(identifier))
       setInfoMessage(res.message)
       if (res.sessionToken && res.channel) {
         setSessionToken(res.sessionToken)
@@ -196,20 +198,15 @@ export default function LoginPage() {
             <p className="item-description">
               Enter your email or mobile. We will send a one-time verification code.
             </p>
-            <div className="form-group">
-              <label htmlFor="login-identifier">Email or mobile</label>
-              <input
-                id="login-identifier"
-                type="text"
-                autoComplete="username"
-                value={identifier}
-                onChange={(ev) => setIdentifier(ev.target.value)}
-                disabled={isSubmitting}
-              />
-              {touched && identifierError ? (
-                <p className="field-error">{identifierError}</p>
-              ) : null}
-            </div>
+            <IdentifierInput
+              id="login-identifier"
+              label="Email or mobile"
+              value={identifier}
+              onChange={setIdentifier}
+              disabled={isSubmitting}
+              hint="Mobile numbers use +91 by default"
+              error={touched ? identifierError ?? undefined : undefined}
+            />
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
               {isSubmitting ? 'Sending code…' : 'Send verification code'}
             </button>
@@ -274,20 +271,15 @@ export default function LoginPage() {
                 ? 'Sign in with the PIN set on your account. OTP sign-in is always available.'
                 : 'Sign in with your account password. OTP sign-in is always available.'}
             </p>
-            <div className="form-group">
-              <label htmlFor="login-identifier-cred">Email or mobile</label>
-              <input
-                id="login-identifier-cred"
-                type="text"
-                autoComplete="username"
-                value={identifier}
-                onChange={(ev) => setIdentifier(ev.target.value)}
-                disabled={isSubmitting}
-              />
-              {touched && credentialErrors.identifier ? (
-                <p className="field-error">{credentialErrors.identifier}</p>
-              ) : null}
-            </div>
+            <IdentifierInput
+              id="login-identifier-cred"
+              label="Email or mobile"
+              value={identifier}
+              onChange={setIdentifier}
+              disabled={isSubmitting}
+              hint="Mobile numbers use +91 by default"
+              error={touched ? credentialErrors.identifier : undefined}
+            />
             <SecretField
               id="login-secret"
               label={loginMethod === 'pin' ? 'PIN' : 'Password'}

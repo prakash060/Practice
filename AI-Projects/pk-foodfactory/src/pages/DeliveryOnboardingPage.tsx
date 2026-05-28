@@ -14,6 +14,7 @@ import {
   TrashIcon,
   XIcon,
 } from '../components/Icons'
+import { PhoneInput } from '../components/PhoneInput'
 import {
   deliveryAgentsAPI,
   type DeliveryAgentDoc,
@@ -21,6 +22,7 @@ import {
   type DeliveryVehicleType,
 } from '../services/api'
 import { useToast } from '../state/ToastContext'
+import { formatPhoneForApi, toLocalPhoneDigits } from '../utils/phoneCountry'
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 
@@ -47,7 +49,7 @@ interface AgentFormProps {
 function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
   const isEdit = Boolean(editing)
   const [name, setName] = useState(editing?.name ?? '')
-  const [phone, setPhone] = useState(editing?.phone ?? '')
+  const [phone, setPhone] = useState(() => toLocalPhoneDigits(editing?.phone))
   const [email, setEmail] = useState(editing?.email ?? '')
   const [vehicleType, setVehicleType] = useState<DeliveryVehicleType>(
     editing?.vehicleType ?? 'Bike'
@@ -118,9 +120,9 @@ function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
       setError('Name is required')
       return
     }
-    const trimmedPhone = phone.trim()
-    if (!trimmedPhone) {
-      setError('Phone is required')
+    const trimmedPhone = formatPhoneForApi(phone)
+    if (!trimmedPhone || trimmedPhone.length !== 10) {
+      setError('Enter a valid 10-digit mobile number (+91)')
       return
     }
 
@@ -194,19 +196,14 @@ function AgentForm({ editing, onSaved, onCancelEdit }: AgentFormProps) {
             maxLength={120}
           />
         </div>
-        <div className="form-group">
-          <label htmlFor="da-phone">Phone</label>
-          <input
-            id="da-phone"
-            type="tel"
-            inputMode="tel"
-            value={phone}
-            onChange={(ev) => setPhone(ev.target.value)}
-            disabled={isSubmitting}
-            required
-            placeholder="10–15 digits"
-          />
-        </div>
+        <PhoneInput
+          id="da-phone"
+          label="Phone"
+          value={phone}
+          onChange={setPhone}
+          disabled={isSubmitting}
+          placeholder="10-digit mobile"
+        />
       </div>
 
       <div className="form-group">

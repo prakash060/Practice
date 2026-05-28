@@ -19,6 +19,7 @@ import { DELIVERY_FEE_INR } from '../constants/pricing'
 import { useFood } from '../hooks/useFood'
 import { useAuth } from '../state/AuthContext'
 import { ordersAPI, paymentAPI } from '../services/api'
+import { normalizeIndianPhone } from '../utils/phoneCountry'
 
 type PaymentScreen = 'checkout' | 'success'
 type Method = 'upi' | 'card' | 'netbanking'
@@ -54,12 +55,6 @@ const METHODS: MethodCard[] = [
     Icon: BankIcon,
   },
 ]
-
-function normalizeIndianPhone(raw?: string): string {
-  if (!raw) return ''
-  const digits = raw.replace(/\D/g, '').slice(-10)
-  return /^[6-9]\d{9}$/.test(digits) ? digits : ''
-}
 
 function isEmailValid(email?: string): boolean {
   return !!email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)

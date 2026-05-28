@@ -2,8 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
+import { PhoneInput } from '../components/PhoneInput'
 import { SecretField } from '../components/SecretField'
 import { useDeliveryAuth } from '../state/DeliveryAuthContext'
+import { formatPhoneForApi } from '../utils/phoneCountry'
 
 export default function DeliveryLoginPage() {
   const navigate = useNavigate()
@@ -16,7 +18,7 @@ export default function DeliveryLoginPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setSubmitError('')
-    const trimmedPhone = phone.trim()
+    const trimmedPhone = formatPhoneForApi(phone)
     const trimmedPasscode = passcode.trim()
     if (!trimmedPhone || !trimmedPasscode) {
       setSubmitError('Phone and passcode are required')
@@ -50,19 +52,14 @@ export default function DeliveryLoginPage() {
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
           {submitError ? <p className="error-message">{submitError}</p> : null}
 
-          <div className="form-group">
-            <label htmlFor="delivery-phone">Phone</label>
-            <input
-              id="delivery-phone"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(ev) => setPhone(ev.target.value)}
-              disabled={isSubmitting}
-              placeholder="10–15 digits"
-            />
-          </div>
+          <PhoneInput
+            id="delivery-phone"
+            label="Phone"
+            value={phone}
+            onChange={setPhone}
+            disabled={isSubmitting}
+            placeholder="10-digit mobile"
+          />
 
           <SecretField
             id="delivery-passcode"
