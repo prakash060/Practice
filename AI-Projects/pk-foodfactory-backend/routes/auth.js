@@ -332,6 +332,7 @@ router.post('/login/start', async (req, res) => {
       await createLoginChallengeAndSendOtp({
         user,
         channel,
+        loginPhone: idRes.kind === 'phone' ? idRes.value : undefined,
       });
 
     return res.json({

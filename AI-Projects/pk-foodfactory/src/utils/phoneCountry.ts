@@ -6,14 +6,28 @@ export const DEFAULT_COUNTRY_DIAL = '91'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function normalizePhoneDigits(value: string): string {
-  return value.replace(/[\s\-().]/g, '')
+  return value.replace(/[\s\-().+]/g, '')
 }
+
+const INDIAN_MOBILE_RE = /^[6-9]\d{9}$/
 
 /** Last 10 digits — canonical local mobile (India). */
 export function getPhoneLast10(phone: string): string | null {
   const digits = normalizePhoneDigits(phone).replace(/\D/g, '')
   if (digits.length < 10) return null
-  return digits.slice(-10)
+
+  let local: string
+  if (digits.length >= DEFAULT_COUNTRY_DIAL.length + 10 && digits.startsWith(DEFAULT_COUNTRY_DIAL)) {
+    local = digits.slice(DEFAULT_COUNTRY_DIAL.length)
+    if (local.length > 10) local = local.slice(-10)
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    local = digits.slice(1)
+  } else {
+    local = digits.slice(-10)
+  }
+
+  if (local.length !== 10 || !INDIAN_MOBILE_RE.test(local)) return null
+  return local
 }
 
 /** Strip country code and keep up to 10 local digits for controlled inputs. */
@@ -34,10 +48,11 @@ export function toLocalPhoneDigits(stored?: string | null): string {
   return getPhoneLast10(stored) ?? sanitizeLocalPhoneInput(stored)
 }
 
-/** Local digits → value for API (10-digit canonical form backend expects). */
+/** Local digits → value for API (international format without +, e.g. 919876543210). */
 export function formatPhoneForApi(localDigits: string): string {
   const last10 = getPhoneLast10(localDigits)
-  return last10 ?? sanitizeLocalPhoneInput(localDigits)
+  if (!last10) return sanitizeLocalPhoneInput(localDigits)
+  return `${DEFAULT_COUNTRY_DIAL}${last10}`
 }
 
 /** Display label e.g. +91 98864 99444 */

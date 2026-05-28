@@ -246,7 +246,7 @@ async function resendOtps(sessionToken, purpose) {
   };
 }
 
-async function deliverLoginOtp(user, preferredChannel, code) {
+async function deliverLoginOtp(user, preferredChannel, code, smsPhone) {
   const purpose = purposeLabel('login');
   let activeChannel = preferredChannel;
   let delivery = {
@@ -268,8 +268,9 @@ async function deliverLoginOtp(user, preferredChannel, code) {
   }
 
   async function trySms() {
-    if (!user.phone) return null;
-    const smsResult = await sendOtpSms(user.phone, code, purpose);
+    const phone = smsPhone || user.phone;
+    if (!phone) return null;
+    const smsResult = await sendOtpSms(phone, code, purpose);
     return {
       emailSent: false,
       smsSent: Boolean(smsResult?.sent),
@@ -320,7 +321,7 @@ async function deliverLoginOtp(user, preferredChannel, code) {
   return { activeChannel, delivery };
 }
 
-async function createLoginChallengeAndSendOtp({ user, channel }) {
+async function createLoginChallengeAndSendOtp({ user, channel, loginPhone }) {
   const email = user.email;
   const phone = user.phone;
   checkSendCooldown(email, phone, 'login');
@@ -330,7 +331,8 @@ async function createLoginChallengeAndSendOtp({ user, channel }) {
 
   await invalidatePriorChallenges(email, phone, 'login');
 
-  const { activeChannel, delivery } = await deliverLoginOtp(user, channel, code);
+  const smsPhone = loginPhone || user.phone;
+  const { activeChannel, delivery } = await deliverLoginOtp(user, channel, code, smsPhone);
 
   const challengeData = {
     purpose: 'login',

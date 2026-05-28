@@ -72,7 +72,9 @@ function getSmsOtpStatusLabel() {
 
 function devLogSms(phone, code, purposeLabel) {
   if (process.env.NODE_ENV !== 'production' || process.env.OTP_DEV_LOG === 'true') {
-    console.warn(`[OTP SMS → ${getPhoneLast10(phone) || phone}] ${code} (${purposeLabel})`);
+    const display =
+      String(phone).startsWith('+') ? phone : String(phone).startsWith('91') ? `+${phone}` : phone;
+    console.warn(`[OTP SMS → ${display}] ${code} (${purposeLabel})`);
     return true;
   }
   return false;
@@ -177,9 +179,9 @@ async function sendTwilio(phone, code, purposeLabel) {
     throw new Error('Twilio not configured');
   }
 
-  const last10 = getPhoneLast10(phone);
+  const to = phone.startsWith('+') ? phone : `+${phone}`;
   const params = new URLSearchParams({
-    To: phone.startsWith('+') ? phone : `+91${last10}`,
+    To: to,
     From: from,
     Body: `SVI Foods: Your ${purposeLabel} code is ${code}. Valid 10 minutes.`,
   });
@@ -216,6 +218,15 @@ async function sendTwilio(phone, code, purposeLabel) {
 }
 
 async function sendOtpSms(phone, code, purposeLabel = 'verification') {
+  let smsMobile;
+  try {
+    smsMobile = formatMsg91Mobile(phone);
+  } catch (formatErr) {
+    console.error('SMS: invalid phone for OTP:', phone, formatErr.message);
+    if (devLogSms(phone, code, purposeLabel)) return { sent: false, devLog: true };
+    throw formatErr;
+  }
+
   const provider = getSmsProvider();
 
   if (provider === 'msg91') {
@@ -227,11 +238,11 @@ async function sendOtpSms(phone, code, purposeLabel = 'verification') {
       throw new Error('MSG91 is not configured on the server');
     }
     try {
-      await sendMsg91(phone, code);
+      await sendMsg91(smsMobile, code);
       return { sent: true };
     } catch (err) {
       console.error('MSG91 error:', err.message);
-      if (devLogSms(phone, code, purposeLabel)) return { sent: false, devLog: true };
+      if (devLogSms(smsMobile, code, purposeLabel)) return { sent: false, devLog: true };
       throw err;
     }
   }
@@ -239,20 +250,20 @@ async function sendOtpSms(phone, code, purposeLabel = 'verification') {
   if (provider === 'twilio') {
     if (!isTwilioConfigured()) {
       console.error('Twilio: SMS_PROVIDER=twilio but TWILIO_* vars are missing or placeholder');
-      if (devLogSms(phone, code, purposeLabel)) return { sent: false, devLog: true };
+      if (devLogSms(smsMobile, code, purposeLabel)) return { sent: false, devLog: true };
       throw new Error('Twilio is not configured on the server');
     }
     try {
-      await sendTwilio(phone, code, purposeLabel);
+      await sendTwilio(smsMobile, code, purposeLabel);
       return { sent: true };
     } catch (err) {
       console.error('Twilio error:', err.message);
-      if (devLogSms(phone, code, purposeLabel)) return { sent: false, devLog: true };
+      if (devLogSms(smsMobile, code, purposeLabel)) return { sent: false, devLog: true };
       throw err;
     }
   }
 
-  if (devLogSms(phone, code, purposeLabel)) {
+  if (devLogSms(smsMobile, code, purposeLabel)) {
     return { sent: false, devLog: true };
   }
 

@@ -5,24 +5,46 @@ const ADDRESS_MIN = 10;
 const ADDRESS_MAX = 500;
 const PASSWORD_MIN = 8;
 const AUTH_TYPES = ['password', 'otp'];
+const DEFAULT_COUNTRY_DIAL = (process.env.DEFAULT_COUNTRY_DIAL || '91').replace(/\D/g, '') || '91';
+const INDIAN_MOBILE_RE = /^[6-9]\d{9}$/;
 
 function normalizePhoneDigits(value) {
-  return String(value).replace(/[\s\-().]/g, '');
+  return String(value).replace(/[\s\-().+]/g, '');
 }
 
-/** Last 10 digits — canonical form for Indian mobiles in DB and MSG91. */
+/** Last 10 digits — canonical local form for Indian mobiles (DB lookup). */
 function getPhoneLast10(phone) {
   const digits = normalizePhoneDigits(phone).replace(/\D/g, '');
   if (digits.length < 10) return null;
-  return digits.slice(-10);
+
+  let local;
+  if (
+    digits.length >= DEFAULT_COUNTRY_DIAL.length + 10 &&
+    digits.startsWith(DEFAULT_COUNTRY_DIAL)
+  ) {
+    local = digits.slice(DEFAULT_COUNTRY_DIAL.length);
+    if (local.length > 10) local = local.slice(-10);
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    local = digits.slice(1);
+  } else {
+    local = digits.slice(-10);
+  }
+
+  if (local.length !== 10 || !INDIAN_MOBILE_RE.test(local)) return null;
+  return local;
 }
 
+/** MSG91 / Twilio — international format without + (e.g. 919876543210). */
 function formatMsg91Mobile(phone) {
   const last10 = getPhoneLast10(phone);
   if (!last10) {
     throw new Error('Invalid mobile number for SMS');
   }
-  return `91${last10}`;
+  return `${DEFAULT_COUNTRY_DIAL}${last10}`;
+}
+
+function formatPhoneWithDialCode(phone) {
+  return formatMsg91Mobile(phone);
 }
 
 function phoneLookupRegex(phone) {
@@ -144,5 +166,7 @@ module.exports = {
   normalizePhoneDigits,
   getPhoneLast10,
   formatMsg91Mobile,
+  formatPhoneWithDialCode,
+  DEFAULT_COUNTRY_DIAL,
   phoneLookupRegex,
 };
