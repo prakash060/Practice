@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { isAxiosError } from 'axios'
+import { AgentAvatar } from '../components/AgentAvatar'
 import { AdminSubpageShell } from '../components/AdminSubpageShell'
-import { RefreshIcon, UserIcon } from '../components/Icons'
+import { RefreshIcon } from '../components/Icons'
 import { adminUsersAPI, type AuthType, type UserPublic } from '../services/api'
 import { useToast } from '../state/ToastContext'
 import { formatPhoneDisplay } from '../utils/phoneCountry'
@@ -196,7 +197,7 @@ export default function AdminUsersPage() {
           ) : null}
 
           {!isLoading && !error && users.length > 0 ? (
-            <ul className="admin-item-list">
+            <ul className="admin-user-list">
               {users.map((u) => {
                 const isProtected = Boolean(u.isAdmin)
                 const isSelected = selectedIds.has(u.id)
@@ -204,56 +205,72 @@ export default function AdminUsersPage() {
                 return (
                   <li
                     key={u.id}
-                    className={`admin-item admin-item--with-select${
-                      isSelected ? ' admin-item--selected' : ''
-                    }${isProtected ? ' admin-item--protected' : ''}`}
+                    className={`admin-user-card${
+                      isSelected ? ' admin-user-card--selected' : ''
+                    }${isProtected ? ' admin-user-card--protected' : ''}`}
                   >
-                    <label className="admin-users-row-check">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        disabled={isProtected || isLoading || isDeleting}
-                        onChange={(ev) => toggleOne(u.id, ev.target.checked)}
-                        aria-label={
-                          isProtected
-                            ? `${u.name} (admin, cannot delete)`
-                            : `Select ${u.name}`
-                        }
-                      />
-                    </label>
-                    <div className="admin-item__thumb admin-item__thumb--avatar" aria-hidden>
-                      <UserIcon />
+                    <div className="admin-user-card__lead">
+                      <label className="admin-user-card__check">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={isProtected || isLoading || isDeleting}
+                          onChange={(ev) => toggleOne(u.id, ev.target.checked)}
+                          aria-label={
+                            isProtected
+                              ? `${u.name} (admin, cannot delete)`
+                              : `Select ${u.name}`
+                          }
+                        />
+                      </label>
+                      <AgentAvatar name={u.name} size="xs" />
                     </div>
-                    <div className="admin-item__body">
-                      <h3>
+                    <div className="admin-user-card__main">
+                      <h3 className="admin-user-card__name">
                         {u.name}
                         {u.isAdmin ? (
                           <span className="order-status-badge order-status-badge--paid">
-                            {' '}
                             Admin
                           </span>
                         ) : null}
                       </h3>
-                      <p className="admin-item__meta">
-                        <strong>Email:</strong> {u.email}
-                        {u.emailVerified ? ' · verified' : ' · not verified'}
-                      </p>
-                      <p className="admin-item__meta">
-                        <strong>Mobile:</strong> {formatPhoneDisplay(u.phone) || u.phone}
-                        {u.phoneVerified ? ' · verified' : ' · not verified'}
-                      </p>
-                      <p className="admin-item__meta">
-                        <strong>Address:</strong> {u.address}
-                      </p>
-                      <p className="admin-item__meta">
-                        <strong>Sign-in:</strong> {authLabel(u.authType)}
-                        {u.lastLoginMethod
-                          ? ` · last used ${lastLoginLabel(u.lastLoginMethod)}`
-                          : ''}
-                      </p>
-                      <p className="admin-item__meta">
-                        <strong>Joined:</strong> {formatJoined(u.createdAt)}
-                      </p>
+                      <dl className="admin-user-card__fields">
+                        <div className="admin-user-card__field">
+                          <dt>Email</dt>
+                          <dd>
+                            {u.email}
+                            <span className="admin-user-card__tag">
+                              {u.emailVerified ? 'verified' : 'not verified'}
+                            </span>
+                          </dd>
+                        </div>
+                        <div className="admin-user-card__field">
+                          <dt>Mobile</dt>
+                          <dd>
+                            {formatPhoneDisplay(u.phone) || u.phone}
+                            <span className="admin-user-card__tag">
+                              {u.phoneVerified ? 'verified' : 'not verified'}
+                            </span>
+                          </dd>
+                        </div>
+                        <div className="admin-user-card__field">
+                          <dt>Address</dt>
+                          <dd>{u.address || '—'}</dd>
+                        </div>
+                        <div className="admin-user-card__field">
+                          <dt>Sign-in</dt>
+                          <dd>
+                            {authLabel(u.authType)}
+                            {u.lastLoginMethod
+                              ? ` · last used ${lastLoginLabel(u.lastLoginMethod)}`
+                              : ''}
+                          </dd>
+                        </div>
+                        <div className="admin-user-card__field">
+                          <dt>Joined</dt>
+                          <dd>{formatJoined(u.createdAt)}</dd>
+                        </div>
+                      </dl>
                     </div>
                   </li>
                 )
