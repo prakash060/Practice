@@ -1,7 +1,7 @@
 const express = require('express');
 const User = require('../models/User');
 const { signToken, requireAuth } = require('../middleware/auth');
-const { isAdminEmail } = require('../middleware/admin');
+const { isAdminEmail, requireAdmin } = require('../middleware/admin');
 const {
   validateName,
   validateEmail,
@@ -148,25 +148,14 @@ router.put('/me', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, requireAdmin, async (req, res) => {
   try {
     const users = await User.find()
       .select('-password')
       .sort({ createdAt: -1 })
       .lean();
 
-    const payload = users.map((u) => ({
-      id: u._id.toString(),
-      name: u.name,
-      email: u.email,
-      phone: u.phone,
-      address: u.address,
-      isAdmin: isAdminEmail(u.email),
-      createdAt: u.createdAt,
-      updatedAt: u.updatedAt,
-    }));
-
-    return res.json(payload);
+    return res.json(users.map((u) => safeUser(u)));
   } catch (err) {
     console.error('List users error:', err);
     return res.status(500).json({ error: 'Failed to list users' });

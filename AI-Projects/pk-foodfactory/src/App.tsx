@@ -28,6 +28,7 @@ import AdminResetPage from './pages/AdminResetPage'
 import AdminSeedPage from './pages/AdminSeedPage'
 import AdminSeedAgentsPage from './pages/AdminSeedAgentsPage'
 import AdminOrdersPage from './pages/AdminOrdersPage'
+import AdminUsersPage from './pages/AdminUsersPage'
 import './App.css'
 
 function App() {
@@ -116,6 +117,14 @@ function App() {
               element={
                 <AdminRoute>
                   <AdminOrdersPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <AdminRoute>
+                  <AdminUsersPage />
                 </AdminRoute>
               }
             />

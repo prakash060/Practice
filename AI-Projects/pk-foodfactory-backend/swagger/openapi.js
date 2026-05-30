@@ -401,8 +401,9 @@ const openapi = {
     '/api/users': {
       get: {
         tags: ['Users'],
-        summary: 'List all registered users',
-        description: 'Requires Bearer token. Passwords are never returned.',
+        summary: 'List all registered users (admin only)',
+        description:
+          'Requires Bearer token and admin account (ADMIN_EMAIL). Passwords are never returned.',
         security: [{ bearerAuth: [] }],
         responses: {
           '200': {

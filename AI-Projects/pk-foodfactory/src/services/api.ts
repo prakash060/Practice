@@ -411,6 +411,15 @@ export const authAPI = {
     const response = await api.put<UserPublic>('/users/me', body);
     return response.data;
   },
+
+  listUsers: async (): Promise<UserPublic[]> => {
+    const response = await api.get<UserPublic[]>('/users');
+    return response.data;
+  },
+};
+
+export const adminUsersAPI = {
+  list: async (): Promise<UserPublic[]> => authAPI.listUsers(),
 };
 
 export interface FoodItemInput {
