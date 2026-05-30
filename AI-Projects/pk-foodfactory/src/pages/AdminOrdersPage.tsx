@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
-import { AdminNav } from '../components/AdminNav'
+import { AdminSubpageShell } from '../components/AdminSubpageShell'
 import { AgentAvatar } from '../components/AgentAvatar'
-import { AppHeaderApp } from '../components/AppHeader'
 import {
   CheckIcon,
-  ChevronLeftIcon,
   ClockIcon,
   HashIcon,
   PackageIcon,
@@ -251,8 +248,19 @@ function AdminOrderRow({ order, agents, busy, onSave }: AdminOrderRowProps) {
   )
 }
 
+function isActiveOrder(o: OrderDoc): boolean {
+  return (
+    o.deliveryStatus === 'unassigned' ||
+    o.deliveryStatus === 'assigned' ||
+    o.deliveryStatus === 'out_for_delivery'
+  )
+}
+
+function isDoneOrder(o: OrderDoc): boolean {
+  return o.deliveryStatus === 'delivered' || o.deliveryStatus === 'not_delivered'
+}
+
 export default function AdminOrdersPage() {
-  const navigate = useNavigate()
   const { showToast } = useToast()
   const [orders, setOrders] = useState<OrderDoc[]>([])
   const [agents, setAgents] = useState<DeliveryAgentDoc[]>([])
@@ -288,18 +296,18 @@ export default function AdminOrdersPage() {
 
   const visibleOrders = useMemo(() => {
     if (filter === 'all') return orders
-    if (filter === 'active') {
-      return orders.filter(
-        (o) =>
-          o.deliveryStatus === 'unassigned' ||
-          o.deliveryStatus === 'assigned' ||
-          o.deliveryStatus === 'out_for_delivery'
-      )
-    }
-    return orders.filter(
-      (o) => o.deliveryStatus === 'delivered' || o.deliveryStatus === 'not_delivered'
-    )
+    if (filter === 'active') return orders.filter(isActiveOrder)
+    return orders.filter(isDoneOrder)
   }, [orders, filter])
+
+  const headerStats = useMemo(
+    () => [
+      { value: orders.length, label: 'Total' },
+      { value: orders.filter(isActiveOrder).length, label: 'In progress' },
+      { value: orders.filter(isDoneOrder).length, label: 'Completed' },
+    ],
+    [orders]
+  )
 
   const handleSave = async (
     orderId: string,
@@ -324,73 +332,67 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <main className="app-shell admin-shell">
-      <AppHeaderApp />
-      <AdminNav />
-
-      <section className="admin-page">
-        <button
-          type="button"
-          className="back-button btn-icon admin-page__back"
-          onClick={() => navigate('/admin')}
-        >
-          <ChevronLeftIcon />
-          <span>Back to menu</span>
-        </button>
-
-        <header className="admin-page__hero">
-          <h1>Orders & delivery</h1>
-          <p>
-            View every order, assign riders, and update payment and delivery status. Customers
-            see the same status on My orders.
-          </p>
-        </header>
-
-        <div className="panel admin-order__toolbar">
-          <div className="admin-filter-row">
-            <label htmlFor="admin-order-filter">Show</label>
-            <select
-              id="admin-order-filter"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as OrderFilter)}
+    <AdminSubpageShell
+      title="Orders & delivery"
+      subtitle="View every order, assign riders, and update payment and delivery status. Customers see the same status on My orders."
+      stats={headerStats}
+      loadError={error || null}
+    >
+      <section className="panel admin-stack">
+        <div className="admin-toolbar">
+          <h2 className="admin-section-title">Orders</h2>
+          <div className="admin-toolbar__filters">
+            <div className="admin-filter-row">
+              <label htmlFor="admin-order-filter">Show</label>
+              <select
+                id="admin-order-filter"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as OrderFilter)}
+              >
+                <option value="all">All orders</option>
+                <option value="active">In progress</option>
+                <option value="done">Completed</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              className="back-button btn-icon"
+              onClick={() => void load()}
+              disabled={isLoading}
             >
-              <option value="all">All orders</option>
-              <option value="active">In progress</option>
-              <option value="done">Completed</option>
-            </select>
+              <RefreshIcon />
+              <span>Refresh</span>
+            </button>
           </div>
-          <button
-            type="button"
-            className="back-button btn-icon"
-            onClick={() => void load()}
-            disabled={isLoading}
-          >
-            <RefreshIcon />
-            <span>Refresh</span>
-          </button>
         </div>
 
-        {error ? <p className="error-message">{error}</p> : null}
-        {isLoading ? <p className="empty-state">Loading orders…</p> : null}
-
-        {!isLoading && !error && visibleOrders.length === 0 ? (
-          <p className="empty-state">No orders in this view.</p>
-        ) : null}
-
-        {!isLoading && !error && visibleOrders.length > 0 ? (
-          <div className="orders-list admin-orders-list">
-            {visibleOrders.map((o) => (
-              <AdminOrderRow
-                key={o.orderId}
-                order={o}
-                agents={agents}
-                busy={busyOrderId === o.orderId}
-                onSave={handleSave}
-              />
-            ))}
+        <div className="auth-card admin-card">
+          <div className="admin-list__header">
+            <h3 className="profile-heading">All orders</h3>
+            <span className="admin-list__count">{visibleOrders.length}</span>
           </div>
-        ) : null}
+
+          {isLoading ? <p className="empty-state">Loading orders…</p> : null}
+
+          {!isLoading && !error && visibleOrders.length === 0 ? (
+            <p className="empty-state">No orders in this view.</p>
+          ) : null}
+
+          {!isLoading && !error && visibleOrders.length > 0 ? (
+            <div className="orders-list admin-orders-list">
+              {visibleOrders.map((o) => (
+                <AdminOrderRow
+                  key={o.orderId}
+                  order={o}
+                  agents={agents}
+                  busy={busyOrderId === o.orderId}
+                  onSave={handleSave}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
       </section>
-    </main>
+    </AdminSubpageShell>
   )
 }

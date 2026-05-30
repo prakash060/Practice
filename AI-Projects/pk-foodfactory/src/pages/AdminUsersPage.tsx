@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
-import { AdminNav } from '../components/AdminNav'
-import { AppHeaderApp } from '../components/AppHeader'
-import { ChevronLeftIcon, RefreshIcon, UserIcon } from '../components/Icons'
+import { AdminSubpageShell } from '../components/AdminSubpageShell'
+import { RefreshIcon, UserIcon } from '../components/Icons'
 import { adminUsersAPI, type AuthType, type UserPublic } from '../services/api'
 import { useToast } from '../state/ToastContext'
 import { formatPhoneDisplay } from '../utils/phoneCountry'
@@ -42,7 +40,6 @@ function lastLoginLabel(method?: AuthType | null): string {
 }
 
 export default function AdminUsersPage() {
-  const navigate = useNavigate()
   const { showToast } = useToast()
   const [users, setUsers] = useState<UserPublic[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
@@ -122,37 +119,25 @@ export default function AdminUsersPage() {
     }
   }
 
+  const headerStats = useMemo(
+    () => [
+      { value: isLoading ? '…' : users.length, label: 'Registered' },
+      { value: isLoading ? '…' : deletableIds.length, label: 'Deletable' },
+      { value: selectedIds.size, label: 'Selected' },
+    ],
+    [users.length, deletableIds.length, selectedIds.size, isLoading]
+  )
+
   return (
-    <main className="app-shell admin-shell">
-      <AppHeaderApp />
-      <AdminNav />
-
-      <section className="admin-page">
-        <button
-          type="button"
-          className="back-button btn-icon admin-page__back"
-          onClick={() => navigate('/admin')}
-        >
-          <ChevronLeftIcon />
-          <span>Back to menu</span>
-        </button>
-
-        <header className="admin-page__hero">
-          <h1>All users</h1>
-          <p>
-            View every registered customer account with contact details, verification status, and
-            sign-in preferences. Select accounts to remove (admin accounts are protected).
-          </p>
-        </header>
-
-        <div className="panel admin-order__toolbar">
-          <p className="item-description">
-            {isLoading
-              ? 'Loading…'
-              : `${users.length} registered user${users.length === 1 ? '' : 's'}${
-                  selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ''
-                }`}
-          </p>
+    <AdminSubpageShell
+      title="All users"
+      subtitle="View every registered customer account with contact details, verification status, and sign-in preferences. Select accounts to remove (admin accounts are protected)."
+      stats={headerStats}
+      loadError={error || null}
+    >
+      <section className="panel admin-stack">
+        <div className="admin-toolbar">
+          <h2 className="admin-section-title">Registered accounts</h2>
           <div className="admin-order__actions">
             {selectedIds.size > 0 ? (
               <button
@@ -176,8 +161,6 @@ export default function AdminUsersPage() {
           </div>
         </div>
 
-        {error ? <p className="error-message">{error}</p> : null}
-
         <div className="auth-card admin-card">
           <div className="admin-list__header admin-list__header--select">
             <label className="admin-users-select-all">
@@ -193,7 +176,7 @@ export default function AdminUsersPage() {
               />
               <span>Select all</span>
             </label>
-            <h2>Registered accounts</h2>
+            <h3 className="profile-heading">Accounts</h3>
             <span className="admin-list__count">{users.length}</span>
           </div>
 
@@ -279,6 +262,6 @@ export default function AdminUsersPage() {
           ) : null}
         </div>
       </section>
-    </main>
+    </AdminSubpageShell>
   )
 }
