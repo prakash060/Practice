@@ -1,7 +1,9 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const User = require('../models/User');
+const OtpChallenge = require('../models/OtpChallenge');
 const { signToken, requireAuth } = require('../middleware/auth');
-const { isAdminEmail, requireAdmin } = require('../middleware/admin');
+const { isAdminEmail, requireAdmin, getAdminEmail } = require('../middleware/admin');
 const {
   validateName,
   validateEmail,
@@ -159,6 +161,64 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('List users error:', err);
     return res.status(500).json({ error: 'Failed to list users' });
+  }
+});
+
+// POST /api/users/bulk-delete — admin removes selected customer accounts (not admin / self)
+router.post('/bulk-delete', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { ids } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    const objectIds = [];
+    for (const id of ids) {
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: `Invalid user id: ${id}` });
+      }
+      objectIds.push(new mongoose.Types.ObjectId(id));
+    }
+
+    const candidates = await User.find({ _id: { $in: objectIds } }).select('email').lean();
+
+    const adminEmail = (getAdminEmail() || '').toLowerCase();
+    const currentId = req.userId ? String(req.userId) : null;
+
+    const deletableIds = candidates
+      .filter((u) => {
+        const email = (u.email || '').trim().toLowerCase();
+        if (adminEmail && email === adminEmail) return false;
+        if (currentId && String(u._id) === currentId) return false;
+        return true;
+      })
+      .map((u) => u._id);
+
+    if (deletableIds.length === 0) {
+      return res.json({
+        deleted: 0,
+        skipped: ids.length,
+        message: 'No deletable users in selection (admin accounts cannot be removed).',
+      });
+    }
+
+    await OtpChallenge.deleteMany({ userId: { $in: deletableIds } });
+    const result = await User.deleteMany({ _id: { $in: deletableIds } });
+
+    const deleted = result.deletedCount || 0;
+    const skipped = ids.length - deleted;
+
+    return res.json({
+      deleted,
+      skipped,
+      message:
+        deleted === 1
+          ? '1 user account deleted.'
+          : `${deleted} user accounts deleted.`,
+    });
+  } catch (err) {
+    console.error('Bulk delete users error:', err);
+    return res.status(500).json({ error: 'Failed to delete users' });
   }
 });
 

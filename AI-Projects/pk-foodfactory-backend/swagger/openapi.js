@@ -415,6 +415,51 @@ const openapi = {
             },
           },
           '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '403': { description: 'Forbidden (non-admin)', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '500': { description: 'Server error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/api/users/bulk-delete': {
+      post: {
+        tags: ['Users'],
+        summary: 'Delete selected user accounts (admin only)',
+        description:
+          'Requires admin. Admin account (ADMIN_EMAIL) and the signed-in admin cannot be deleted.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['ids'],
+                properties: {
+                  ids: { type: 'array', items: { type: 'string' }, minItems: 1 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Deletion result',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    deleted: { type: 'integer' },
+                    skipped: { type: 'integer' },
+                    message: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Bad request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '403': { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '500': { description: 'Server error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
         },
       },

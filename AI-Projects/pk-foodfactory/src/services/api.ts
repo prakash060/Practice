@@ -418,8 +418,19 @@ export const authAPI = {
   },
 };
 
+export interface BulkDeleteUsersResponse {
+  deleted: number;
+  skipped: number;
+  message: string;
+}
+
 export const adminUsersAPI = {
   list: async (): Promise<UserPublic[]> => authAPI.listUsers(),
+
+  bulkDelete: async (ids: string[]): Promise<BulkDeleteUsersResponse> => {
+    const response = await api.post<BulkDeleteUsersResponse>('/users/bulk-delete', { ids });
+    return response.data;
+  },
 };
 
 export interface FoodItemInput {
