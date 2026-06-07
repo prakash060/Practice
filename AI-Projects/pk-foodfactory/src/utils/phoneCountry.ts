@@ -65,26 +65,25 @@ export function formatPhoneDisplay(stored?: string | null): string {
   return `${DEFAULT_COUNTRY_CODE} ${local}`
 }
 
-/** True when the value looks like a phone number (show +91 prefix, tel keypad). */
+/** True when the value looks like a phone number (show +91 prefix). */
 export function shouldShowPhoneCountryPrefix(value: string): boolean {
-  const v = value.trim()
-  // Empty must stay in text/email mode so mobile browsers allow typing letters.
-  if (!v) return false
+  const v = value.trimStart()
+  // Empty must stay in plain text mode so mobile browsers allow typing letters.
+  if (!v.trim()) return false
   if (v.includes('@')) return false
   if (/[a-zA-Z]/.test(v)) return false
   return /^[\d+\s\-().]+$/.test(v)
 }
 
 export function sanitizeIdentifierInput(raw: string): string {
-  const trimmed = raw.trim()
-  if (trimmed.includes('@') || /[a-zA-Z]/.test(trimmed)) {
-    return trimmed
+  // Keep raw value while typing — trimming on each keystroke breaks mobile IME/cursor.
+  if (raw.includes('@') || /[a-zA-Z]/.test(raw)) {
+    return raw
   }
-  if (shouldShowPhoneCountryPrefix(trimmed)) {
-    const local = sanitizeLocalPhoneInput(trimmed)
-    return local
+  if (shouldShowPhoneCountryPrefix(raw)) {
+    return sanitizeLocalPhoneInput(raw)
   }
-  return trimmed
+  return raw
 }
 
 /** Email as-is; phone → last 10 digits for backend lookup. */

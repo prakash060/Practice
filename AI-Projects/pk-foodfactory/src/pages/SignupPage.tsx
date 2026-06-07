@@ -175,7 +175,13 @@ export default function SignupPage() {
               <label htmlFor="signup-email">Email</label>
               <input
                 id="signup-email"
-                type="email"
+                name="email"
+                type="text"
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="next"
                 value={email}
                 onChange={(ev) => setEmail(ev.target.value)}
                 disabled={isSubmitting}

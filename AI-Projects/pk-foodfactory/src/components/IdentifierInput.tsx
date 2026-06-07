@@ -42,8 +42,8 @@ export function IdentifierInput({
         ) : null}
         <input
           id={id}
+          name="identifier"
           type="text"
-          inputMode={showPrefix ? 'tel' : 'email'}
           autoComplete="username"
           autoCapitalize="none"
           autoCorrect="off"
