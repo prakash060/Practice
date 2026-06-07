@@ -65,9 +65,11 @@ export function formatPhoneDisplay(stored?: string | null): string {
   return `${DEFAULT_COUNTRY_CODE} ${local}`
 }
 
+/** True when the value looks like a phone number (show +91 prefix, tel keypad). */
 export function shouldShowPhoneCountryPrefix(value: string): boolean {
   const v = value.trim()
-  if (!v) return true
+  // Empty must stay in text/email mode so mobile browsers allow typing letters.
+  if (!v) return false
   if (v.includes('@')) return false
   if (/[a-zA-Z]/.test(v)) return false
   return /^[\d+\s\-().]+$/.test(v)

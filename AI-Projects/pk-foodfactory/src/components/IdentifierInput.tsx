@@ -25,7 +25,7 @@ export function IdentifierInput({
   disabled,
   error,
   hint,
-  placeholder = '10-digit mobile or email',
+  placeholder = 'Email or 10-digit mobile',
 }: IdentifierInputProps) {
   const showPrefix = shouldShowPhoneCountryPrefix(value)
 
@@ -42,9 +42,13 @@ export function IdentifierInput({
         ) : null}
         <input
           id={id}
-          type={showPrefix ? 'tel' : 'text'}
-          inputMode={showPrefix ? 'numeric' : 'email'}
+          type="text"
+          inputMode={showPrefix ? 'tel' : 'email'}
           autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="next"
           placeholder={placeholder}
           value={value}
           onChange={(ev) => onChange(sanitizeIdentifierInput(ev.target.value))}

@@ -267,7 +267,7 @@ export default function LoginPage() {
               value={identifier}
               onChange={setIdentifier}
               disabled={isSubmitting}
-              hint="Mobile numbers use +91 by default"
+              hint="Type your email, or start with digits for mobile (+91)"
               error={touched ? credentialErrors.identifier : undefined}
             />
             <SecretField
