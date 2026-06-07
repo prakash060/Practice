@@ -13,6 +13,7 @@ const {
   validatePassword,
   phoneLookupRegex,
   getPhoneLast10,
+  DEFAULT_COUNTRY_DIAL,
 } = require('../utils/userValidation');
 const { buildLoginMethodsResponse, recordSuccessfulLogin, LOGIN_METHODS } = require('../utils/authMethods');
 const {
@@ -153,9 +154,22 @@ function signUserToken(user) {
 }
 
 async function findUserByPhone(phone) {
+  const last10 = getPhoneLast10(phone);
+  if (!last10) return null;
+
   const re = phoneLookupRegex(phone);
-  if (!re) return null;
-  return User.findOne({ phone: re });
+  if (re) {
+    const byRegex = await User.findOne({ phone: re });
+    if (byRegex) return byRegex;
+  }
+
+  return User.findOne({
+    $or: [
+      { phone: last10 },
+      { phone: `${DEFAULT_COUNTRY_DIAL}${last10}` },
+      { phone: `+${DEFAULT_COUNTRY_DIAL}${last10}` },
+    ],
+  });
 }
 
 async function findUserByEmailAndPhone(email, phone) {
@@ -206,6 +220,10 @@ router.post('/signup/start', async (req, res) => {
     return res.status(201).json({
       sessionToken,
       message: otpSessionMessage(devOtp, delivery),
+      delivery: {
+        emailSent: Boolean(delivery?.emailSent),
+        smsSent: Boolean(delivery?.smsSent),
+      },
       ...(devOtp ? { devOtp } : {}),
     });
   } catch (err) {
@@ -223,6 +241,10 @@ router.post('/signup/send-otp', async (req, res) => {
 
     return res.json({
       message: otpSessionMessage(devOtp, delivery, { resent: true }),
+      delivery: {
+        emailSent: Boolean(delivery?.emailSent),
+        smsSent: Boolean(delivery?.smsSent),
+      },
       ...(devOtp ? { devOtp } : {}),
     });
   } catch (err) {
@@ -327,7 +349,8 @@ router.post('/login/start', async (req, res) => {
       return res.json({ message: GENERIC_LOGIN_MSG });
     }
 
-    const channel = resolveLoginOtpChannel(user, idRes.kind, requestedChannel);
+    // Always match OTP channel to how the user signed in (email vs mobile).
+    const channel = idRes.kind === 'email' ? 'email' : 'phone';
     const { sessionToken, devOtp, delivery, channel: usedChannel } =
       await createLoginChallengeAndSendOtp({
         user,

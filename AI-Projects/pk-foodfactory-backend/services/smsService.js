@@ -2,7 +2,12 @@ const https = require('https');
 const { formatMsg91Mobile, getPhoneLast10 } = require('../utils/userValidation');
 
 function getSmsProvider() {
-  return (process.env.SMS_PROVIDER || 'none').trim().toLowerCase();
+  const raw = (process.env.SMS_PROVIDER || 'none').trim().toLowerCase();
+  if (!raw || raw === 'none') return 'none';
+  // Tolerate typos like msg9hello1 — any value starting with msg9/msg91 maps to MSG91.
+  if (raw.includes('msg91') || raw.startsWith('msg9') || raw === 'msg') return 'msg91';
+  if (raw.includes('twilio')) return 'twilio';
+  return raw;
 }
 
 const SMS_PLACEHOLDER_MARKERS = [

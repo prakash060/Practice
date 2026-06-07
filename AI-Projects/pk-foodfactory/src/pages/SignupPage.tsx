@@ -5,7 +5,7 @@ import { AppHeaderAuth } from '../components/AppHeader'
 import { PhoneInput } from '../components/PhoneInput'
 import { OtpInput } from '../components/OtpInput'
 import { SecretField } from '../components/SecretField'
-import { authAPI, type DevOtpHint } from '../services/api'
+import { authAPI, type DevOtpHint, type OtpDeliveryStatus } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
 import { formatPhoneForApi } from '../utils/phoneCountry'
 import {
@@ -41,6 +41,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
 
   const [devOtp, setDevOtp] = useState<DevOtpHint | null>(null)
+  const [otpDelivery, setOtpDelivery] = useState<OtpDeliveryStatus | null>(null)
   const [submitError, setSubmitError] = useState('')
   const [infoMessage, setInfoMessage] = useState('')
   const [touched, setTouched] = useState(false)
@@ -69,6 +70,7 @@ export default function SignupPage() {
       })
       setSessionToken(res.sessionToken)
       setDevOtp(res.devOtp ?? null)
+      setOtpDelivery(res.delivery ?? null)
       setEmailOtp('')
       setPhoneOtp('')
       setInfoMessage(res.message)
@@ -87,6 +89,7 @@ export default function SignupPage() {
     try {
       const res = await authAPI.signupSendOtp(sessionToken)
       setDevOtp(res.devOtp ?? null)
+      if (res.delivery) setOtpDelivery(res.delivery)
       setEmailOtp('')
       setPhoneOtp('')
       setInfoMessage(res.message)
@@ -220,6 +223,15 @@ export default function SignupPage() {
 
         {step === 'otp' ? (
           <form className="auth-form" onSubmit={handleOtpSubmit} noValidate>
+            <p className="item-description">
+              {otpDelivery?.emailSent && otpDelivery?.smsSent
+                ? 'Enter the 6-digit codes sent to your email and mobile number.'
+                : otpDelivery?.emailSent
+                  ? 'Enter the code sent to your email and the SMS code from your phone.'
+                  : otpDelivery?.smsSent
+                    ? 'Enter the SMS code and the code sent to your email.'
+                    : 'Enter the email and SMS verification codes.'}
+            </p>
             {devOtp ? (
               <div className="dev-otp-banner" role="status">
                 <p>

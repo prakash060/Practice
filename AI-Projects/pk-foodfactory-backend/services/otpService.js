@@ -145,10 +145,29 @@ async function deliverOtps(email, emailCode, phone, phoneCode, purposeLabel) {
     smsDevLog: Boolean(smsValue?.devLog),
   };
 
-  // Only fail outright if neither channel could be delivered nor surfaced via the
-  // dev fallback. Partial failures are reported by otpSessionMessage().
-  const anyDelivered =
-    delivery.emailSent || delivery.smsSent || delivery.emailDevLog || delivery.smsDevLog;
+  const emailOk = delivery.emailSent || delivery.emailDevLog;
+  const smsOk = delivery.smsSent || delivery.smsDevLog;
+
+  // Signup must deliver to both email and mobile — do not let users proceed with only one code.
+  if (purposeLabel === 'signup') {
+    if (!emailOk) {
+      const err = new Error(
+        'Could not send email verification code. Check EMAIL_USER and EMAIL_PASS (use a Gmail App Password).'
+      );
+      err.statusCode = 503;
+      throw err;
+    }
+    if (!smsOk) {
+      const err = new Error(
+        'Could not send SMS verification code. Check SMS_PROVIDER, MSG91_AUTH_KEY, and MSG91_TEMPLATE_ID.'
+      );
+      err.statusCode = 503;
+      throw err;
+    }
+    return delivery;
+  }
+
+  const anyDelivered = emailOk || smsOk;
   if (!anyDelivered) {
     throw (
       (emailResult.status === 'rejected' && emailResult.reason) ||
@@ -248,7 +267,6 @@ async function resendOtps(sessionToken, purpose) {
 
 async function deliverLoginOtp(user, preferredChannel, code, smsPhone) {
   const purpose = purposeLabel('login');
-  let activeChannel = preferredChannel;
   let delivery = {
     emailSent: false,
     smsSent: false,
@@ -256,54 +274,33 @@ async function deliverLoginOtp(user, preferredChannel, code, smsPhone) {
     smsDevLog: false,
   };
 
-  async function tryEmail() {
-    if (!user.email) return null;
+  if (preferredChannel === 'email') {
+    if (!user.email) {
+      const err = new Error('This account has no email on file.');
+      err.statusCode = 400;
+      throw err;
+    }
     const emailResult = await sendOtpEmail(user.email, code, purpose);
-    return {
+    delivery = {
       emailSent: Boolean(emailResult?.sent),
       smsSent: false,
       emailDevLog: Boolean(emailResult?.devLog),
       smsDevLog: false,
     };
-  }
-
-  async function trySms() {
+  } else {
     const phone = smsPhone || user.phone;
-    if (!phone) return null;
+    if (!phone) {
+      const err = new Error('This account has no mobile number on file.');
+      err.statusCode = 400;
+      throw err;
+    }
     const smsResult = await sendOtpSms(phone, code, purpose);
-    return {
+    delivery = {
       emailSent: false,
       smsSent: Boolean(smsResult?.sent),
       emailDevLog: false,
       smsDevLog: Boolean(smsResult?.devLog),
     };
-  }
-
-  const primary = preferredChannel === 'email' ? tryEmail : trySms;
-  const secondary = preferredChannel === 'email' ? trySms : tryEmail;
-  const secondaryChannel = preferredChannel === 'email' ? 'phone' : 'email';
-
-  try {
-    const primaryDelivery = await primary();
-    if (primaryDelivery) delivery = primaryDelivery;
-  } catch (primaryErr) {
-    console.warn(`Login OTP ${preferredChannel} delivery failed:`, primaryErr.message);
-  }
-
-  const primaryOk =
-    Boolean(delivery.emailSent || delivery.smsSent) ||
-    Boolean(delivery.emailDevLog || delivery.smsDevLog);
-
-  if (!primaryOk) {
-    try {
-      const alt = await secondary();
-      if (alt) {
-        delivery = alt;
-        activeChannel = secondaryChannel;
-      }
-    } catch (secondaryErr) {
-      console.warn(`Login OTP ${secondaryChannel} fallback failed:`, secondaryErr.message);
-    }
   }
 
   const delivered =
@@ -312,13 +309,15 @@ async function deliverLoginOtp(user, preferredChannel, code, smsPhone) {
 
   if (!delivered) {
     const err = new Error(
-      'Could not send verification code. Check server email/SMS settings or try the other channel.'
+      preferredChannel === 'email'
+        ? 'Could not send verification code to your email. Check server email settings.'
+        : 'Could not send verification code to your mobile number. Check server SMS settings.'
     );
     err.statusCode = 503;
     throw err;
   }
 
-  return { activeChannel, delivery };
+  return { activeChannel: preferredChannel, delivery };
 }
 
 async function createLoginChallengeAndSendOtp({ user, channel, loginPhone }) {

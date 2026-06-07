@@ -3,13 +3,17 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { AppHeaderAuth } from '../components/AppHeader'
 import { IdentifierInput } from '../components/IdentifierInput'
-import { PhoneInput } from '../components/PhoneInput'
 import { OtpInput } from '../components/OtpInput'
 import { SecretField } from '../components/SecretField'
 import { authAPI, type DevOtpHint } from '../services/api'
 import { defaultLandingPath, useAuth } from '../state/AuthContext'
-import { formatPhoneForApi, normalizeIdentifierForApi } from '../utils/phoneCountry'
-import { validateLoginForm, validateOtp, validatePhone } from '../utils/userValidators'
+import { normalizeIdentifierForApi } from '../utils/phoneCountry'
+import {
+  identifierChannel,
+  validateIdentifier,
+  validateLoginForm,
+  validateOtp,
+} from '../utils/userValidators'
 
 type LoginMethod = 'otp' | 'password'
 type OtpStep = 'identifier' | 'verify'
@@ -29,7 +33,7 @@ export default function LoginPage() {
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('otp')
   const [otpStep, setOtpStep] = useState<OtpStep>('identifier')
 
-  const [phone, setPhone] = useState('')
+  const [otpIdentifier, setOtpIdentifier] = useState('')
   const [identifier, setIdentifier] = useState('')
   const [secret, setSecret] = useState('')
   const [sessionToken, setSessionToken] = useState('')
@@ -45,7 +49,7 @@ export default function LoginPage() {
   const requestedFrom =
     (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? null
 
-  const phoneError = useMemo(() => validatePhone(phone), [phone])
+  const otpIdentifierError = useMemo(() => validateIdentifier(otpIdentifier), [otpIdentifier])
   const credentialErrors = useMemo(
     () => validateLoginForm(identifier, secret),
     [identifier, secret]
@@ -92,22 +96,27 @@ export default function LoginPage() {
     setSubmitError('')
     setInfoMessage('')
     setTouched(true)
-    if (phoneError) return
+    if (otpIdentifierError) return
+
+    const otpChannel = identifierChannel(otpIdentifier)
+    if (!otpChannel) return
 
     setIsSubmitting(true)
     try {
-      const res = await authAPI.loginStart(formatPhoneForApi(phone), 'phone')
+      const res = await authAPI.loginStart(normalizeIdentifierForApi(otpIdentifier), otpChannel)
       setInfoMessage(res.message)
       if (res.sessionToken) {
         setSessionToken(res.sessionToken)
-        setChannel(res.channel ?? 'phone')
+        setChannel(res.channel ?? otpChannel)
         setDevOtp(res.devOtp ?? null)
         setOtp('')
         setOtpStep('verify')
         setSubmitError('')
       } else {
         setSubmitError(
-          'No account found for this mobile number. Check the number or create an account.'
+          otpChannel === 'email'
+            ? 'No account found for this email. Check the address or create an account.'
+            : 'No account found for this mobile number. Check the number or create an account.'
         )
       }
     } catch (err) {
@@ -168,7 +177,7 @@ export default function LoginPage() {
               checked={loginMethod === 'otp'}
               onChange={() => switchMethod('otp')}
             />
-            Mobile number
+            One-time code
           </label>
           <label>
             <input
@@ -181,7 +190,7 @@ export default function LoginPage() {
           </label>
         </fieldset>
         <p className="item-description auth-method-hint">
-          Sign in with a one-time code sent to your mobile number, or with your account password.
+          Sign in with a one-time code sent to your email or mobile, or with your account password.
         </p>
 
         {infoMessage ? <p className="auth-info">{infoMessage}</p> : null}
@@ -190,16 +199,17 @@ export default function LoginPage() {
         {loginMethod === 'otp' && otpStep === 'identifier' ? (
           <form className="auth-form" onSubmit={handleOtpStart} noValidate>
             <p className="item-description">
-              Enter your registered mobile number. We will send a one-time code by SMS.
+              Enter your registered email or mobile number. We will send a one-time code to that
+              channel.
             </p>
-            <PhoneInput
-              id="login-phone"
-              label="Mobile number"
-              value={phone}
-              onChange={setPhone}
+            <IdentifierInput
+              id="login-identifier-otp"
+              label="Email or mobile"
+              value={otpIdentifier}
+              onChange={setOtpIdentifier}
               disabled={isSubmitting}
-              hint="India (+91) — 10-digit mobile without leading zero"
-              error={touched ? phoneError ?? undefined : undefined}
+              hint="Email → code by email · Mobile digits → code by SMS (+91)"
+              error={touched ? otpIdentifierError ?? undefined : undefined}
             />
             <button type="submit" className="proceed-payment-button auth-submit" disabled={isSubmitting}>
               {isSubmitting ? 'Sending code…' : 'Send verification code'}

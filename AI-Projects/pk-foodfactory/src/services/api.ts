@@ -252,10 +252,16 @@ export interface DevOtpHint {
   code?: string;
 }
 
+export interface OtpDeliveryStatus {
+  emailSent?: boolean;
+  smsSent?: boolean;
+}
+
 export interface OtpSessionResponse {
   sessionToken: string;
   message: string;
   channel?: 'email' | 'phone';
+  delivery?: OtpDeliveryStatus;
   devOtp?: DevOtpHint;
 }
 
@@ -278,6 +284,7 @@ export interface ResetStartResponse {
 export interface OtpResendResponse {
   message: string;
   channel?: 'email' | 'phone';
+  delivery?: OtpDeliveryStatus;
   devOtp?: DevOtpHint;
 }
 

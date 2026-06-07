@@ -85,6 +85,14 @@ export function validateIdentifier(identifier: string): string | null {
   return `Enter a valid email or 10-digit mobile (${DEFAULT_COUNTRY_CODE})`
 }
 
+export function identifierChannel(identifier: string): 'email' | 'phone' | null {
+  const raw = identifier.trim()
+  if (!raw) return null
+  if (EMAIL_RE.test(raw)) return 'email'
+  if (getPhoneLast10(raw)) return 'phone'
+  return null
+}
+
 export function validateOtp(code: string): string | null {
   const trimmed = code.trim().replace(/\s/g, '')
   if (!trimmed) return 'Code is required'
